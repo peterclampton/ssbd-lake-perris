@@ -5256,6 +5256,12 @@ let editorRaycaster=null;
 let editorPointer=null;
 let editorHeight=28;
 const editorImported=[];
+// GLBs supplied with a published layout live in the repo, so normal visitors
+// can see them too. Local-only imports are intentionally not guessed at.
+const publishedImportAssets={
+  'a857309da700437b82e8831255f491bf':'assets/a857309da700437b82e8831255f491bf.glb'
+};
+const loadedPublishedImports=new Set();
 const EDITOR_STORAGE='ssbd-lake-perris-layout-v1';
 const editorUndoStack=[];
 let editorTransformStart=null;
@@ -5294,8 +5300,45 @@ function editorSnapshot(){
     if(!obj.parent) return;
     records.push({index,position:obj.position.toArray(),rotation:obj.rotation.toArray(),scale:obj.scale.toArray(),visible:obj.visible});
   });
-  editorImported.filter(obj=>obj.parent).forEach((obj,index)=>records.push({imported:index,name:obj.userData.editorName,position:obj.position.toArray(),rotation:obj.rotation.toArray(),scale:obj.scale.toArray(),visible:obj.visible}));
+  editorImported.filter(obj=>obj.parent).forEach((obj,index)=>{
+    const record={imported:index,name:obj.userData.editorName,position:obj.position.toArray(),rotation:obj.rotation.toArray(),scale:obj.scale.toArray(),visible:obj.visible};
+    if(Number.isInteger(obj.userData.editorSourceIndex)) record.sourceIndex=obj.userData.editorSourceIndex;
+    records.push(record);
+  });
   return {version:1,savedAt:new Date().toISOString(),objects:records};
+}
+function loadPublishedImports(layout){
+  if(!layout || !Array.isArray(layout.objects)) return;
+  layout.objects.filter(record=>record.imported!==undefined && publishedImportAssets[record.name]).forEach(record=>{
+    const key=record.name;
+    if(loadedPublishedImports.has(key)) return;
+    loadedPublishedImports.add(key);
+    new THREE.GLTFLoader().load(publishedImportAssets[key],gltf=>{
+      const model=gltf.scene || gltf.scenes[0];
+      model.userData.editorName=key; model.userData.editorImported=true;
+      if(record.position) model.position.fromArray(record.position);
+      if(record.rotation) model.rotation.fromArray(record.rotation);
+      if(record.scale) model.scale.fromArray(record.scale);
+      if(typeof record.visible==='boolean') model.visible=record.visible;
+      model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
+      scene.add(model); editorImported.push(model);
+    },undefined,err=>{loadedPublishedImports.delete(key);console.warn(`Could not load ${key}`,err);});
+  });
+  layout.objects.filter(record=>record.imported!==undefined && Number.isInteger(record.sourceIndex)).forEach(record=>{
+    const key=`copy-${record.imported}-${record.sourceIndex}`;
+    if(loadedPublishedImports.has(key)) return;
+    const source=editorBaseObjects[record.sourceIndex];
+    if(!source) return;
+    loadedPublishedImports.add(key);
+    const copy=source.clone(true);
+    copy.userData.editorName=record.name || `${editorObjectLabel(source)} copy`;
+    copy.userData.editorSourceIndex=record.sourceIndex; copy.userData.editorImported=true;
+    if(record.position) copy.position.fromArray(record.position);
+    if(record.rotation) copy.rotation.fromArray(record.rotation);
+    if(record.scale) copy.scale.fromArray(record.scale);
+    if(typeof record.visible==='boolean') copy.visible=record.visible;
+    scene.add(copy); editorImported.push(copy);
+  });
 }
 function editorApplyLayout(layout){
   if(!layout || !Array.isArray(layout.objects)) return;
@@ -5318,6 +5361,7 @@ function editorApplyLayout(layout){
       if(obj){obj.position.x+=17;obj.position.z-=9;}
     }
   }
+  loadPublishedImports(layout);
 }
 function editorSave(){
   try{localStorage.setItem(EDITOR_STORAGE,JSON.stringify(editorSnapshot()));toast('Editor layout saved in this browser.');}
@@ -5332,6 +5376,8 @@ function editorDuplicate(){
   if(!editorSelected) return;
   const copy=editorSelected.clone(true);
   copy.position.x+=2; copy.position.z+=2; copy.userData.editorName=`${editorObjectLabel(editorSelected)} copy`;
+  const sourceIndex=editorBaseObjects.indexOf(editorSelected);
+  if(sourceIndex>=0) copy.userData.editorSourceIndex=sourceIndex;
   copy.userData.editorImported=true; scene.add(copy); editorImported.push(copy); editorPushUndo({type:'remove',obj:copy}); editorSelect(copy); editorSave();
 }
 function editorDelete(){

@@ -55,10 +55,17 @@
   .mobileAction{height:58px;border:1px solid rgba(255,255,255,.58);border-radius:16px;background:rgba(20,35,55,.55);color:#fff;font:700 12px/1 system-ui,sans-serif;letter-spacing:.4px;text-shadow:0 1px 2px #000;}
   .mobileAction:active{transform:scale(.94);background:rgba(48,92,126,.82);}
   .mobileAction.active{background:#8a3cc9;border-color:#fff;box-shadow:0 0 16px rgba(205,96,255,.7);}
+  #rotateOverlay{display:none;position:fixed;inset:0;z-index:30;align-items:center;justify-content:center;flex-direction:column;background:linear-gradient(145deg,#183a61,#0b1c30);color:#fff;text-align:center;padding:28px;}
+  #rotateIcon{font-size:52px;line-height:1;margin-bottom:18px;animation:rotateHint 1.8s ease-in-out infinite;}
+  #rotateOverlay h2{margin:0 0 10px;font-size:21px;letter-spacing:2px;text-transform:uppercase;}
+  #rotateOverlay p{margin:0;color:#bdd4ea;font-size:14px;line-height:1.5;}
+  @keyframes rotateHint{0%,100%{transform:rotate(0deg)}50%{transform:rotate(90deg)}}
   @media (pointer:coarse){#mobileControls{display:block;}#controls{display:none;}#partyBtn,#respawnBtn{display:none;}#title{top:max(14px,env(safe-area-inset-top));left:16px;}#title h1{font-size:14px;}#title p{font-size:10px;}#startOverlay h1{font-size:26px;letter-spacing:4px;text-align:center;padding:0 18px;}#startOverlay h2{font-size:11px;letter-spacing:2px;text-align:center;}#startOverlay p{font-size:12px;line-height:1.6;text-align:center;padding:0 28px;}}
+  @media (pointer:coarse) and (orientation:portrait){#rotateOverlay{display:flex;}}
 </style>
 </head>
 <body>
+<div id="rotateOverlay"><div id="rotateIcon">↻</div><h2>Rotate your phone</h2><p>SSBD is built to explore in landscape.</p></div>
 <div id="startOverlay">
   <h1>Same Same But Different</h1>
   <h2>Lake Perris &middot; Festival Day</h2>

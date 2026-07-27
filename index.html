@@ -5251,6 +5251,9 @@ const editorEnabled=new URLSearchParams(location.search).get('editor')==='1';
 // Private Unreal comparison mode. This deliberately draws only lightweight
 // proxies from the Unreal export; it never changes the public web layout.
 const unrealPreviewEnabled=new URLSearchParams(location.search).get('unrealPreview')==='1';
+// The asset pass uses a stricter classifier plus proper low-poly proxy shapes.
+// It is a separate private URL while we validate it against the hand-built map.
+const unrealAssetPreviewEnabled=new URLSearchParams(location.search).get('unrealPreview')==='assets';
 let editorActive=editorEnabled;
 let editorSelected=null;
 let editorBaseObjects=[];
@@ -5270,13 +5273,21 @@ const EDITOR_STORAGE='ssbd-lake-perris-layout-v1';
 const editorUndoStack=[];
 let editorTransformStart=null;
 
+function unrealPreviewText(actor){return `${actor.name||''} ${(actor.staticMeshes||[]).map(m=>m.asset||'').join(' ')}`.toLowerCase();}
+function unrealPreviewKind(actor){
+  const text=unrealPreviewText(actor);
+  // Never use a bare "stage" substring: it accidentally matches Landscape.
+  if(/same_stage|different-but|cococove|cube78|\bstage\d*\b|stage\.stage|dj.?booth|stagespeaker/.test(text)) return 'stage';
+  if(/fenceline|\bfence\b|fence_|fence00|barricade|\bgate\b|velvet.?rope/.test(text)) return 'fence';
+  if(/whitetent|gazebo|\btent\b|canopy|awning|shade/.test(text)) return 'tent';
+  if(/foodstall|food.?truck|foodcart|\bbar\b|vendor|concession/.test(text)) return 'food';
+  if(/portable.?restroom|porta.?potty|\btoilet\b/.test(text)) return 'toilet';
+  if(/container|trailer|scaffold|\btower\b|\bbuilding\b|\bhouse\b/.test(text)) return 'structure';
+  return null;
+}
 function unrealPreviewColor(actor){
-  const text=`${actor.name||''} ${(actor.staticMeshes||[]).map(m=>m.asset||'').join(' ')}`.toLowerCase();
-  if(/same.?stage|but.?stage|stage/.test(text)) return new THREE.Color(0xffb347);
-  if(/fence|barricade|gate/.test(text)) return new THREE.Color(0xb86cff);
-  if(/tent|canopy|shade/.test(text)) return new THREE.Color(0x47d9e8);
-  if(/bar|food|vendor/.test(text)) return new THREE.Color(0xff7da8);
-  return new THREE.Color(0x80ed99);
+  const kind=unrealPreviewKind(actor);
+  return new THREE.Color({stage:0xffb347,fence:0xb86cff,tent:0x47d9e8,food:0xff7da8,toilet:0x54d6ff,structure:0x80ed99}[kind]||0x708090);
 }
 function unrealPreviewLabel(text,position,color){
   const canvas=document.createElement('canvas'); canvas.width=512; canvas.height=96;
@@ -5288,11 +5299,55 @@ function unrealPreviewLabel(text,position,color){
   const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(canvas),depthTest:false,transparent:true}));
   sprite.position.copy(position); sprite.position.y+=7; sprite.scale.set(18,3.4,1); return sprite;
 }
+function unrealProxyShape(kind,color){
+  const group=new THREE.Group();
+  const mat=new THREE.MeshStandardMaterial({color,roughness:.8,metalness:.05,transparent:true,opacity:.88});
+  const dark=new THREE.MeshStandardMaterial({color:0x152238,roughness:.85,transparent:true,opacity:.9});
+  const add=(geo,material,x,y,z,sx=1,sy=1,sz=1)=>{const mesh=new THREE.Mesh(geo,material);mesh.position.set(x,y,z);mesh.scale.set(sx,sy,sz);group.add(mesh);return mesh;};
+  if(kind==='stage'){
+    add(new THREE.BoxGeometry(1,1,1),dark,0,.35,0,4,.7,2.4);
+    add(new THREE.BoxGeometry(1,1,1),mat,0,1.9,.8,4,.35,.18);
+    add(new THREE.BoxGeometry(1,1,1),mat,-1.7,1.6,.1,.18,2.6,.18); add(new THREE.BoxGeometry(1,1,1),mat,1.7,1.6,.1,.18,2.6,.18);
+  } else if(kind==='tent') {
+    add(new THREE.ConeGeometry(2.35,2.1,4),mat,0,1.3,0,1,1,1); add(new THREE.BoxGeometry(3.7,.18,3.7),dark,0,.2,0);
+  } else if(kind==='fence') {
+    add(new THREE.BoxGeometry(4.4,.12,.12),mat,0,.95,0); add(new THREE.BoxGeometry(.12,1.9,.12),mat,-2.05,.95,0); add(new THREE.BoxGeometry(.12,1.9,.12),mat,2.05,.95,0);
+  } else if(kind==='food') {
+    add(new THREE.BoxGeometry(3.2,1.55,1.5),dark,0,.8,0); add(new THREE.BoxGeometry(3.55,.22,1.82),mat,0,1.68,0); add(new THREE.BoxGeometry(2.4,.2,.08),mat,0,1.2,.78);
+  } else if(kind==='toilet') {
+    add(new THREE.BoxGeometry(1.25,2.35,1.2),mat,0,1.2,0); add(new THREE.BoxGeometry(.12,.75,.05),dark,.33,1.2,.63);
+  } else {
+    add(new THREE.BoxGeometry(2.4,2.4,2.4),mat,0,1.2,0); add(new THREE.BoxGeometry(2.7,.2,2.7),dark,0,2.5,0);
+  }
+  return group;
+}
 function loadUnrealPreview(){
-  if(!unrealPreviewEnabled) return;
+  if(!unrealPreviewEnabled && !unrealAssetPreviewEnabled) return;
   fetch('unreal-web-preview.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(manifest=>{
-    const actors=(manifest&&manifest.actors||[]).filter(actor=>actor.visible!==false && actor.web && Array.isArray(actor.staticMeshes) && actor.staticMeshes.length);
+    const allActors=(manifest&&manifest.actors||[]).filter(actor=>actor.visible!==false && actor.web && (Array.isArray(actor.staticMeshes) && actor.staticMeshes.length || /same_stage|different-but|cococove|cube78/i.test(actor.name||'')));
+    const actors=unrealAssetPreviewEnabled ? allActors.filter(actor=>unrealPreviewKind(actor)) : allActors;
     if(!actors.length) throw new Error('No exported mesh actors');
+    if(unrealAssetPreviewEnabled){
+      const layer=new THREE.Group(); layer.name='Unreal calibrated asset proxy preview';
+      const counts={};
+      actors.forEach(actor=>{
+        const [x,y,z]=actor.web.position, kind=unrealPreviewKind(actor), proxy=unrealProxyShape(kind,unrealPreviewColor(actor));
+        proxy.position.set(x,Math.max(0,y),z); proxy.rotation.y=actor.web.rotationYRadians||0;
+        // Unreal's actor scale is not exported yet, so deliberately keep a
+        // consistent readable proxy scale instead of inventing dimensions.
+        layer.add(proxy); counts[kind]=(counts[kind]||0)+1;
+      });
+      scene.add(layer);
+      const labels=[
+        ['Same Stage','Same_Stage_4_29_26__REVIEW_','#ffd166'],
+        ['But Stage · Cube78','Cube78','#ffd166'],
+        ['Coconut Cove','cococove_single','#ffd166']
+      ];
+      labels.forEach(([label,name,color])=>{const actor=allActors.find(a=>a.name===name);if(!actor)return;const [x,y,z]=actor.web.position;scene.add(unrealPreviewLabel(label,new THREE.Vector3(x,Math.max(0,y),z),color));});
+      const summary=Object.entries(counts).map(([kind,count])=>`${count} ${kind}${count===1?'':'s'}`).join(' · ');
+      toast(`UNREAL ASSET PREVIEW — ${summary}. Public layout unchanged.`);
+      return;
+    }
     const geometry=new THREE.BoxGeometry(0.8,0.8,0.8);
     const material=new THREE.MeshBasicMaterial({vertexColors:true,transparent:true,opacity:0.68,depthWrite:false});
     const proxies=new THREE.InstancedMesh(geometry,material,actors.length);

@@ -5298,8 +5298,9 @@ function editorUndo(){
 function editorSnapshot(){
   const records=[];
   editorBaseObjects.forEach((obj,index)=>{
-    if(!obj.parent) return;
-    records.push({index,position:obj.position.toArray(),rotation:obj.rotation.toArray(),scale:obj.scale.toArray(),visible:obj.visible});
+    // Keep a tombstone for deleted base objects. The original implementation
+    // omitted them, which made the public map quietly recreate them.
+    records.push({index,position:obj.position.toArray(),rotation:obj.rotation.toArray(),scale:obj.scale.toArray(),visible:!!obj.parent && obj.visible});
   });
   editorImported.filter(obj=>obj.parent).forEach((obj,index)=>{
     const record={imported:index,name:obj.userData.editorName,position:obj.position.toArray(),rotation:obj.rotation.toArray(),scale:obj.scale.toArray(),visible:obj.visible};
@@ -5343,8 +5344,10 @@ function loadPublishedImports(layout){
 }
 function editorApplyLayout(layout){
   if(!layout || !Array.isArray(layout.objects)) return;
+  const savedBaseIndexes=new Set();
   layout.objects.forEach(record=>{
     if(record.imported!==undefined) return;
+    savedBaseIndexes.add(record.index);
     const obj=editorBaseObjects[record.index];
     if(!obj) return;
     if(record.position) obj.position.fromArray(record.position);
@@ -5352,6 +5355,9 @@ function editorApplyLayout(layout){
     if(record.scale) obj.scale.fromArray(record.scale);
     if(typeof record.visible==='boolean') obj.visible=record.visible;
   });
+  // Old exports represented a delete by omitting the base object entirely.
+  // Treat those omissions as hidden so previously published deletes work too.
+  editorBaseObjects.forEach((obj,index)=>{if(!savedBaseIndexes.has(index)) obj.visible=false;});
   // Layout exports made before the corrected plan placed the whole Limitless
   // pocket against The Same Stage. Migrate that small, known object range as
   // it loads; fresh editor saves carry the corrected deck position and skip it.
@@ -5408,12 +5414,15 @@ function editorSetMode(mode){
 }
 function setupEditor(){
   editorBaseObjects=scene.children.slice();
-  fetch('scene-layout.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(editorApplyLayout).catch(()=>{});
+  fetch('scene-layout.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(layout=>{
+    editorApplyLayout(layout);
+    // Local work must win over the published baseline once the fetch completes.
+    if(editorEnabled) try{editorApplyLayout(JSON.parse(localStorage.getItem(EDITOR_STORAGE)));}catch(err){}
+  }).catch(()=>{});
   if(!editorEnabled) return;
   editorPanel.classList.add('show');
   player.x=-13; player.z=5; player.y=0; player.xPrev=player.x; player.zPrev=player.z;
   player.yaw=Math.PI; player.pitch=-0.42;
-  try{editorApplyLayout(JSON.parse(localStorage.getItem(EDITOR_STORAGE)));}catch(err){}
   editorRaycaster=new THREE.Raycaster(); editorPointer=new THREE.Vector2();
   editorControls=new THREE.TransformControls(camera,renderer.domElement);
   editorControls.setSize(0.75); editorControls.addEventListener('dragging-changed',e=>{

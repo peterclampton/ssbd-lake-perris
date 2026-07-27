@@ -76,7 +76,7 @@
   <div id="editorSelected">Nothing selected</div>
   <div class="editorRow"><button data-mode="translate">Move</button><button data-mode="rotate">Rotate</button><button data-mode="scale">Scale</button></div>
   <div class="editorRow"><button id="editorUndo" disabled>Undo</button><button id="editorDuplicate" disabled>Duplicate</button><button id="editorDelete" disabled>Delete</button></div>
-  <div class="editorRow"><label>Import GLB<input id="editorImport" type="file" accept=".glb,model/gltf-binary"></label><button id="editorSave">Save</button></div>
+  <div class="editorRow"><label>Import GLB<input id="editorImport" type="file" accept=".glb,model/gltf-binary"></label><button id="editorSave">Save</button><button id="editorPublish">Publish</button></div>
   <div class="editorRow"><button id="editorExport">Download layout</button><button id="editorExit">Exit editor</button></div>
   <div class="editorHint">WASD moves · arrows/mouse looks · Q/F up/down. Open with <b>?editor=1</b>.</div>
 </aside>
@@ -5255,6 +5255,7 @@ let editorPointer=null;
 let editorHeight=28;
 const editorImported=[];
 const EDITOR_STORAGE='ssbd-lake-perris-layout-v1';
+const EDITOR_PUBLISH_ENDPOINT='ssbd-publish-endpoint-v1';
 const editorUndoStack=[];
 let editorTransformStart=null;
 
@@ -5316,6 +5317,18 @@ function editorDownload(){
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='ssbd-lake-perris-layout.json'; a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 }
+async function editorPublish(){
+  let endpoint=localStorage.getItem(EDITOR_PUBLISH_ENDPOINT);
+  if(!endpoint){endpoint=prompt('Enter the publish endpoint (this is only needed once).');if(!endpoint)return;localStorage.setItem(EDITOR_PUBLISH_ENDPOINT,endpoint.replace(/\/$/,''));}
+  const key=prompt('Publish password:'); if(!key)return;
+  const button=document.getElementById('editorPublish'); button.disabled=true; button.textContent='Publishing…';
+  try{
+    const response=await fetch(`${endpoint}/api/publish`,{method:'POST',headers:{'Content-Type':'application/json','X-SSBD-Publish-Key':key},body:JSON.stringify({layout:editorSnapshot()})});
+    const result=await response.json(); if(!response.ok) throw new Error(result.error||'Publish failed');
+    toast('Published — GitHub Pages is redeploying.'); localStorage.setItem(EDITOR_STORAGE,JSON.stringify(editorSnapshot()));
+  }catch(err){toast(`Publish failed: ${err.message}`);}
+  finally{button.disabled=false;button.textContent='Publish';}
+}
 function editorDuplicate(){
   if(!editorSelected) return;
   const copy=editorSelected.clone(true);
@@ -5348,11 +5361,12 @@ function editorSetMode(mode){
   document.querySelectorAll('#editorPanel [data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
 }
 function setupEditor(){
+  editorBaseObjects=scene.children.slice();
+  fetch('scene-layout.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(editorApplyLayout).catch(()=>{});
   if(!editorEnabled) return;
   editorPanel.classList.add('show');
   player.x=-13; player.z=5; player.y=0; player.xPrev=player.x; player.zPrev=player.z;
   player.yaw=Math.PI; player.pitch=-0.42;
-  editorBaseObjects=scene.children.slice();
   try{editorApplyLayout(JSON.parse(localStorage.getItem(EDITOR_STORAGE)));}catch(err){}
   editorRaycaster=new THREE.Raycaster(); editorPointer=new THREE.Vector2();
   editorControls=new THREE.TransformControls(camera,renderer.domElement);
@@ -5376,6 +5390,7 @@ function setupEditor(){
   document.getElementById('editorDuplicate').onclick=editorDuplicate;
   document.getElementById('editorDelete').onclick=editorDelete;
   document.getElementById('editorSave').onclick=editorSave;
+  document.getElementById('editorPublish').onclick=editorPublish;
   document.getElementById('editorExport').onclick=editorDownload;
   document.getElementById('editorImport').onchange=e=>editorImport(e.target.files[0]);
   document.getElementById('editorExit').onclick=()=>{editorActive=false;editorPanel.classList.remove('show');editorSelect(null);toast('Editor closed. Reload with ?editor=1 to edit again.');};

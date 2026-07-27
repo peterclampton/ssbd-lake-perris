@@ -4823,7 +4823,7 @@ function animate(){
 
   const sailing = boatPhase !== 0;
   const inFlight = riding || rideY > 0.05;
-  const locked = inFlight || sailing || editorActive;
+  const locked = inFlight || sailing;
 
   if(!locked){
     const lookSpeed=1.65;
@@ -4841,7 +4841,7 @@ function animate(){
   fx += mobileMove.x;
   fz += mobileMove.y;
   const run = keys['ShiftLeft']||keys['ShiftRight'] ? 1.7 : 1;
-  if((fx||fz) && !locked){
+  if((fx||fz) && !locked && !editorActive){
     const len = Math.hypot(fx,fz); fx/=len; fz/=len;
     const s = Math.sin(player.yaw), c = Math.cos(player.yaw);
     const mx = ( -s*fz + c*fx );
@@ -4883,6 +4883,9 @@ function animate(){
     player.x = BALLOON_X; player.z = BALLOON_Z - 3.2;   // where you'll step off
   } else if(sailing){
     camera.position.set(pontoon.position.x, pontoon.position.y + 2.6, pontoon.position.z);
+  } else if(editorActive){
+    // Editor starts above the central lawn, looking toward the Same Stage.
+    camera.position.set(player.x, 28, player.z);
   } else {
     const bob = player.grounded ? Math.sin(t*10*run)*0.05*moving : 0;
     camera.position.set(player.x, 1.7 + player.y + bob, player.z);
@@ -5277,8 +5280,8 @@ function editorApplyLayout(layout){
   });
 }
 function editorSave(){
-  try{localStorage.setItem(EDITOR_STORAGE,JSON.stringify(editorSnapshot()));showToast('Editor layout saved in this browser.');}
-  catch(err){showToast('Could not save layout: browser storage is full.');}
+  try{localStorage.setItem(EDITOR_STORAGE,JSON.stringify(editorSnapshot()));toast('Editor layout saved in this browser.');}
+  catch(err){toast('Could not save layout: browser storage is full.');}
 }
 function editorDownload(){
   const blob=new Blob([JSON.stringify(editorSnapshot(),null,2)],{type:'application/json'});
@@ -5306,8 +5309,8 @@ function editorImport(file){
       const model=gltf.scene || gltf.scenes[0];
       model.userData.editorName=file.name.replace(/\.glb$/i,''); model.userData.editorImported=true;
       model.position.set(player.x,0,player.z-5); model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
-      scene.add(model); editorImported.push(model); editorSelect(model); editorSave(); showToast(`Imported ${file.name}`);
-    },err=>{console.error(err);showToast('That GLB could not be loaded.');});
+      scene.add(model); editorImported.push(model); editorSelect(model); editorSave(); toast(`Imported ${file.name}`);
+    },err=>{console.error(err);toast('That GLB could not be loaded.');});
   };
   reader.readAsArrayBuffer(file);
 }
@@ -5318,6 +5321,8 @@ function editorSetMode(mode){
 function setupEditor(){
   if(!editorEnabled) return;
   editorPanel.classList.add('show');
+  player.x=-13; player.z=5; player.y=0; player.xPrev=player.x; player.zPrev=player.z;
+  player.yaw=Math.PI; player.pitch=-0.42;
   editorBaseObjects=scene.children.slice();
   try{editorApplyLayout(JSON.parse(localStorage.getItem(EDITOR_STORAGE)));}catch(err){}
   editorRaycaster=new THREE.Raycaster(); editorPointer=new THREE.Vector2();
@@ -5339,8 +5344,8 @@ function setupEditor(){
   document.getElementById('editorSave').onclick=editorSave;
   document.getElementById('editorExport').onclick=editorDownload;
   document.getElementById('editorImport').onchange=e=>editorImport(e.target.files[0]);
-  document.getElementById('editorExit').onclick=()=>{editorActive=false;editorPanel.classList.remove('show');editorSelect(null);showToast('Editor closed. Reload with ?editor=1 to edit again.');};
-  showToast('Editor ready — click an object to edit it.');
+  document.getElementById('editorExit').onclick=()=>{editorActive=false;editorPanel.classList.remove('show');editorSelect(null);toast('Editor closed. Reload with ?editor=1 to edit again.');};
+  toast('Editor ready — click an object to edit it.');
 }
 setupEditor();
 

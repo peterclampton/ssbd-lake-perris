@@ -56,6 +56,11 @@
   .mobileAction:active{transform:scale(.94);background:rgba(48,92,126,.82);}
   .mobileAction.active{background:#8a3cc9;border-color:#fff;box-shadow:0 0 16px rgba(205,96,255,.7);}
   #rotateOverlay{display:none;position:fixed;inset:0;z-index:30;align-items:center;justify-content:center;flex-direction:column;background:linear-gradient(145deg,#183a61,#0b1c30);color:#fff;text-align:center;padding:28px;}
+  #editorPanel{display:none;position:fixed;z-index:50;top:16px;right:16px;width:248px;padding:14px;border:1px solid rgba(255,255,255,.26);border-radius:12px;background:rgba(11,20,34,.91);color:#eef5ff;font:12px/1.35 system-ui,sans-serif;box-shadow:0 12px 34px rgba(0,0,0,.34);backdrop-filter:blur(10px);}
+  #editorPanel.show{display:block;} #editorPanel h2{margin:0 0 5px;font-size:15px;letter-spacing:1px;} #editorPanel p{margin:0 0 10px;color:#b9cce0;}
+  #editorPanel .editorRow{display:flex;gap:6px;margin:7px 0;} #editorPanel button,#editorPanel label{flex:1;box-sizing:border-box;border:1px solid #6285a8;border-radius:6px;background:#1f3b59;color:#fff;padding:7px 6px;font:600 11px/1 system-ui,sans-serif;text-align:center;cursor:pointer;}
+  #editorPanel button:hover,#editorPanel label:hover{background:#2f5c87;} #editorPanel button.active{background:#d47e2e;border-color:#ffc276;} #editorPanel label input{display:none;}
+  #editorSelected{min-height:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#ffd18a;margin:8px 0 4px;}.editorHint{color:#9db4cc;font-size:10px;}
   #rotateIcon{font-size:52px;line-height:1;margin-bottom:18px;animation:rotateHint 1.8s ease-in-out infinite;}
   #rotateOverlay h2{margin:0 0 10px;font-size:21px;letter-spacing:2px;text-transform:uppercase;}
   #rotateOverlay p{margin:0;color:#bdd4ea;font-size:14px;line-height:1.5;}
@@ -66,6 +71,15 @@
 </head>
 <body>
 <div id="rotateOverlay"><div id="rotateIcon">↻</div><h2>Rotate your phone</h2><p>SSBD is built to explore in landscape.</p></div>
+<aside id="editorPanel" aria-label="Scene editor">
+  <h2>SCENE EDITOR</h2><p>Click an object, then use the handles.</p>
+  <div id="editorSelected">Nothing selected</div>
+  <div class="editorRow"><button data-mode="translate">Move</button><button data-mode="rotate">Rotate</button><button data-mode="scale">Scale</button></div>
+  <div class="editorRow"><button id="editorDuplicate">Duplicate</button><button id="editorDelete">Delete</button></div>
+  <div class="editorRow"><label>Import GLB<input id="editorImport" type="file" accept=".glb,model/gltf-binary"></label><button id="editorSave">Save</button></div>
+  <div class="editorRow"><button id="editorExport">Download layout</button><button id="editorExit">Exit editor</button></div>
+  <div class="editorHint">Editor is local to this browser. Open with <b>?editor=1</b>.</div>
+</aside>
 <div id="startOverlay">
   <h1>Same Same But Different</h1>
   <h2>Lake Perris &middot; Festival Day</h2>
@@ -89,6 +103,8 @@
   <div id="toast"></div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script>
 // ================= SETUP =================
 // PLAYER-RELATIVE TRUTH (facing the Same Stage from the lawn):
@@ -4807,7 +4823,7 @@ function animate(){
 
   const sailing = boatPhase !== 0;
   const inFlight = riding || rideY > 0.05;
-  const locked = inFlight || sailing;
+  const locked = inFlight || sailing || editorActive;
 
   if(!locked){
     const lookSpeed=1.65;
@@ -5210,6 +5226,123 @@ function updatePartyWorld(t,dt){
   });
   updateSSBDGradient(t);
 }
+
+// ================= OPTIONAL IN-BROWSER SCENE EDITOR =================
+// This is intentionally opt-in: append ?editor=1 to the URL. The festival
+// remains a clean, playable visitor experience by default.
+const editorPanel=document.getElementById('editorPanel');
+const editorEnabled=new URLSearchParams(location.search).get('editor')==='1';
+let editorActive=editorEnabled;
+let editorSelected=null;
+let editorBaseObjects=[];
+let editorControls=null;
+let editorRaycaster=null;
+let editorPointer=null;
+const editorImported=[];
+const EDITOR_STORAGE='ssbd-lake-perris-layout-v1';
+
+function editorObjectLabel(obj){
+  return obj.userData.editorName || obj.name || (obj.isGroup?'Group':obj.type.replace('Mesh',''));
+}
+function editorTopLevel(obj){
+  let top=obj;
+  while(top.parent && top.parent!==scene) top=top.parent;
+  return top.parent===scene ? top : null;
+}
+function editorSelect(obj){
+  editorSelected=obj || null;
+  if(editorControls) editorControls.detach();
+  if(editorSelected && editorControls) editorControls.attach(editorSelected);
+  document.getElementById('editorSelected').textContent=editorSelected ? editorObjectLabel(editorSelected) : 'Nothing selected';
+}
+function editorSnapshot(){
+  const records=[];
+  editorBaseObjects.forEach((obj,index)=>{
+    if(!obj.parent) return;
+    records.push({index,position:obj.position.toArray(),rotation:obj.rotation.toArray(),scale:obj.scale.toArray(),visible:obj.visible});
+  });
+  editorImported.forEach((obj,index)=>records.push({imported:index,name:obj.userData.editorName,position:obj.position.toArray(),rotation:obj.rotation.toArray(),scale:obj.scale.toArray(),visible:obj.visible}));
+  return {version:1,savedAt:new Date().toISOString(),objects:records};
+}
+function editorApplyLayout(layout){
+  if(!layout || !Array.isArray(layout.objects)) return;
+  layout.objects.forEach(record=>{
+    if(record.imported!==undefined) return;
+    const obj=editorBaseObjects[record.index];
+    if(!obj) return;
+    if(record.position) obj.position.fromArray(record.position);
+    if(record.rotation) obj.rotation.fromArray(record.rotation);
+    if(record.scale) obj.scale.fromArray(record.scale);
+    if(typeof record.visible==='boolean') obj.visible=record.visible;
+  });
+}
+function editorSave(){
+  try{localStorage.setItem(EDITOR_STORAGE,JSON.stringify(editorSnapshot()));showToast('Editor layout saved in this browser.');}
+  catch(err){showToast('Could not save layout: browser storage is full.');}
+}
+function editorDownload(){
+  const blob=new Blob([JSON.stringify(editorSnapshot(),null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='ssbd-lake-perris-layout.json'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+function editorDuplicate(){
+  if(!editorSelected) return;
+  const copy=editorSelected.clone(true);
+  copy.position.x+=2; copy.position.z+=2; copy.userData.editorName=`${editorObjectLabel(editorSelected)} copy`;
+  copy.userData.editorImported=true; scene.add(copy); editorImported.push(copy); editorSelect(copy); editorSave();
+}
+function editorDelete(){
+  if(!editorSelected) return;
+  editorSelected.parent.remove(editorSelected);
+  const i=editorImported.indexOf(editorSelected); if(i>=0) editorImported.splice(i,1);
+  editorSelect(null); editorSave();
+}
+function editorImport(file){
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    const loader=new THREE.GLTFLoader();
+    loader.parse(reader.result,'',gltf=>{
+      const model=gltf.scene || gltf.scenes[0];
+      model.userData.editorName=file.name.replace(/\.glb$/i,''); model.userData.editorImported=true;
+      model.position.set(player.x,0,player.z-5); model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
+      scene.add(model); editorImported.push(model); editorSelect(model); editorSave(); showToast(`Imported ${file.name}`);
+    },err=>{console.error(err);showToast('That GLB could not be loaded.');});
+  };
+  reader.readAsArrayBuffer(file);
+}
+function editorSetMode(mode){
+  editorControls.setMode(mode);
+  document.querySelectorAll('#editorPanel [data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
+}
+function setupEditor(){
+  if(!editorEnabled) return;
+  editorPanel.classList.add('show');
+  editorBaseObjects=scene.children.slice();
+  try{editorApplyLayout(JSON.parse(localStorage.getItem(EDITOR_STORAGE)));}catch(err){}
+  editorRaycaster=new THREE.Raycaster(); editorPointer=new THREE.Vector2();
+  editorControls=new THREE.TransformControls(camera,renderer.domElement);
+  editorControls.setSize(0.75); editorControls.addEventListener('dragging-changed',e=>{if(e.value) Object.keys(keys).forEach(k=>delete keys[k]); else editorSave();});
+  scene.add(editorControls);
+  editorSetMode('translate');
+  renderer.domElement.addEventListener('pointerdown',event=>{
+    if(!editorActive || event.button!==0 || editorControls.dragging) return;
+    const rect=renderer.domElement.getBoundingClientRect();
+    editorPointer.set(((event.clientX-rect.left)/rect.width)*2-1,-((event.clientY-rect.top)/rect.height)*2+1);
+    editorRaycaster.setFromCamera(editorPointer,camera);
+    const hit=editorRaycaster.intersectObjects(scene.children,true).find(h=>h.object!==editorControls && !h.object.isTransformControls);
+    if(hit){const target=editorTopLevel(hit.object); if(target && target!==editorControls) editorSelect(target);}
+  });
+  document.querySelectorAll('#editorPanel [data-mode]').forEach(b=>b.onclick=()=>editorSetMode(b.dataset.mode));
+  document.getElementById('editorDuplicate').onclick=editorDuplicate;
+  document.getElementById('editorDelete').onclick=editorDelete;
+  document.getElementById('editorSave').onclick=editorSave;
+  document.getElementById('editorExport').onclick=editorDownload;
+  document.getElementById('editorImport').onchange=e=>editorImport(e.target.files[0]);
+  document.getElementById('editorExit').onclick=()=>{editorActive=false;editorPanel.classList.remove('show');editorSelect(null);showToast('Editor closed. Reload with ?editor=1 to edit again.');};
+  showToast('Editor ready — click an object to edit it.');
+}
+setupEditor();
 
 animate();
 </script>

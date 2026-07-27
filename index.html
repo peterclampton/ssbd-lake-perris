@@ -75,7 +75,7 @@
   <h2>SCENE EDITOR</h2><p>Click an object, then use the handles.</p>
   <div id="editorSelected">Nothing selected</div>
   <div class="editorRow"><button data-mode="translate">Move</button><button data-mode="rotate">Rotate</button><button data-mode="scale">Scale</button></div>
-  <div class="editorRow"><button id="editorDuplicate">Duplicate</button><button id="editorDelete">Delete</button></div>
+  <div class="editorRow"><button id="editorUndo" disabled>Undo</button><button id="editorDuplicate" disabled>Duplicate</button><button id="editorDelete" disabled>Delete</button></div>
   <div class="editorRow"><label>Import GLB<input id="editorImport" type="file" accept=".glb,model/gltf-binary"></label><button id="editorSave">Save</button></div>
   <div class="editorRow"><button id="editorExport">Download layout</button><button id="editorExit">Exit editor</button></div>
   <div class="editorHint">WASD moves · arrows/mouse looks · Q/F up/down. Open with <b>?editor=1</b>.</div>
@@ -5255,6 +5255,8 @@ let editorPointer=null;
 let editorHeight=28;
 const editorImported=[];
 const EDITOR_STORAGE='ssbd-lake-perris-layout-v1';
+const editorUndoStack=[];
+let editorTransformStart=null;
 
 function editorObjectLabel(obj){
   return obj.userData.editorName || obj.name || (obj.isGroup?'Group':obj.type.replace('Mesh',''));
@@ -5269,6 +5271,20 @@ function editorSelect(obj){
   if(editorControls) editorControls.detach();
   if(editorSelected && editorControls) editorControls.attach(editorSelected);
   document.getElementById('editorSelected').textContent=editorSelected ? editorObjectLabel(editorSelected) : 'Nothing selected';
+  document.getElementById('editorDuplicate').disabled=!editorSelected;
+  document.getElementById('editorDelete').disabled=!editorSelected;
+}
+function editorState(obj){return {position:obj.position.toArray(),rotation:obj.rotation.toArray(),scale:obj.scale.toArray(),visible:obj.visible};}
+function editorRestore(obj,state){obj.position.fromArray(state.position);obj.rotation.fromArray(state.rotation);obj.scale.fromArray(state.scale);obj.visible=state.visible;}
+function editorStatesDiffer(a,b){return JSON.stringify(a)!==JSON.stringify(b);}
+function editorPushUndo(entry){editorUndoStack.push(entry);document.getElementById('editorUndo').disabled=false;}
+function editorUndo(){
+  const entry=editorUndoStack.pop(); if(!entry) return;
+  if(entry.type==='transform') editorRestore(entry.obj,entry.before);
+  if(entry.type==='remove'){entry.obj.parent&&entry.obj.parent.remove(entry.obj); if(editorSelected===entry.obj) editorSelect(null);}
+  if(entry.type==='add'){entry.parent.add(entry.obj); editorSelect(entry.obj);}
+  document.getElementById('editorUndo').disabled=!editorUndoStack.length;
+  editorSave();
 }
 function editorSnapshot(){
   const records=[];
@@ -5276,7 +5292,7 @@ function editorSnapshot(){
     if(!obj.parent) return;
     records.push({index,position:obj.position.toArray(),rotation:obj.rotation.toArray(),scale:obj.scale.toArray(),visible:obj.visible});
   });
-  editorImported.forEach((obj,index)=>records.push({imported:index,name:obj.userData.editorName,position:obj.position.toArray(),rotation:obj.rotation.toArray(),scale:obj.scale.toArray(),visible:obj.visible}));
+  editorImported.filter(obj=>obj.parent).forEach((obj,index)=>records.push({imported:index,name:obj.userData.editorName,position:obj.position.toArray(),rotation:obj.rotation.toArray(),scale:obj.scale.toArray(),visible:obj.visible}));
   return {version:1,savedAt:new Date().toISOString(),objects:records};
 }
 function editorApplyLayout(layout){
@@ -5304,12 +5320,13 @@ function editorDuplicate(){
   if(!editorSelected) return;
   const copy=editorSelected.clone(true);
   copy.position.x+=2; copy.position.z+=2; copy.userData.editorName=`${editorObjectLabel(editorSelected)} copy`;
-  copy.userData.editorImported=true; scene.add(copy); editorImported.push(copy); editorSelect(copy); editorSave();
+  copy.userData.editorImported=true; scene.add(copy); editorImported.push(copy); editorPushUndo({type:'remove',obj:copy}); editorSelect(copy); editorSave();
 }
 function editorDelete(){
   if(!editorSelected) return;
-  editorSelected.parent.remove(editorSelected);
-  const i=editorImported.indexOf(editorSelected); if(i>=0) editorImported.splice(i,1);
+  const removed=editorSelected, parent=removed.parent;
+  editorPushUndo({type:'add',obj:removed,parent});
+  parent.remove(removed);
   editorSelect(null); editorSave();
 }
 function editorImport(file){
@@ -5321,7 +5338,7 @@ function editorImport(file){
       const model=gltf.scene || gltf.scenes[0];
       model.userData.editorName=file.name.replace(/\.glb$/i,''); model.userData.editorImported=true;
       model.position.set(player.x,0,player.z-5); model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
-      scene.add(model); editorImported.push(model); editorSelect(model); editorSave(); toast(`Imported ${file.name}`);
+      scene.add(model); editorImported.push(model); editorPushUndo({type:'remove',obj:model}); editorSelect(model); editorSave(); toast(`Imported ${file.name}`);
     },err=>{console.error(err);toast('That GLB could not be loaded.');});
   };
   reader.readAsArrayBuffer(file);
@@ -5339,7 +5356,10 @@ function setupEditor(){
   try{editorApplyLayout(JSON.parse(localStorage.getItem(EDITOR_STORAGE)));}catch(err){}
   editorRaycaster=new THREE.Raycaster(); editorPointer=new THREE.Vector2();
   editorControls=new THREE.TransformControls(camera,renderer.domElement);
-  editorControls.setSize(0.75); editorControls.addEventListener('dragging-changed',e=>{if(e.value) Object.keys(keys).forEach(k=>delete keys[k]); else editorSave();});
+  editorControls.setSize(0.75); editorControls.addEventListener('dragging-changed',e=>{
+    if(e.value){Object.keys(keys).forEach(k=>delete keys[k]); editorTransformStart=editorSelected?editorState(editorSelected):null;}
+    else if(editorSelected && editorTransformStart){if(editorStatesDiffer(editorTransformStart,editorState(editorSelected))) editorPushUndo({type:'transform',obj:editorSelected,before:editorTransformStart});editorTransformStart=null;editorSave();}
+  });
   scene.add(editorControls);
   editorSetMode('translate');
   renderer.domElement.addEventListener('pointerdown',event=>{
@@ -5350,7 +5370,9 @@ function setupEditor(){
     const hit=editorRaycaster.intersectObjects(scene.children,true).find(h=>h.object!==editorControls && !h.object.isTransformControls);
     if(hit){const target=editorTopLevel(hit.object); if(target && target!==editorControls) editorSelect(target);}
   });
-  document.querySelectorAll('#editorPanel [data-mode]').forEach(b=>b.onclick=()=>editorSetMode(b.dataset.mode));
+  document.querySelectorAll('#editorPanel button').forEach(b=>b.addEventListener('pointerdown',e=>e.stopPropagation()));
+  document.querySelectorAll('#editorPanel [data-mode]').forEach(b=>b.onclick=e=>{e.preventDefault();editorSetMode(b.dataset.mode);});
+  document.getElementById('editorUndo').onclick=editorUndo;
   document.getElementById('editorDuplicate').onclick=editorDuplicate;
   document.getElementById('editorDelete').onclick=editorDelete;
   document.getElementById('editorSave').onclick=editorSave;

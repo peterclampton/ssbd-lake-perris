@@ -78,7 +78,7 @@
   <div class="editorRow"><button id="editorDuplicate">Duplicate</button><button id="editorDelete">Delete</button></div>
   <div class="editorRow"><label>Import GLB<input id="editorImport" type="file" accept=".glb,model/gltf-binary"></label><button id="editorSave">Save</button></div>
   <div class="editorRow"><button id="editorExport">Download layout</button><button id="editorExit">Exit editor</button></div>
-  <div class="editorHint">Editor is local to this browser. Open with <b>?editor=1</b>.</div>
+  <div class="editorHint">WASD moves · arrows/mouse looks · Q/F up/down. Open with <b>?editor=1</b>.</div>
 </aside>
 <div id="startOverlay">
   <h1>Same Same But Different</h1>
@@ -4841,7 +4841,14 @@ function animate(){
   fx += mobileMove.x;
   fz += mobileMove.y;
   const run = keys['ShiftLeft']||keys['ShiftRight'] ? 1.7 : 1;
-  if((fx||fz) && !locked && !editorActive){
+  if((fx||fz) && editorActive){
+    const len=Math.hypot(fx,fz); fx/=len; fz/=len;
+    const s=Math.sin(player.yaw), c=Math.cos(player.yaw), speed=26*dt;
+    player.x+=(-s*fz+c*fx)*speed;
+    player.z+=(-c*fz-s*fx)*speed;
+    player.x=Math.max(-340,Math.min(340,player.x));
+    player.z=Math.max(-340,Math.min(240,player.z));
+  } else if((fx||fz) && !locked){
     const len = Math.hypot(fx,fz); fx/=len; fz/=len;
     const s = Math.sin(player.yaw), c = Math.cos(player.yaw);
     const mx = ( -s*fz + c*fx );
@@ -4859,6 +4866,10 @@ function animate(){
   if(!riding && rideY < 0.05) rideY = Math.max(0, rideY);
 
   const moving = (fx||fz) ? 1 : 0;
+  if(editorActive){
+    if(keys['KeyQ']) editorHeight=Math.min(160,editorHeight+22*dt);
+    if(keys['KeyF']) editorHeight=Math.max(2,editorHeight-22*dt);
+  }
   let groundH = 0;
   if(onDock(player.x, player.z) || onIslandDock(player.x, player.z)) groundH = 0.75;
   else if(distToIsland(player.x, player.z) < 53) groundH = 2.25;
@@ -4885,7 +4896,7 @@ function animate(){
     camera.position.set(pontoon.position.x, pontoon.position.y + 2.6, pontoon.position.z);
   } else if(editorActive){
     // Editor starts above the central lawn, looking toward the Same Stage.
-    camera.position.set(player.x, 28, player.z);
+    camera.position.set(player.x, editorHeight, player.z);
   } else {
     const bob = player.grounded ? Math.sin(t*10*run)*0.05*moving : 0;
     camera.position.set(player.x, 1.7 + player.y + bob, player.z);
@@ -5241,6 +5252,7 @@ let editorBaseObjects=[];
 let editorControls=null;
 let editorRaycaster=null;
 let editorPointer=null;
+let editorHeight=28;
 const editorImported=[];
 const EDITOR_STORAGE='ssbd-lake-perris-layout-v1';
 

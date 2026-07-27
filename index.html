@@ -5248,6 +5248,9 @@ function updatePartyWorld(t,dt){
 // remains a clean, playable visitor experience by default.
 const editorPanel=document.getElementById('editorPanel');
 const editorEnabled=new URLSearchParams(location.search).get('editor')==='1';
+// Private Unreal comparison mode. This deliberately draws only lightweight
+// proxies from the Unreal export; it never changes the public web layout.
+const unrealPreviewEnabled=new URLSearchParams(location.search).get('unrealPreview')==='1';
 let editorActive=editorEnabled;
 let editorSelected=null;
 let editorBaseObjects=[];
@@ -5266,6 +5269,54 @@ const loadedPublishedImports=new Set();
 const EDITOR_STORAGE='ssbd-lake-perris-layout-v1';
 const editorUndoStack=[];
 let editorTransformStart=null;
+
+function unrealPreviewColor(actor){
+  const text=`${actor.name||''} ${(actor.staticMeshes||[]).map(m=>m.asset||'').join(' ')}`.toLowerCase();
+  if(/same.?stage|but.?stage|stage/.test(text)) return new THREE.Color(0xffb347);
+  if(/fence|barricade|gate/.test(text)) return new THREE.Color(0xb86cff);
+  if(/tent|canopy|shade/.test(text)) return new THREE.Color(0x47d9e8);
+  if(/bar|food|vendor/.test(text)) return new THREE.Color(0xff7da8);
+  return new THREE.Color(0x80ed99);
+}
+function unrealPreviewLabel(text,position,color){
+  const canvas=document.createElement('canvas'); canvas.width=512; canvas.height=96;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='rgba(7,14,28,.84)'; ctx.fillRect(0,0,512,96);
+  ctx.strokeStyle='#ffffff'; ctx.lineWidth=3; ctx.strokeRect(2,2,508,92);
+  ctx.fillStyle=color; ctx.font='700 38px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(text,256,48);
+  const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(canvas),depthTest:false,transparent:true}));
+  sprite.position.copy(position); sprite.position.y+=7; sprite.scale.set(18,3.4,1); return sprite;
+}
+function loadUnrealPreview(){
+  if(!unrealPreviewEnabled) return;
+  fetch('unreal-web-preview.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(manifest=>{
+    const actors=(manifest&&manifest.actors||[]).filter(actor=>actor.visible!==false && actor.web && Array.isArray(actor.staticMeshes) && actor.staticMeshes.length);
+    if(!actors.length) throw new Error('No exported mesh actors');
+    const geometry=new THREE.BoxGeometry(0.8,0.8,0.8);
+    const material=new THREE.MeshBasicMaterial({vertexColors:true,transparent:true,opacity:0.68,depthWrite:false});
+    const proxies=new THREE.InstancedMesh(geometry,material,actors.length);
+    const matrix=new THREE.Matrix4(), color=new THREE.Color();
+    actors.forEach((actor,index)=>{
+      const [x,y,z]=actor.web.position;
+      const height=Math.max(0.35,Math.min(5,0.6+Math.abs(y)*0.15));
+      matrix.compose(new THREE.Vector3(x,Math.max(0.4,y)+height/2,z),new THREE.Quaternion().setFromEuler(new THREE.Euler(0,actor.web.rotationYRadians||0,0)),new THREE.Vector3(1.1,height,1.1));
+      proxies.setMatrixAt(index,matrix); proxies.setColorAt(index,unrealPreviewColor(actor));
+    });
+    proxies.instanceMatrix.needsUpdate=true; if(proxies.instanceColor) proxies.instanceColor.needsUpdate=true;
+    proxies.name='Unreal calibrated preview proxies'; scene.add(proxies);
+    const labels=[
+      ['Same Stage','Same_Stage_4_29_26__REVIEW_','#ffd166'],
+      ['But Stage · Cube78','Cube78','#ffd166'],
+      ['Coconut Cove','cococove_single','#ffd166']
+    ];
+    labels.forEach(([label,name,color])=>{
+      const actor=actors.find(a=>a.name===name); if(!actor) return;
+      const [x,y,z]=actor.web.position; scene.add(unrealPreviewLabel(label,new THREE.Vector3(x,Math.max(0,y),z),color));
+    });
+    toast(`UNREAL PREVIEW — ${actors.length.toLocaleString()} calibrated actor proxies. Public layout unchanged.`);
+  }).catch(error=>{console.error('Unreal preview failed',error);toast('Could not load Unreal preview.');});
+}
 
 function editorObjectLabel(obj){
   return obj.userData.editorName || obj.name || (obj.isGroup?'Group':obj.type.replace('Mesh',''));
@@ -5450,6 +5501,7 @@ function setupEditor(){
   document.getElementById('editorExit').onclick=()=>{editorActive=false;editorPanel.classList.remove('show');editorSelect(null);toast('Editor closed. Reload with ?editor=1 to edit again.');};
   toast('Editor ready — click an object to edit it.');
 }
+loadUnrealPreview();
 setupEditor();
 
 animate();

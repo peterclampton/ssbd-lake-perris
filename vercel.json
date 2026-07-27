@@ -1,5 +1,0 @@
-{
-  "functions": {
-    "api/publish.js": { "maxDuration": 10 }
-  }
-}

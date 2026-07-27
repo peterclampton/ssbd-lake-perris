@@ -48,6 +48,14 @@
     background-size:500% 100%;animation:partyButton 2.4s linear infinite;
     box-shadow:0 0 18px rgba(228,59,54,.38);}
   @keyframes partyButton{to{background-position:500% 0}}
+  #mobileControls{display:none;position:fixed;inset:0;z-index:12;pointer-events:none;touch-action:none;}
+  #movePad{position:absolute;left:max(20px,env(safe-area-inset-left));bottom:max(24px,env(safe-area-inset-bottom));width:132px;height:132px;border-radius:50%;background:rgba(18,32,51,.30);border:1px solid rgba(255,255,255,.38);box-shadow:0 3px 18px rgba(0,0,0,.2);pointer-events:auto;}
+  #moveKnob{position:absolute;left:36px;top:36px;width:58px;height:58px;border-radius:50%;background:rgba(255,255,255,.67);border:1px solid rgba(16,30,46,.35);}
+  #mobileActions{position:absolute;right:max(18px,env(safe-area-inset-right));bottom:max(24px,env(safe-area-inset-bottom));display:grid;grid-template-columns:70px 70px;gap:10px;pointer-events:auto;}
+  .mobileAction{height:58px;border:1px solid rgba(255,255,255,.58);border-radius:16px;background:rgba(20,35,55,.55);color:#fff;font:700 12px/1 system-ui,sans-serif;letter-spacing:.4px;text-shadow:0 1px 2px #000;}
+  .mobileAction:active{transform:scale(.94);background:rgba(48,92,126,.82);}
+  .mobileAction.active{background:#8a3cc9;border-color:#fff;box-shadow:0 0 16px rgba(205,96,255,.7);}
+  @media (pointer:coarse){#mobileControls{display:block;}#controls{display:none;}#partyBtn,#respawnBtn{display:none;}#title{top:max(14px,env(safe-area-inset-top));left:16px;}#title h1{font-size:14px;}#title p{font-size:10px;}#startOverlay h1{font-size:26px;letter-spacing:4px;text-align:center;padding:0 18px;}#startOverlay h2{font-size:11px;letter-spacing:2px;text-align:center;}#startOverlay p{font-size:12px;line-height:1.6;text-align:center;padding:0 28px;}}
 </style>
 </head>
 <body>
@@ -64,6 +72,13 @@
   <div id="controls"><span>W A S D</span>move &nbsp;<span>Arrow keys</span>look &nbsp;<span>Space</span>jump &nbsp;<span>Shift</span>run &nbsp;<span>E</span>interact &nbsp;<span>L</span>party mode &nbsp;<span>R</span>respawn &nbsp;<span>Esc</span>release mouse</div>
   <button id="partyBtn" type="button" aria-label="Toggle party mode">L · Party Mode</button>
   <button id="respawnBtn" type="button" aria-label="Respawn at the East Entrance">Respawn</button>
+  <div id="mobileControls" aria-label="Touch controls">
+    <div id="movePad" aria-label="Move"><div id="moveKnob"></div></div>
+    <div id="mobileActions">
+      <button class="mobileAction" id="mobileInteract" type="button">INTERACT</button><button class="mobileAction" id="mobileJump" type="button">JUMP</button>
+      <button class="mobileAction" id="mobileParty" type="button">PARTY</button><button class="mobileAction" id="mobileRespawn" type="button">RESPAWN</button>
+    </div>
+  </div>
   <div id="toast"></div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -73,18 +88,19 @@
 //   stage = ahead (+z) · Butwood = LEFT (+x) · entrance/food/Innerspace = RIGHT (-x)
 //   beach/Coco Cove/island = BEHIND (-z)
 const scene = new THREE.Scene();
+const isTouchDevice = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
 scene.background = new THREE.Color(0x8ec8f7);
 scene.fog = new THREE.FogExp2(0xcfe3f2, 0.0026);
 
 const camera = new THREE.PerspectiveCamera(72, innerWidth/innerHeight, 0.1, 1600);
 const renderer = new THREE.WebGLRenderer({antialias:true, powerPreference:'high-performance'});
 renderer.setSize(innerWidth, innerHeight);
-renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setPixelRatio(Math.min(devicePixelRatio,isTouchDevice ? 1.25 : 2));
 renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.08;
 renderer.physicallyCorrectLights = true;
-renderer.shadowMap.enabled = true;
+renderer.shadowMap.enabled = !isTouchDevice;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.body.appendChild(renderer.domElement);
 
@@ -4585,6 +4601,7 @@ function respawnPlayer(){
 function togglePartyMode(force){
   partyMode = typeof force === 'boolean' ? force : !partyMode;
   partyBtn.classList.toggle('active',partyMode);
+  if(window.mobilePartyBtn) mobilePartyBtn.classList.toggle('active',partyMode);
   partyBtn.textContent = partyMode ? 'L · Party On' : 'L · Party Mode';
   partyBtn.setAttribute('aria-pressed',partyMode?'true':'false');
   toast(partyMode
@@ -4597,16 +4614,16 @@ addEventListener('keydown', e=>{
   if(e.code==='KeyE') tryInteract();
   if(e.code==='KeyL' && !e.repeat) togglePartyMode();
   if(e.code==='KeyR') respawnPlayer();
-  if(e.code==='Space'){
-    e.preventDefault();
-    if(started && player.grounded && !riding && rideY < 0.5){ player.vy = 5.6; player.grounded = false; }
-  }
+  if(e.code==='Space'){ e.preventDefault(); doJump(); }
 });
 addEventListener('keyup', e=> keys[e.code]=false);
 
 const overlay = document.getElementById('startOverlay');
 const respawnBtn = document.getElementById('respawnBtn');
 const partyBtn = document.getElementById('partyBtn');
+function doJump(){
+  if(started && player.grounded && !riding && rideY < 0.5){ player.vy = 5.6; player.grounded = false; }
+}
 respawnBtn.addEventListener('pointerdown',e=>e.stopPropagation());
 respawnBtn.addEventListener('mousedown',e=>e.stopPropagation());
 respawnBtn.addEventListener('click',e=>{ e.stopPropagation(); respawnPlayer(); });
@@ -4621,6 +4638,7 @@ function startGame(){
 }
 overlay.addEventListener('click', ()=>{
   startGame();
+  if(isTouchDevice){ toast('Left thumb moves · drag the right side to look'); return; }
   try{
     const p = renderer.domElement.requestPointerLock();
     if(p && p.catch) p.catch(()=>{ dragLook = true; toast("Mouse capture blocked — click & drag to look around"); });
@@ -4646,6 +4664,45 @@ addEventListener('mousemove', e=>{
   player.pitch = Math.max(-1.35, Math.min(1.35, player.pitch));
 });
 renderer.domElement.setAttribute('tabindex','0');
+
+// Touch controls: left joystick moves, any free screen space swipes the camera.
+const mobileMove = {x:0,y:0};
+const movePad = document.getElementById('movePad');
+const moveKnob = document.getElementById('moveKnob');
+const mobilePartyBtn = document.getElementById('mobileParty');
+window.mobilePartyBtn = mobilePartyBtn;
+let padTouchId = null, lookTouchId = null, lastLookX = 0, lastLookY = 0, lastMobileTap = 0;
+function setPadFromTouch(t){
+  const r=movePad.getBoundingClientRect(), cx=r.left+r.width/2, cy=r.top+r.height/2;
+  let dx=t.clientX-cx, dy=t.clientY-cy; const max=42, d=Math.hypot(dx,dy);
+  if(d>max){ dx*=max/d; dy*=max/d; }
+  moveKnob.style.transform=`translate(${dx}px,${dy}px)`;
+  mobileMove.x=dx/max; mobileMove.y=-dy/max;
+}
+function resetPad(){ padTouchId=null; mobileMove.x=0; mobileMove.y=0; moveKnob.style.transform='translate(0,0)'; }
+movePad.addEventListener('touchstart',e=>{ const t=e.changedTouches[0]; padTouchId=t.identifier; setPadFromTouch(t); e.preventDefault(); },{passive:false});
+movePad.addEventListener('touchmove',e=>{ for(const t of e.changedTouches) if(t.identifier===padTouchId) setPadFromTouch(t); e.preventDefault(); },{passive:false});
+movePad.addEventListener('touchend',e=>{ for(const t of e.changedTouches) if(t.identifier===padTouchId) resetPad(); },{passive:false});
+movePad.addEventListener('touchcancel',resetPad,{passive:true});
+function mobileButton(id, fn){
+  const el=document.getElementById(id); el.addEventListener('touchstart',e=>{ lastMobileTap=Date.now(); e.preventDefault(); e.stopPropagation(); fn(); },{passive:false});
+  el.addEventListener('click',e=>{ e.preventDefault(); e.stopPropagation(); if(Date.now()-lastMobileTap>600) fn(); });
+}
+mobileButton('mobileInteract',tryInteract); mobileButton('mobileJump',doJump);
+mobileButton('mobileParty',togglePartyMode); mobileButton('mobileRespawn',respawnPlayer);
+renderer.domElement.addEventListener('touchstart',e=>{
+  if(!isTouchDevice || !started || e.touches.length!==1) return;
+  const t=e.touches[0]; lookTouchId=t.identifier; lastLookX=t.clientX; lastLookY=t.clientY; e.preventDefault();
+},{passive:false});
+renderer.domElement.addEventListener('touchmove',e=>{
+  if(!isTouchDevice || lookTouchId===null) return;
+  for(const t of e.touches) if(t.identifier===lookTouchId){
+    player.yaw-=(t.clientX-lastLookX)*0.008; player.pitch-=(t.clientY-lastLookY)*0.008;
+    player.pitch=Math.max(-1.35,Math.min(1.35,player.pitch)); lastLookX=t.clientX; lastLookY=t.clientY; e.preventDefault(); break;
+  }
+},{passive:false});
+renderer.domElement.addEventListener('touchend',e=>{ for(const t of e.changedTouches) if(t.identifier===lookTouchId) lookTouchId=null; },{passive:true});
+renderer.domElement.addEventListener('touchcancel',()=>lookTouchId=null,{passive:true});
 
 const promptEl = document.getElementById('prompt');
 let nearInteract = null;
@@ -4758,6 +4815,8 @@ function animate(){
   if(keys['KeyS']) fz -= 1;
   if(keys['KeyA']) fx -= 1;
   if(keys['KeyD']) fx += 1;
+  fx += mobileMove.x;
+  fz += mobileMove.y;
   const run = keys['ShiftLeft']||keys['ShiftRight'] ? 1.7 : 1;
   if((fx||fz) && !locked){
     const len = Math.hypot(fx,fz); fx/=len; fz/=len;

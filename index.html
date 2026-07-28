@@ -5540,6 +5540,41 @@ function addDirectFenceSegment(parent,start,end,color){
   // Exported spline endpoints are authoritative and frequently span 10–20m.
   return addContinuousFenceSegment(parent,a,b,color,60);
 }
+function rotateVectorByQuaternion(vector,quaternion){
+  const [x,y,z]=vector,[qx,qy,qz,qw]=quaternion||[0,0,0,1];
+  const ix=qw*x+qy*z-qz*y, iy=qw*y+qz*x-qx*z, iz=qw*z+qx*y-qy*x, iw=-qx*x-qy*y-qz*z;
+  return [
+    ix*qw+iw*-qx+iy*-qz-iz*-qy,
+    iy*qw+iw*-qy+iz*-qx-ix*-qz,
+    iz*qw+iw*-qz+ix*-qy-iy*-qx
+  ];
+}
+function componentFenceEndpointsWeb(component,manifest){
+  const bounds=component?.staticMesh?.localBounds, transform=component?.worldTransform;
+  if(!bounds?.minCm||!bounds?.maxCm||!transform?.locationCm) return null;
+  const min=bounds.minCm,max=bounds.maxCm,size=bounds.sizeCm||max.map((v,i)=>v-min[i]);
+  // Fence meshes are long along local X or Y. Reconstruct the centerline in
+  // local space, then apply the component's real scale + quaternion. World
+  // AABBs and actor yaw cannot recover this after a panel has been rotated.
+  const axis=size[0]>=size[1]?0:1, center=min.map((v,i)=>(v+max[i])/2);
+  const localA=[...center],localB=[...center]; localA[axis]=min[axis];localB[axis]=max[axis];
+  const scale=transform.scale||[1,1,1],toWorld=local=>{
+    const rotated=rotateVectorByQuaternion(local.map((v,i)=>v*scale[i]),transform.rotationQuaternion);
+    return rotated.map((v,i)=>v+transform.locationCm[i]);
+  };
+  const a=unrealCmToWeb(toWorld(localA),manifest),b=unrealCmToWeb(toWorld(localB),manifest);
+  if(!a||!b||Math.hypot(b[0]-a[0],b[2]-a[2])<.08) return null;
+  return [a,b];
+}
+function addActorFenceComponents(parent,actor,manifest){
+  let rendered=0;
+  const components=(actor.components||[]).filter(component=>component.staticMesh&&component.visible!==false);
+  components.forEach(component=>{
+    const endpoints=componentFenceEndpointsWeb(component,manifest);
+    if(endpoints&&addDirectFenceSegment(parent,endpoints[0],endpoints[1],unrealKindColor('fence'))) rendered++;
+  });
+  return rendered;
+}
 function unrealCmToWeb(locationCm,manifest){
   const same=manifest?.anchors?.sameStage;
   if(!same || !locationCm) return null;
@@ -5591,17 +5626,6 @@ function addExportedInstances(parent,manifest){
     });
   }));
   return count;
-}
-function addActorScrimPanel(parent,actor){
-  const [x,,z]=actor.web.position, [w,d]=actorFootprintWeb(actor);
-  // The exported actor yaw is authoritative. Bounds choose only the panel
-  // length; never rotate toward a guessed neighboring actor.
-  const length=Math.max(w,d), group=new THREE.Group();
-  const black=new THREE.MeshStandardMaterial({color:0x050505,roughness:1,side:THREE.DoubleSide});
-  const steel=new THREE.MeshStandardMaterial({color:0x202328,roughness:.75,metalness:.35});
-  const wall=new THREE.Mesh(new THREE.BoxGeometry(length,1.8288,.065),black); wall.position.y=.9144; group.add(wall);
-  [-length/2,length/2].forEach(px=>{const post=new THREE.Mesh(new THREE.BoxGeometry(.09,1.95,.09),steel);post.position.set(px,.975,0);group.add(post);});
-  group.position.set(x,0,z); group.rotation.y=actor.web.rotationYRadians||0; parent.add(group); return true;
 }
 function addExportedSplineFence(parent,actor){
   const splineData=actor.webSplines||{}, connected=false;
@@ -5668,15 +5692,14 @@ function loadFreshUnrealMap(){
     fenceActors.forEach(actor=>{
       if(addExportedSplineFence(layer,actor)) fenceActorsWithConnections.add(actor);
     });
-    // Standalone scrim actors carry their own authoritative rotation and
-    // world bounds. Render each panel directly; neighbor-based rotation was
-    // the source of the broken/zig-zag fence lines.
+    // Standalone fence actors are reconstructed from each mesh component's
+    // local long axis, world scale and quaternion. This produces the actual
+    // two endpoints; actor yaw plus a world AABB produced rotated, gapped runs.
     const scrimActors=fenceActors.filter(actor=>!fenceActorsWithConnections.has(actor)&&/scrim/i.test(unrealPreviewText(actor)));
-    scrimActors.forEach(actor=>{if(addActorScrimPanel(layer,actor)) fenceActorsWithConnections.add(actor);});
-    // The remaining standalone fence actors also keep their own exported yaw.
-    // Numeric suffixes are identifiers, not a safe ordering signal.
+    scrimActors.forEach(actor=>{if(addActorFenceComponents(layer,actor,manifest)) fenceActorsWithConnections.add(actor);});
+    // Use the same component-endpoint reconstruction for all remaining panels.
     fenceActors.filter(actor=>!fenceActorsWithConnections.has(actor)).forEach(actor=>{
-      if(addActorScrimPanel(layer,actor)) fenceActorsWithConnections.add(actor);
+      if(addActorFenceComponents(layer,actor,manifest)) fenceActorsWithConnections.add(actor);
     });
     actors.forEach(actor=>{
       const kind=unrealFreshKind(actor), [x,,z]=actor.web.position;

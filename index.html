@@ -5373,7 +5373,7 @@ function loadFreshUnrealMap(){
       layer.add(proxy); counts[kind]=(counts[kind]||0)+1;
     });
     scene.add(layer);
-    [['SAME STAGE','Same_Stage_4_29_26__REVIEW_'],['BUT STAGE','Cube78'],['COCONUT COVE','cococove_single'],['LIMITLESS','Limitless_Platform']]
+    [['SAME STAGE','Same_Stage_4_29_26__REVIEW_'],['BUT STAGE','Different-But_Stage_2023_v1'],['COCONUT COVE','cococove_single'],['LIMITLESS','Limitless_Platform']]
       .forEach(([label,name])=>{const a=(manifest.actors||[]).find(actor=>actor.name===name);if(a?.web){const [x,,z]=a.web.position;scene.add(unrealPreviewLabel(label,new THREE.Vector3(x,0,z),'#fff1a8'));}});
     const summary=Object.entries(counts).map(([kind,count])=>`${count} ${kind}`).join(' · ');
     toast(`FRESH UNREAL MAP — ${summary}. Legacy festival objects are hidden.`);

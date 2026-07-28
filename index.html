@@ -5278,10 +5278,10 @@ function unrealPreviewKind(actor){
   const text=unrealPreviewText(actor);
   // Never use a bare "stage" substring: it accidentally matches Landscape.
   if(/same_stage|different-but|cococove|cube78|\bstage\d*\b|stage\.stage|dj.?booth|stagespeaker/.test(text)) return 'stage';
-  if(/fenceline|\bfence\b|fence_|fence00|barricade|\bgate\b|velvet.?rope/.test(text)) return 'fence';
+  if(/fenceline|\bfence\b|fence_|fence00|4footfence|barricade|\bgate\b|velvet.?rope/.test(text)) return 'fence';
   if(/whitetent|gazebo|\btent\b|canopy|awning|shade/.test(text)) return 'tent';
-  if(/foodstall|food.?truck|foodcart|\bbar\b|vendor|concession/.test(text)) return 'food';
-  if(/portable.?restroom|porta.?potty|\btoilet\b/.test(text)) return 'toilet';
+  if(/foodstall|food.?truck|foodcart|\bbartop\b|\bbar\b|vendor|concession/.test(text)) return 'food';
+  if(/portable.?restroom|porta.?potty|\btoilet\b|\bbathrooms?\b/.test(text)) return 'toilet';
   if(/container|trailer|scaffold|\btower\b|\bbuilding\b|\bhouse\b/.test(text)) return 'structure';
   return null;
 }
@@ -5331,8 +5331,10 @@ function loadUnrealPreview(){
       const layer=new THREE.Group(); layer.name='Unreal calibrated asset proxy preview';
       const counts={};
       actors.forEach(actor=>{
-        const [x,y,z]=actor.web.position, kind=unrealPreviewKind(actor), proxy=unrealProxyShape(kind,unrealPreviewColor(actor));
-        proxy.position.set(x,Math.max(0,y),z); proxy.rotation.y=actor.web.rotationYRadians||0;
+        const [x,,z]=actor.web.position, kind=unrealPreviewKind(actor), proxy=unrealProxyShape(kind,unrealPreviewColor(actor));
+        // Unreal Z is intentionally discarded.  The exported X/Y map position
+        // is calibrated, but its elevation is not comparable to the web terrain.
+        proxy.position.set(x,0,z); proxy.rotation.y=actor.web.rotationYRadians||0;
         // Unreal's actor scale is not exported yet, so deliberately keep a
         // consistent readable proxy scale instead of inventing dimensions.
         layer.add(proxy); counts[kind]=(counts[kind]||0)+1;
@@ -5343,7 +5345,7 @@ function loadUnrealPreview(){
         ['But Stage · Cube78','Cube78','#ffd166'],
         ['Coconut Cove','cococove_single','#ffd166']
       ];
-      labels.forEach(([label,name,color])=>{const actor=allActors.find(a=>a.name===name);if(!actor)return;const [x,y,z]=actor.web.position;scene.add(unrealPreviewLabel(label,new THREE.Vector3(x,Math.max(0,y),z),color));});
+      labels.forEach(([label,name,color])=>{const actor=allActors.find(a=>a.name===name);if(!actor)return;const [x,,z]=actor.web.position;scene.add(unrealPreviewLabel(label,new THREE.Vector3(x,0,z),color));});
       const summary=Object.entries(counts).map(([kind,count])=>`${count} ${kind}${count===1?'':'s'}`).join(' · ');
       toast(`UNREAL ASSET PREVIEW — ${summary}. Public layout unchanged.`);
       return;
@@ -5353,9 +5355,9 @@ function loadUnrealPreview(){
     const proxies=new THREE.InstancedMesh(geometry,material,actors.length);
     const matrix=new THREE.Matrix4(), color=new THREE.Color();
     actors.forEach((actor,index)=>{
-      const [x,y,z]=actor.web.position;
-      const height=Math.max(0.35,Math.min(5,0.6+Math.abs(y)*0.15));
-      matrix.compose(new THREE.Vector3(x,Math.max(0.4,y)+height/2,z),new THREE.Quaternion().setFromEuler(new THREE.Euler(0,actor.web.rotationYRadians||0,0)),new THREE.Vector3(1.1,height,1.1));
+      const [x,,z]=actor.web.position;
+      const height=0.8;
+      matrix.compose(new THREE.Vector3(x,height/2,z),new THREE.Quaternion().setFromEuler(new THREE.Euler(0,actor.web.rotationYRadians||0,0)),new THREE.Vector3(1.1,height,1.1));
       proxies.setMatrixAt(index,matrix); proxies.setColorAt(index,unrealPreviewColor(actor));
     });
     proxies.instanceMatrix.needsUpdate=true; if(proxies.instanceColor) proxies.instanceColor.needsUpdate=true;
@@ -5367,7 +5369,7 @@ function loadUnrealPreview(){
     ];
     labels.forEach(([label,name,color])=>{
       const actor=actors.find(a=>a.name===name); if(!actor) return;
-      const [x,y,z]=actor.web.position; scene.add(unrealPreviewLabel(label,new THREE.Vector3(x,Math.max(0,y),z),color));
+      const [x,,z]=actor.web.position; scene.add(unrealPreviewLabel(label,new THREE.Vector3(x,0,z),color));
     });
     toast(`UNREAL PREVIEW — ${actors.length.toLocaleString()} calibrated actor proxies. Public layout unchanged.`);
   }).catch(error=>{console.error('Unreal preview failed',error);toast('Could not load Unreal preview.');});

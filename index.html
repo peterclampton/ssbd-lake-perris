@@ -5277,7 +5277,9 @@ const EDITOR_STORAGE='ssbd-lake-perris-layout-v1';
 const editorUndoStack=[];
 let editorTransformStart=null;
 
-function unrealPreviewText(actor){return `${actor.name||''} ${(actor.staticMeshes||[]).map(m=>m.asset||'').join(' ')}`.toLowerCase();}
+function unrealPreviewText(actor){
+  return `${actor.name||''} ${(actor.tags||[]).join(' ')} ${(actor.staticMeshes||[]).map(m=>m.asset||'').join(' ')}`.toLowerCase();
+}
 function unrealPreviewKind(actor){
   const text=unrealPreviewText(actor);
   // Never use a bare "stage" substring: it accidentally matches Landscape.
@@ -5479,6 +5481,10 @@ function addExportedSplineFence(parent,actor){
     if(path.closedLoop && points.length>2) rendered=addDirectFenceSegment(parent,points[points.length-1],points[0],unrealKindColor('fence'))||rendered;
   });
   (splineData.segments||[]).forEach(segment=>{
+    const semanticText=`${segment.asset||''} ${(segment.materials||[]).join(' ')}`.toLowerCase();
+    // A Landscape actor can own asphalt, sidewalk and fence spline meshes at
+    // once. Never turn road/sidewalk materials into black scrim.
+    if(/asphalt|sidewalk|road|curb|concrete|pavement/.test(semanticText) && !/fence|scrim/.test(semanticText)) return;
     if(segment.start&&segment.end) rendered=addDirectFenceSegment(parent,segment.start,segment.end,unrealKindColor('fence'))||rendered;
   });
   return rendered;

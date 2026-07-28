@@ -517,13 +517,16 @@ function scrimFenceRun(x1,z1,x2,z2,height=3.35){
   for(let i=0;i<=n;i++){
     const px=x1+dx*i/n, pz=z1+dz*i/n;
     const post=new THREE.Mesh(new THREE.BoxGeometry(0.11,height+0.25,0.11),postMat);
+    post.userData.legacySiteGeometry='scrim';
     post.position.set(px,(height+0.25)/2,pz); scene.add(post);
   }
   const panel=new THREE.Mesh(new THREE.PlaneGeometry(len,height),scrimMat);
+  panel.userData.legacySiteGeometry='scrim';
   panel.position.set((x1+x2)/2,height/2,(z1+z2)/2);
   panel.rotation.y=ang+Math.PI/2; scene.add(panel);
   for(const hy of [0.12,height-0.1]){
     const rail=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.1,len),postMat);
+    rail.userData.legacySiteGeometry='scrim';
     rail.position.set((x1+x2)/2,hy,(z1+z2)/2);
     rail.rotation.y=ang; scene.add(rail);
   }
@@ -537,12 +540,15 @@ function bikeRackRun(x1,z1,x2,z2){
   for(let i=0;i<=n;i++){
     const px=x1+dx*i/n,pz=z1+dz*i/n;
     const post=new THREE.Mesh(new THREE.CylinderGeometry(0.045,0.045,1.05,7),green);
+    post.userData.legacySiteGeometry='barrier';
     post.position.set(px,0.55,pz); scene.add(post);
     const foot=new THREE.Mesh(new THREE.BoxGeometry(0.62,0.06,0.1),green);
+    foot.userData.legacySiteGeometry='barrier';
     foot.position.set(px,0.05,pz); foot.rotation.y=ang; scene.add(foot);
   }
   for(const y of [0.38,0.92]){
     const rail=new THREE.Mesh(new THREE.BoxGeometry(0.07,0.07,len),green);
+    rail.userData.legacySiteGeometry='barrier';
     rail.position.set((x1+x2)/2,y,(z1+z2)/2);
     rail.rotation.y=ang; scene.add(rail);
   }
@@ -5258,6 +5264,9 @@ const unrealAssetPreviewEnabled=new URLSearchParams(location.search).get('unreal
 // legacy web build is retained only as a ground/sky reference, never as a
 // source of object placement.
 const unrealFreshEnabled=new URLSearchParams(location.search).get('unrealFresh')==='1';
+// Hybrid pass: the mature hand-built map supplies the recognizable assets,
+// while Unreal supplies surveyed linear geometry and repeated vegetation.
+const unrealHybridEnabled=new URLSearchParams(location.search).get('unrealHybrid')==='1';
 let editorActive=editorEnabled;
 let editorSelected=null;
 let editorBaseObjects=[];
@@ -5799,8 +5808,48 @@ function loadFreshUnrealMap(){
     toast(`FRESH UNREAL MAP — ${summary}. Legacy festival objects are hidden.`);
   }).catch(error=>{console.error('Fresh Unreal map failed',error);toast('Could not load fresh Unreal map.');});
 }
+function loadHybridUnrealMap(){
+  if(!unrealHybridEnabled) return;
+  // Retain the old map's stages, booths, tents, decks, gazebos, toilets and
+  // environmental art. Its hand-authored fence/barrier runs are the one layer
+  // Unreal now replaces authoritatively.
+  scene.traverse(obj=>{
+    if(obj.userData?.legacySiteGeometry==='scrim' || obj.userData?.legacySiteGeometry==='barrier'){
+      obj.visible=false;
+    }
+  });
+  fetch('unreal-web-preview.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(manifest=>{
+    if(!manifest?.actors?.length) throw new Error('No Unreal actors');
+    const layer=new THREE.Group();
+    layer.name='Hybrid Unreal surveyed geometry';
+    const splineCounts=addAuthoritativeSplineGeometry(layer,manifest);
+    const instanceTrees=addExportedInstances(layer,manifest);
+
+    // Some black scrim was built as standalone mesh actors rather than spline
+    // segments. Reconstruct every such panel from exported component endpoints.
+    const actors=manifest.actors.filter(actor=>actor.visible!==false && actor.web);
+    const fences=actors.filter(actor=>unrealFreshKind(actor)==='fence');
+    const represented=new Set();
+    fences.forEach(actor=>{
+      if(addExportedSplineFence(layer,actor)) represented.add(actor);
+    });
+    const panels=fences.filter(actor=>!represented.has(actor) && /scrim|privacy.?screen/i.test(unrealPreviewText(actor)));
+    panels.forEach(actor=>{
+      if(addActorFenceComponents(layer,actor,manifest)) represented.add(actor);
+    });
+    const panelSegments=panels.flatMap(actor=>collectActorFenceSegments(actor,manifest));
+    const joins=bridgeScrimTopology(layer,panelSegments,fences.filter(actor=>/\bgate\b/i.test(actor.name||'')));
+    fences.filter(actor=>!represented.has(actor)).forEach(actor=>addActorFenceComponents(layer,actor,manifest));
+
+    scene.add(layer);
+    toast(`HYBRID MAP — old-map assets + Unreal survey: ${splineCounts.scrim} black-scrim spline segments, ${joins} joined panel gaps, ${splineCounts.road} road, ${splineCounts.sidewalk} sidewalk, ${splineCounts.wood} path, ${instanceTrees} instanced trees.`);
+  }).catch(error=>{
+    console.error('Hybrid Unreal map failed',error);
+    toast('Could not load the hybrid Unreal map.');
+  });
+}
 function loadUnrealPreview(){
-  if(unrealFreshEnabled || (!unrealPreviewEnabled && !unrealAssetPreviewEnabled)) return;
+  if(unrealFreshEnabled || unrealHybridEnabled || (!unrealPreviewEnabled && !unrealAssetPreviewEnabled)) return;
   fetch('unreal-web-preview.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(manifest=>{
     const allActors=(manifest&&manifest.actors||[]).filter(actor=>actor.visible!==false && actor.web && (Array.isArray(actor.staticMeshes) && actor.staticMeshes.length || /same_stage|different-but|cococove|cube78/i.test(actor.name||'')));
     const actors=unrealAssetPreviewEnabled ? allActors.filter(actor=>unrealPreviewKind(actor)) : allActors;
@@ -5999,7 +6048,7 @@ function editorSetMode(mode){
   document.querySelectorAll('#editorPanel [data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
 }
 function setupEditor(){
-  if(unrealFreshEnabled) return;
+  if(unrealFreshEnabled || unrealHybridEnabled) return;
   editorBaseObjects=scene.children.slice();
   fetch('scene-layout.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(layout=>{
     editorApplyLayout(layout);
@@ -6038,6 +6087,7 @@ function setupEditor(){
   toast('Editor ready — click an object to edit it.');
 }
 loadFreshUnrealMap();
+loadHybridUnrealMap();
 loadUnrealPreview();
 setupEditor();
 

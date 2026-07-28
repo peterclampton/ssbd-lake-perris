@@ -5295,6 +5295,13 @@ function unrealFreshKind(actor){
   const name=(actor.name||'').toLowerCase();
   const mesh=(actor.staticMeshes||[]).map(m=>m.asset||'').join(' ').toLowerCase();
   const text=`${name} ${mesh}`;
+  // Site-plan semantics take precedence over generic mesh guessing.
+  if(/parking.?divider|parking.?row|parking.?lot/.test(name)) return 'parking';
+  if(/camp\+?village|camping|campground/.test(name)) return 'camp';
+  if(/bike.?rack/.test(name)) return 'bike';
+  if(/light.?tower|bathroom_light|dsl.?light/.test(name)) return 'light';
+  if(/production.?lot|\bhq\b|headquarters|staging/.test(name)) return 'production';
+  if(/\bada\b|ada.?ramp|accessible/.test(name)) return 'ada';
   if(/fence|scrim|gate|barricade|velvet.?rope/.test(text)) return 'fence';
   if(/bathroom|restroom|porta.?potty|toilet/.test(text)) return 'toilet';
   if(/same.?stage|different.?but|but.?stage|cococove|coconut|famgarden|innerspace|grandmahouse|\bstage\b|dj.?booth/.test(text)) return 'stage';
@@ -5306,10 +5313,9 @@ function unrealFreshKind(actor){
   if(/food|bar(top)?|vendor|concession|grill|catering|foodstall/.test(text)) return 'food';
   if(/tree|palm|foliage|birch|poplar|maple|pine|deciduous/.test(text)) return 'tree';
   if(/container|trailer|tower|scaffold|house|building|\brv\b|generator|dumpster|cafe/.test(text)) return 'structure';
-  // Do not quietly drop real mesh actors just because they have not received
-  // a bespoke category yet.  Terrain, water and editor helpers are excluded;
-  // everything else gets a small readable site-prop placeholder.
-  if((actor.staticMeshes||[]).length && !/\blandscape\b|\bwater\b|playerstart|matpreview|\bplane\.plane\b/.test(text)) return 'prop';
+  // Unclassified meshes stay hidden. The site plan contains intentional
+  // emergency lanes, circulation corridors and empty beach setbacks; filling
+  // every unknown Unreal actor with a box destroys that information.
   return null;
 }
 function unrealPreviewColor(actor){
@@ -5317,7 +5323,7 @@ function unrealPreviewColor(actor){
   return new THREE.Color({stage:0xffb347,fence:0xb86cff,tent:0x47d9e8,food:0xff7da8,toilet:0x54d6ff,structure:0x80ed99}[kind]||0x708090);
 }
 function unrealKindColor(kind){
-  return new THREE.Color({stage:0xffb347,platform:0xf3d56b,fence:0xb86cff,tent:0x47d9e8,vendor:0xffba62,food:0xff7da8,toilet:0x54d6ff,tree:0x4eb36b,structure:0x80ed99,prop:0xb6c3d1}[kind]||0x708090);
+  return new THREE.Color({stage:0xffb347,platform:0xf3d56b,fence:0xb86cff,tent:0x47d9e8,vendor:0xffba62,food:0xff7da8,toilet:0x54d6ff,tree:0x4eb36b,structure:0x80ed99,parking:0xd6d9dd,camp:0x7fcf6a,bike:0xffd95e,light:0xfff2a8,production:0x8aa4c8,ada:0x4b9dff}[kind]||0x708090);
 }
 function unrealPreviewLabel(text,position,color){
   const canvas=document.createElement('canvas'); canvas.width=512; canvas.height=96;
@@ -5382,10 +5388,37 @@ function unrealProxyShape(kind,color){
     add(new THREE.CylinderGeometry(.22,.35,3.8,7),dark,0,1.9,0);
     add(new THREE.ConeGeometry(2.2,4.6,7),mat,0,5.4,0);
     add(new THREE.ConeGeometry(1.65,3.6,7),mat,0,7.6,0);
-  } else if(kind==='prop') {
-    add(new THREE.CylinderGeometry(.5,.65,.25,6),dark,0,.13,0);
-    add(new THREE.BoxGeometry(1.35,1.2,1.1),mat,0,.82,0);
-    add(new THREE.BoxGeometry(1.55,.16,1.3),dark,0,1.5,0);
+  } else if(kind==='parking') {
+    // A low wheel-stop / lane divider: readable from above without pretending
+    // the parking lot is another festival structure.
+    add(new THREE.BoxGeometry(5.4,.16,.28),mat,0,.08,0);
+    add(new THREE.BoxGeometry(.18,.28,.42),dark,-2.35,.14,0);
+    add(new THREE.BoxGeometry(.18,.28,.42),dark,2.35,.14,0);
+  } else if(kind==='camp') {
+    add(new THREE.BoxGeometry(5.6,.12,4.2),dark,0,.06,0);
+    add(new THREE.ConeGeometry(2.35,2.2,4),mat,0,1.15,0,1,1,.75);
+    add(new THREE.CylinderGeometry(.2,.3,.3,8),dark,2.25,.15,1.35);
+  } else if(kind==='bike') {
+    // Three galvanized loops per exported rack actor.
+    [-1.05,0,1.05].forEach(x=>{
+      add(new THREE.TorusGeometry(.48,.07,6,14,Math.PI),mat,x,.52,0,1,1,1).rotation.z=Math.PI/2;
+      add(new THREE.BoxGeometry(.12,.58,.12),dark,x-.48,.29,0);
+      add(new THREE.BoxGeometry(.12,.58,.12),dark,x+.48,.29,0);
+    });
+  } else if(kind==='light') {
+    add(new THREE.CylinderGeometry(.09,.13,6.5,8),dark,0,3.25,0);
+    add(new THREE.BoxGeometry(2.3,.13,.13),dark,0,6.45,0);
+    add(new THREE.BoxGeometry(.72,.38,.22),mat,-.72,6.22,.08);
+    add(new THREE.BoxGeometry(.72,.38,.22),mat,.72,6.22,.08);
+  } else if(kind==='production') {
+    add(new THREE.BoxGeometry(5.8,2.6,2.45),dark,0,1.3,0);
+    add(new THREE.BoxGeometry(5.3,.5,.08),mat,0,2.1,1.24);
+    add(new THREE.BoxGeometry(1.15,1.85,.08),mat,-1.55,1.25,1.25);
+  } else if(kind==='ada') {
+    const ramp=add(new THREE.BoxGeometry(4.6,.22,1.65),mat,0,.35,0);
+    ramp.rotation.z=-.08;
+    add(new THREE.BoxGeometry(4.7,.1,.1),dark,0,.95,-.78);
+    add(new THREE.BoxGeometry(4.7,.1,.1),dark,0,.95,.78);
   } else {
     add(new THREE.BoxGeometry(2.4,2.4,2.4),mat,0,1.2,0); add(new THREE.BoxGeometry(2.7,.2,2.7),dark,0,2.5,0);
   }
@@ -5403,7 +5436,12 @@ function unrealFreshProxyShape(kind,color){
   if(kind==='food') proxy.scale.set(.86,.92,.86);
   if(kind==='toilet') proxy.scale.set(.9,.92,.9);
   if(kind==='tree') proxy.scale.set(.8,.8,.8);
-  if(kind==='prop') proxy.scale.set(.65,.65,.65);
+  if(kind==='parking') proxy.scale.set(1,1,1);
+  if(kind==='camp') proxy.scale.set(1,1,1);
+  if(kind==='bike') proxy.scale.set(.8,.8,.8);
+  if(kind==='light') proxy.scale.set(1,1,1);
+  if(kind==='production') proxy.scale.set(1,1,1);
+  if(kind==='ada') proxy.scale.set(1,1,1);
   return proxy;
 }
 function unrealFenceSeriesKey(actor){

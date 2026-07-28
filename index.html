@@ -5431,10 +5431,13 @@ function unrealProxyShape(kind,color){
     add(new THREE.BoxGeometry(5.3,.5,.08),mat,0,2.1,1.24);
     add(new THREE.BoxGeometry(1.15,1.85,.08),mat,-1.55,1.25,1.25);
   } else if(kind==='ada') {
-    const ramp=add(new THREE.BoxGeometry(4.6,.22,1.65),mat,0,.35,0);
-    ramp.rotation.z=-.08;
-    add(new THREE.BoxGeometry(4.7,.1,.1),dark,0,.95,-.78);
-    add(new THREE.BoxGeometry(4.7,.1,.1),dark,0,.95,.78);
+    // ADA RAMP is exported as many individually placed deck, landing and
+    // handrail actors. Keep each actor level and let its real world bounds
+    // and yaw define the footprint; a generic tilted wedge made the assembled
+    // route look like scattered blue seesaws.
+    add(new THREE.BoxGeometry(1,.12,1),mat,0,.06,0);
+    add(new THREE.BoxGeometry(1,.08,.045),dark,0,.22,-.49);
+    add(new THREE.BoxGeometry(1,.08,.045),dark,0,.22,.49);
   } else {
     add(new THREE.BoxGeometry(2.4,2.4,2.4),mat,0,1.2,0); add(new THREE.BoxGeometry(2.7,.2,2.7),dark,0,2.5,0);
   }
@@ -5495,13 +5498,13 @@ function actorBottomOffsetWeb(actor,kind){
 function sizeActorProxy(proxy,actor,kind){
   const [w,d,h]=actorFootprintWeb(actor);
   const nominal={stage:[6.2,3.25,3.2],platform:[8,1,5],tent:[6.1,5.15,6.1],vendor:[5.7,4.2,4.2],
-    gazebo:[6.1,4.35,6.1],food:[3.7,2.6,2],toilet:[1.25,2.35,1.2],structure:[2.7,2.6,2.7]}[kind];
+    gazebo:[6.1,4.35,6.1],food:[3.7,2.6,2],toilet:[1.25,2.35,1.2],structure:[2.7,2.6,2.7],ada:[1,.3,1]}[kind];
   if(!nominal) return;
   // Bounds define footprint and height. Tents retain the agreed ten-foot
   // eave/roof treatment; scrim is handled separately at exactly six feet.
   const sx=Math.max(.45,Math.min(4,w/nominal[0]));
   const sz=Math.max(.45,Math.min(4,d/nominal[2]));
-  let sy=kind==='tent'||kind==='vendor'?1:Math.max(.45,Math.min(3,h/nominal[1]));
+  let sy=kind==='tent'||kind==='vendor'||kind==='ada'?1:Math.max(.45,Math.min(3,h/nominal[1]));
   proxy.scale.multiply(new THREE.Vector3(sx,sy,sz));
 }
 function treeSpecies(actorOrText){
@@ -5535,8 +5538,17 @@ function makeTreeProxy(species,height=12,crownWidth=5){
   }
   return g;
 }
-function addDirectFenceSegment(parent,start,end,color){
-  const a={web:{position:start}},b={web:{position:end}};
+function addDirectFenceSegment(parent,start,end,color,overlap=.12){
+  let aPos=[...start],bPos=[...end];
+  const dx=bPos[0]-aPos[0],dz=bPos[2]-aPos[2],length=Math.hypot(dx,dz);
+  // Scrim panels are physically butted together. A tiny symmetric extension
+  // hides floating-point and mesh-pivot seams without bridging real gates.
+  if(length>.08 && overlap>0){
+    const ux=dx/length,uz=dz/length;
+    aPos[0]-=ux*overlap;aPos[2]-=uz*overlap;
+    bPos[0]+=ux*overlap;bPos[2]+=uz*overlap;
+  }
+  const a={web:{position:aPos}},b={web:{position:bPos}};
   // Exported spline endpoints are authoritative and frequently span 10–20m.
   return addContinuousFenceSegment(parent,a,b,color,60);
 }
@@ -5553,16 +5565,25 @@ function componentFenceEndpointsWeb(component,manifest){
   const bounds=component?.staticMesh?.localBounds, transform=component?.worldTransform;
   if(!bounds?.minCm||!bounds?.maxCm||!transform?.locationCm) return null;
   const min=bounds.minCm,max=bounds.maxCm,size=bounds.sizeCm||max.map((v,i)=>v-min[i]);
-  // Fence meshes are long along local X or Y. Reconstruct the centerline in
-  // local space, then apply the component's real scale + quaternion. World
-  // AABBs and actor yaw cannot recover this after a panel has been rotated.
-  const axis=size[0]>=size[1]?0:1, center=min.map((v,i)=>(v+max[i])/2);
-  const localA=[...center],localB=[...center]; localA[axis]=min[axis];localB[axis]=max[axis];
+  // The scrim source mesh is almost square in local XY, but X is scaled to
+  // become its length and Y becomes its six-foot height. Choosing the longest
+  // *unscaled* axis therefore picked vertical Y for many panels. Test every
+  // local axis after scale + quaternion and select the largest horizontal
+  // world-space projection.
+  const center=min.map((v,i)=>(v+max[i])/2);
   const scale=transform.scale||[1,1,1],toWorld=local=>{
     const rotated=rotateVectorByQuaternion(local.map((v,i)=>v*scale[i]),transform.rotationQuaternion);
     return rotated.map((v,i)=>v+transform.locationCm[i]);
   };
-  const a=unrealCmToWeb(toWorld(localA),manifest),b=unrealCmToWeb(toWorld(localB),manifest);
+  let best=null;
+  for(let axis=0;axis<3;axis++){
+    const localA=[...center],localB=[...center]; localA[axis]=min[axis];localB[axis]=max[axis];
+    const worldA=toWorld(localA),worldB=toWorld(localB);
+    const horizontal=Math.hypot(worldB[0]-worldA[0],worldB[1]-worldA[1]);
+    if(!best||horizontal>best.horizontal) best={worldA,worldB,horizontal};
+  }
+  if(!best) return null;
+  const a=unrealCmToWeb(best.worldA,manifest),b=unrealCmToWeb(best.worldB,manifest);
   if(!a||!b||Math.hypot(b[0]-a[0],b[2]-a[2])<.08) return null;
   return [a,b];
 }

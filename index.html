@@ -5596,6 +5596,54 @@ function addActorFenceComponents(parent,actor,manifest){
   });
   return rendered;
 }
+function collectActorFenceSegments(actor,manifest){
+  const segments=[];
+  (actor.components||[]).filter(component=>component.staticMesh&&component.visible!==false).forEach(component=>{
+    const endpoints=componentFenceEndpointsWeb(component,manifest);
+    if(endpoints) segments.push({actor,a:endpoints[0],b:endpoints[1]});
+  });
+  return segments;
+}
+function bridgeScrimTopology(parent,segments,gateActors){
+  // Separate scrim panels exported from Unreal are not guaranteed to touch:
+  // several same-run neighbours have 1.8–2.6m endpoint holes. Join endpoints
+  // only when their panel directions are collinear and the gap continues that
+  // line. Explicitly-labelled gate actors protect intentional openings.
+  const gates=(gateActors||[]).map(actor=>actor.web?.position).filter(Boolean);
+  const endpoints=[];
+  segments.forEach((segment,index)=>{
+    const dx=segment.b[0]-segment.a[0],dz=segment.b[2]-segment.a[2],length=Math.hypot(dx,dz);
+    if(length<.08) return;
+    const dir=[dx/length,dz/length];
+    endpoints.push({segment,index,point:segment.a,dir}, {segment,index,point:segment.b,dir});
+  });
+  const used=new Set();
+  const candidates=[];
+  for(let i=0;i<endpoints.length;i++) for(let j=i+1;j<endpoints.length;j++){
+    const a=endpoints[i],b=endpoints[j];
+    if(a.index===b.index) continue;
+    const gx=b.point[0]-a.point[0],gz=b.point[2]-a.point[2],gap=Math.hypot(gx,gz);
+    if(gap<.08||gap>3.1) continue;
+    const gu=[gx/gap,gz/gap];
+    const parallel=Math.abs(a.dir[0]*b.dir[0]+a.dir[1]*b.dir[1]);
+    const alongA=Math.abs(a.dir[0]*gu[0]+a.dir[1]*gu[1]);
+    const alongB=Math.abs(b.dir[0]*gu[0]+b.dir[1]*gu[1]);
+    if(parallel<.82||alongA<.78||alongB<.78) continue;
+    const mx=(a.point[0]+b.point[0])/2,mz=(a.point[2]+b.point[2])/2;
+    // A gate label near the midpoint owns this opening; never seal it.
+    if(gates.some(g=>Math.hypot(g[0]-mx,g[2]-mz)<2.8)) continue;
+    candidates.push({i,j,gap,a,b});
+  }
+  candidates.sort((a,b)=>a.gap-b.gap);
+  let joined=0;
+  for(const candidate of candidates){
+    if(used.has(candidate.i)||used.has(candidate.j)) continue;
+    if(addDirectFenceSegment(parent,candidate.a.point,candidate.b.point,unrealKindColor('fence'),.04)){
+      used.add(candidate.i);used.add(candidate.j);joined++;
+    }
+  }
+  return joined;
+}
 function unrealCmToWeb(locationCm,manifest){
   const same=manifest?.anchors?.sameStage;
   if(!same || !locationCm) return null;
@@ -5718,6 +5766,12 @@ function loadFreshUnrealMap(){
     // two endpoints; actor yaw plus a world AABB produced rotated, gapped runs.
     const scrimActors=fenceActors.filter(actor=>!fenceActorsWithConnections.has(actor)&&/scrim/i.test(unrealPreviewText(actor)));
     scrimActors.forEach(actor=>{if(addActorFenceComponents(layer,actor,manifest)) fenceActorsWithConnections.add(actor);});
+    const scrimSegments=scrimActors.flatMap(actor=>collectActorFenceSegments(actor,manifest));
+    counts['scrim gap joins']=bridgeScrimTopology(
+      layer,
+      scrimSegments,
+      fenceActors.filter(actor=>/\bgate\b/i.test(actor.name||''))
+    );
     // Use the same component-endpoint reconstruction for all remaining panels.
     fenceActors.filter(actor=>!fenceActorsWithConnections.has(actor)).forEach(actor=>{
       if(addActorFenceComponents(layer,actor,manifest)) fenceActorsWithConnections.add(actor);

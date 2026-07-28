@@ -5290,16 +5290,19 @@ function unrealPreviewKind(actor){
   return null;
 }
 function unrealFreshKind(actor){
-  // Actor names are intentional labels in Peter's new export.  Do not inspect
-  // arbitrary mesh paths here: package paths create false positives such as
-  // "Content" accidentally matching "tent".
+  // Names are Peter's labels; mesh names safely fill in ordinary environment
+  // objects such as trees and the already-labelled festival infrastructure.
   const name=(actor.name||'').toLowerCase();
-  if(/fence|scrim|gate|barricade|velvet.?rope/.test(name)) return 'fence';
-  if(/bathroom|restroom|porta.?potty|toilet/.test(name)) return 'toilet';
-  if(/same.?stage|different.?but|but.?stage|cococove|coconut|famgarden|innerspace|grandmahouse|\bstage\b|dj.?booth/.test(name)) return 'stage';
-  if(/tent|canopy|gazebo|awning/.test(name)) return 'tent';
-  if(/food|bar(top)?|vendor|concession|grill|catering/.test(name)) return 'food';
-  if(/limitless|platform|deck|container|trailer|tower|scaffold|house|building|\brv\b|generator|dumpster/.test(name)) return 'structure';
+  const mesh=(actor.staticMeshes||[]).map(m=>m.asset||'').join(' ').toLowerCase();
+  const text=`${name} ${mesh}`;
+  if(/fence|scrim|gate|barricade|velvet.?rope/.test(text)) return 'fence';
+  if(/bathroom|restroom|porta.?potty|toilet/.test(text)) return 'toilet';
+  if(/same.?stage|different.?but|but.?stage|cococove|coconut|famgarden|innerspace|grandmahouse|\bstage\b|dj.?booth/.test(text)) return 'stage';
+  if(/limitless|\bplatform\b|\bdeck\b/.test(text)) return 'platform';
+  if(/tent|canopy|gazebo|awning/.test(text)) return 'tent';
+  if(/food|bar(top)?|vendor|concession|grill|catering|foodstall/.test(text)) return 'food';
+  if(/tree|palm|foliage|birch|poplar|maple|pine|deciduous/.test(text)) return 'tree';
+  if(/container|trailer|tower|scaffold|house|building|\brv\b|generator|dumpster|cafe/.test(text)) return 'structure';
   return null;
 }
 function unrealPreviewColor(actor){
@@ -5307,7 +5310,7 @@ function unrealPreviewColor(actor){
   return new THREE.Color({stage:0xffb347,fence:0xb86cff,tent:0x47d9e8,food:0xff7da8,toilet:0x54d6ff,structure:0x80ed99}[kind]||0x708090);
 }
 function unrealKindColor(kind){
-  return new THREE.Color({stage:0xffb347,fence:0xb86cff,tent:0x47d9e8,food:0xff7da8,toilet:0x54d6ff,structure:0x80ed99}[kind]||0x708090);
+  return new THREE.Color({stage:0xffb347,platform:0xf3d56b,fence:0xb86cff,tent:0x47d9e8,food:0xff7da8,toilet:0x54d6ff,tree:0x4eb36b,structure:0x80ed99}[kind]||0x708090);
 }
 function unrealPreviewLabel(text,position,color){
   const canvas=document.createElement('canvas'); canvas.width=512; canvas.height=96;
@@ -5328,6 +5331,9 @@ function unrealProxyShape(kind,color){
     add(new THREE.BoxGeometry(1,1,1),dark,0,.35,0,4,.7,2.4);
     add(new THREE.BoxGeometry(1,1,1),mat,0,1.9,.8,4,.35,.18);
     add(new THREE.BoxGeometry(1,1,1),mat,-1.7,1.6,.1,.18,2.6,.18); add(new THREE.BoxGeometry(1,1,1),mat,1.7,1.6,.1,.18,2.6,.18);
+  } else if(kind==='platform') {
+    add(new THREE.BoxGeometry(8,.45,5),dark,0,.23,0); add(new THREE.BoxGeometry(8.25,.12,5.25),mat,0,.5,0);
+    [[-3.6,-2.1],[3.6,-2.1],[-3.6,2.1],[3.6,2.1]].forEach(([x,z])=>add(new THREE.BoxGeometry(.18,.7,.18),mat,x,.35,z));
   } else if(kind==='tent') {
     // Standard event tents read as 20' x 20' with a ten-foot eave.  The
     // Unreal export's Z is deliberately ignored, but their web proxies still
@@ -5347,6 +5353,10 @@ function unrealProxyShape(kind,color){
     add(new THREE.BoxGeometry(3.2,1.55,1.5),dark,0,.8,0); add(new THREE.BoxGeometry(3.55,.22,1.82),mat,0,1.68,0); add(new THREE.BoxGeometry(2.4,.2,.08),mat,0,1.2,.78);
   } else if(kind==='toilet') {
     add(new THREE.BoxGeometry(1.25,2.35,1.2),mat,0,1.2,0); add(new THREE.BoxGeometry(.12,.75,.05),dark,.33,1.2,.63);
+  } else if(kind==='tree') {
+    add(new THREE.CylinderGeometry(.22,.35,3.8,7),dark,0,1.9,0);
+    add(new THREE.ConeGeometry(2.2,4.6,7),mat,0,5.4,0);
+    add(new THREE.ConeGeometry(1.65,3.6,7),mat,0,7.6,0);
   } else {
     add(new THREE.BoxGeometry(2.4,2.4,2.4),mat,0,1.2,0); add(new THREE.BoxGeometry(2.7,.2,2.7),dark,0,2.5,0);
   }
@@ -5357,10 +5367,12 @@ function unrealFreshProxyShape(kind,color){
   // Make the clean pass feel like a site plan, rather than the old toy-like
   // cubes.  These proportions are web proxies, not guesses at Unreal height.
   if(kind==='stage') proxy.scale.set(1.55,1.15,1.35);
+  if(kind==='platform') proxy.scale.set(1,1,1);
   if(kind==='tent') proxy.scale.set(1,1,1);
   if(kind==='fence') proxy.scale.set(.9,1,.9);
   if(kind==='food') proxy.scale.set(.86,.92,.86);
   if(kind==='toilet') proxy.scale.set(.9,.92,.9);
+  if(kind==='tree') proxy.scale.set(.8,.8,.8);
   return proxy;
 }
 function loadFreshUnrealMap(){

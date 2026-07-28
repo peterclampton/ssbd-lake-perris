@@ -5466,6 +5466,23 @@ function addContinuousFenceSegment(parent,a,b,color){
   const postB=postA.clone(); postA.position.x=-length/2; postA.position.y=1.3; postB.position.x=length/2; postB.position.y=1.3;
   group.add(wall,postA,postB); group.position.set((ax+bx)/2,0,(az+bz)/2); group.rotation.y=Math.atan2(dz,dx); parent.add(group); return true;
 }
+function addDirectFenceSegment(parent,start,end,color){
+  const a={web:{position:start}},b={web:{position:end}};
+  return addContinuousFenceSegment(parent,a,b,color);
+}
+function addExportedSplineFence(parent,actor){
+  const splineData=actor.webSplines||{}, connected=false;
+  let rendered=connected;
+  (splineData.paths||[]).forEach(path=>{
+    const points=path.points||[];
+    for(let i=0;i<points.length-1;i++) rendered=addDirectFenceSegment(parent,points[i],points[i+1],unrealKindColor('fence'))||rendered;
+    if(path.closedLoop && points.length>2) rendered=addDirectFenceSegment(parent,points[points.length-1],points[0],unrealKindColor('fence'))||rendered;
+  });
+  (splineData.segments||[]).forEach(segment=>{
+    if(segment.start&&segment.end) rendered=addDirectFenceSegment(parent,segment.start,segment.end,unrealKindColor('fence'))||rendered;
+  });
+  return rendered;
+}
 function addSpatialScrimRuns(parent,actors){
   // Unreal's SCRIM_FENCELINE numeric suffixes restart in multiple areas, so
   // actor-name ordering is not a path. Build the line from spatial neighbours
@@ -5502,13 +5519,19 @@ function loadFreshUnrealMap(){
     const counts={};
     const fenceActors=actors.filter(actor=>unrealFreshKind(actor)==='fence');
     const fenceActorsWithConnections=new Set();
+    // Spline exports are authoritative fence geometry. Render their sampled
+    // curve/segment endpoints directly instead of reconstructing a path from
+    // the spline actor's single origin.
+    fenceActors.forEach(actor=>{
+      if(addExportedSplineFence(layer,actor)) fenceActorsWithConnections.add(actor);
+    });
     // Black scrim is reconstructed spatially. Never sort it by actor suffix:
     // Unreal reuses SCRIM_FENCELINE0... across unrelated site areas.
-    const scrimActors=fenceActors.filter(actor=>/scrim/i.test(unrealPreviewText(actor)));
+    const scrimActors=fenceActors.filter(actor=>!fenceActorsWithConnections.has(actor)&&/scrim/i.test(unrealPreviewText(actor)));
     addSpatialScrimRuns(layer,scrimActors).forEach(actor=>fenceActorsWithConnections.add(actor));
     // Non-scrim fence families may still use reliable numbered sequences.
     const fenceSeries=new Map();
-    fenceActors.filter(actor=>!scrimActors.includes(actor)).forEach(actor=>{const key=unrealFenceSeriesKey(actor); if(!fenceSeries.has(key)) fenceSeries.set(key,[]); fenceSeries.get(key).push(actor);});
+    fenceActors.filter(actor=>!fenceActorsWithConnections.has(actor)&&!scrimActors.includes(actor)).forEach(actor=>{const key=unrealFenceSeriesKey(actor); if(!fenceSeries.has(key)) fenceSeries.set(key,[]); fenceSeries.get(key).push(actor);});
     fenceSeries.forEach(series=>{
       series.sort((a,b)=>unrealFenceIndex(a)-unrealFenceIndex(b));
       for(let i=0;i<series.length-1;i++){

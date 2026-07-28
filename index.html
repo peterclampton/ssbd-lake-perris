@@ -5456,10 +5456,10 @@ function unrealFenceSeriesKey(actor){
 function unrealFenceIndex(actor){
   const match=(actor.name||'').match(/(\d+)$/); return match?Number(match[1]):Number.MAX_SAFE_INTEGER;
 }
-function addContinuousFenceSegment(parent,a,b,color){
+function addContinuousFenceSegment(parent,a,b,color,maxLength=5.6){
   const [ax,,az]=a.web.position, [bx,,bz]=b.web.position;
   const dx=bx-ax,dz=bz-az,length=Math.hypot(dx,dz);
-  if(length<.25 || length>5.6) return false; // a genuine break/gate, not a bridge across the site
+  if(length<.08 || length>maxLength) return false; // a genuine break/gate, not a bridge across the site
   const group=new THREE.Group();
   const fabric=new THREE.MeshStandardMaterial({color,roughness:.95,side:THREE.DoubleSide,transparent:true,opacity:.84});
   const dark=new THREE.MeshStandardMaterial({color:0x152238,roughness:.85});
@@ -5470,7 +5470,58 @@ function addContinuousFenceSegment(parent,a,b,color){
 }
 function addDirectFenceSegment(parent,start,end,color){
   const a={web:{position:start}},b={web:{position:end}};
-  return addContinuousFenceSegment(parent,a,b,color);
+  // Exported spline endpoints are authoritative and frequently span 10–20m.
+  return addContinuousFenceSegment(parent,a,b,color,60);
+}
+function unrealCmToWeb(locationCm,manifest){
+  const same=manifest?.anchors?.sameStage;
+  if(!same || !locationCm) return null;
+  const scale=0.007107610935392121, angle=0.6117497778749903;
+  const dx=locationCm[0]-same.unrealCm[0], dy=locationCm[1]-same.unrealCm[1];
+  return [
+    same.web[0]+(dx*Math.cos(angle)-dy*Math.sin(angle))*scale,
+    0,
+    same.web[1]+(dx*Math.sin(angle)+dy*Math.cos(angle))*scale
+  ];
+}
+function addAuthoritativeSplineGeometry(parent,manifest){
+  const counts={scrim:0,road:0,sidewalk:0,wood:0};
+  (manifest.actors||[]).forEach(actor=>(actor.webSplines?.segments||[]).forEach(segment=>{
+    if(!segment.start||!segment.end) return;
+    const text=`${segment.asset||''} ${(segment.materials||[]).join(' ')}`.toLowerCase();
+    if(/privacy.?screen|privacyscreen|scrim/.test(text)){
+      if(addDirectFenceSegment(parent,segment.start,segment.end,unrealKindColor('fence'))) counts.scrim++;
+      return;
+    }
+    const [a,b]=[segment.start,segment.end], dx=b[0]-a[0],dz=b[2]-a[2],length=Math.hypot(dx,dz);
+    if(length<.08) return;
+    let color,height,width,y,kind;
+    if(/concrete|sidewalk|pavement|curb/.test(text)){color=0xc7c7c2;height=.08;width=2.15;y=.04;kind='sidewalk';}
+    else if(/wood_strip|wood.?strip/.test(text)){color=0xa98258;height=.10;width=1.25;y=.05;kind='wood';}
+    else if(/asphalt|mi_border|dirt_gardens/.test(text)){color=0x53575a;height=.045;width=5.6;y=.022;kind='road';}
+    else return;
+    const material=new THREE.MeshStandardMaterial({color,roughness:.96});
+    const mesh=new THREE.Mesh(new THREE.BoxGeometry(length,height,width),material);
+    mesh.position.set((a[0]+b[0])/2,y,(a[2]+b[2])/2);
+    mesh.rotation.y=Math.atan2(dz,dx); parent.add(mesh); counts[kind]++;
+  }));
+  return counts;
+}
+function addExportedInstances(parent,manifest){
+  let count=0;
+  (manifest.actors||[]).forEach(actor=>(actor.instancedMeshes||[]).forEach(component=>{
+    const text=`${actor.name||''} ${component.staticMesh?.asset||''} ${(component.materials||[]).join(' ')}`.toLowerCase();
+    const kind=/tree|palm|foliage|birch|poplar|maple|pine/.test(text)?'tree':null;
+    if(!kind) return;
+    (component.instances||[]).forEach(instance=>{
+      const position=unrealCmToWeb(instance.locationCm,manifest); if(!position) return;
+      const proxy=unrealFreshProxyShape(kind,unrealKindColor(kind));
+      proxy.position.set(position[0],0,position[2]);
+      const s=instance.scale||[1,1,1], horizontal=Math.max(.45,Math.min(1.8,(Math.abs(s[0])+Math.abs(s[1]))/2));
+      proxy.scale.multiplyScalar(horizontal*.72); parent.add(proxy); count++;
+    });
+  }));
+  return count;
 }
 function addExportedSplineFence(parent,actor){
   const splineData=actor.webSplines||{}, connected=false;
@@ -5523,6 +5574,12 @@ function loadFreshUnrealMap(){
     if(!actors.length) throw new Error('No labelled Unreal actors');
     const layer=new THREE.Group(); layer.name='Fresh Unreal-driven festival map';
     const counts={};
+    const splineCounts=addAuthoritativeSplineGeometry(layer,manifest);
+    counts['spline scrim']=splineCounts.scrim;
+    counts['road spline']=splineCounts.road;
+    counts['sidewalk spline']=splineCounts.sidewalk;
+    counts['wood spline']=splineCounts.wood;
+    counts['instanced trees']=addExportedInstances(layer,manifest);
     const fenceActors=actors.filter(actor=>unrealFreshKind(actor)==='fence');
     const fenceActorsWithConnections=new Set();
     // Spline exports are authoritative fence geometry. Render their sampled

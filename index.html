@@ -5313,7 +5313,8 @@ function unrealFreshKind(actor){
   // Vendor tents need their own treatment: a plain canopy communicates
   // nothing about what it is, while these are actual merchant rows.
   if(/vendor.?tent|vendor/.test(text)) return 'vendor';
-  if(/tent|canopy|gazebo|awning/.test(text)) return 'tent';
+  if(/gazebo/.test(text)) return 'gazebo';
+  if(/tent|canopy|awning/.test(text)) return 'tent';
   if(/food|bar(top)?|vendor|concession|grill|catering|foodstall/.test(text)) return 'food';
   if(/tree|palm|foliage|birch|poplar|maple|pine|deciduous/.test(text)) return 'tree';
   if(/container|trailer|tower|scaffold|house|building|\brv\b|generator|dumpster|cafe/.test(text)) return 'structure';
@@ -5327,7 +5328,7 @@ function unrealPreviewColor(actor){
   return new THREE.Color({stage:0xffb347,fence:0xb86cff,tent:0x47d9e8,food:0xff7da8,toilet:0x54d6ff,structure:0x80ed99}[kind]||0x708090);
 }
 function unrealKindColor(kind){
-  return new THREE.Color({stage:0xffb347,platform:0xf3d56b,fence:0x111318,barrier:0xbfc7cf,tent:0x47d9e8,vendor:0xffba62,food:0xff7da8,toilet:0x54d6ff,tree:0x4eb36b,structure:0x80ed99,parking:0xd6d9dd,camp:0x7fcf6a,light:0xfff2a8,production:0x8aa4c8,ada:0x4b9dff}[kind]||0x708090);
+  return new THREE.Color({stage:0xffb347,platform:0xf3d56b,fence:0x090a0c,barrier:0xbfc7cf,tent:0xf3f1e8,vendor:0xffba62,gazebo:0xd9d2bf,food:0xff7da8,toilet:0x54d6ff,tree:0x4eb36b,structure:0x80ed99,parking:0xd6d9dd,camp:0x7fcf6a,light:0xfff2a8,production:0x8aa4c8,ada:0x4b9dff}[kind]||0x708090);
 }
 function unrealPreviewLabel(text,position,color){
   const canvas=document.createElement('canvas'); canvas.width=512; canvas.height=96;
@@ -5370,14 +5371,23 @@ function unrealProxyShape(kind,color){
     add(new THREE.BoxGeometry(4.8,.18,.72),dark,0,1.35,1.48);
     [-1.65,0,1.65].forEach(x=>add(new THREE.BoxGeometry(.68,.52,.55),mat,x,.38,1.28));
     add(new THREE.BoxGeometry(4.65,.5,.1),mat,0,2.48,1.78);
+  } else if(kind==='gazebo') {
+    // Park gazebos are permanent hexagonal shelters, not pop-up tents.
+    const roof=new THREE.MeshStandardMaterial({color:0xb8aa91,roughness:.88});
+    add(new THREE.CylinderGeometry(3.05,3.05,.18,6),dark,0,.09,0);
+    add(new THREE.ConeGeometry(3.35,1.35,6),roof,0,3.65,0);
+    for(let i=0;i<6;i++){
+      const a=i*Math.PI/3;
+      add(new THREE.CylinderGeometry(.11,.13,3.05,7),dark,Math.cos(a)*2.65,1.58,Math.sin(a)*2.65);
+    }
   } else if(kind==='fence') {
     // Scrim is a continuous, visible fabric wall—not a line on the ground.
     // Segments overlap slightly because exported fence actors are commonly
     // spaced at about four feet.
-    const scrim=new THREE.MeshStandardMaterial({color,roughness:.95,side:THREE.DoubleSide,transparent:true,opacity:.82});
-    add(new THREE.BoxGeometry(4.7,2.45,.07),scrim,0,1.225,0);
-    add(new THREE.BoxGeometry(.12,2.6,.12),dark,-2.25,1.3,0);
-    add(new THREE.BoxGeometry(.12,2.6,.12),dark,2.25,1.3,0);
+    const scrim=new THREE.MeshStandardMaterial({color:0x050505,roughness:1,side:THREE.DoubleSide});
+    add(new THREE.BoxGeometry(4.7,1.8288,.07),scrim,0,.9144,0);
+    add(new THREE.BoxGeometry(.12,1.95,.12),dark,-2.25,.975,0);
+    add(new THREE.BoxGeometry(.12,1.95,.12),dark,2.25,.975,0);
   } else if(kind==='food') {
     // Food/bar assets read as stalls: a serving window, awning and sign—not
     // a featureless box.
@@ -5438,6 +5448,7 @@ function unrealFreshProxyShape(kind,color){
   if(kind==='platform') proxy.scale.set(1,1,1);
   if(kind==='tent') proxy.scale.set(1,1,1);
   if(kind==='vendor') proxy.scale.set(1,1,1);
+  if(kind==='gazebo') proxy.scale.set(1,1,1);
   if(kind==='fence') proxy.scale.set(.9,1,.9);
   if(kind==='food') proxy.scale.set(.86,.92,.86);
   if(kind==='toilet') proxy.scale.set(.9,.92,.9);
@@ -5461,12 +5472,68 @@ function addContinuousFenceSegment(parent,a,b,color,maxLength=5.6){
   const dx=bx-ax,dz=bz-az,length=Math.hypot(dx,dz);
   if(length<.08 || length>maxLength) return false; // a genuine break/gate, not a bridge across the site
   const group=new THREE.Group();
-  const fabric=new THREE.MeshStandardMaterial({color,roughness:.95,side:THREE.DoubleSide,transparent:true,opacity:.84});
+  const fabric=new THREE.MeshStandardMaterial({color:0x050505,roughness:1,side:THREE.DoubleSide});
   const dark=new THREE.MeshStandardMaterial({color:0x152238,roughness:.85});
-  const wall=new THREE.Mesh(new THREE.BoxGeometry(length+.18,2.45,.07),fabric);
-  const postA=new THREE.Mesh(new THREE.BoxGeometry(.12,2.6,.12),dark);
-  const postB=postA.clone(); postA.position.x=-length/2; postA.position.y=1.3; postB.position.x=length/2; postB.position.y=1.3;
+  const wall=new THREE.Mesh(new THREE.BoxGeometry(length+.06,1.8288,.07),fabric);
+  wall.position.y=.9144;
+  const postA=new THREE.Mesh(new THREE.BoxGeometry(.1,1.95,.1),dark);
+  const postB=postA.clone(); postA.position.x=-length/2; postA.position.y=.975; postB.position.x=length/2; postB.position.y=.975;
   group.add(wall,postA,postB); group.position.set((ax+bx)/2,0,(az+bz)/2); group.rotation.y=Math.atan2(dz,dx); parent.add(group); return true;
+}
+function actorFootprintWeb(actor){
+  const size=actor.worldBounds?.sizeCm||[0,0,0];
+  return [Math.max(.4,size[0]*.007107610935392121),Math.max(.4,size[1]*.007107610935392121),Math.max(.3,size[2]*.01)];
+}
+function actorBottomOffsetWeb(actor,kind){
+  // Unreal's landscape datum is ~100 cm. Only preserve deliberate elevation
+  // for structures that can actually sit above grade; terrain-following trees,
+  // tents, gazebos and fences are grounded to the web terrain.
+  if(!['platform','stage','structure','production','ada'].includes(kind)) return 0;
+  const bottom=actor.worldBounds?.minCm?.[2]; if(!Number.isFinite(bottom)) return 0;
+  return Math.max(0,Math.min(4,(bottom-100)*.01));
+}
+function sizeActorProxy(proxy,actor,kind){
+  const [w,d,h]=actorFootprintWeb(actor);
+  const nominal={stage:[6.2,3.25,3.2],platform:[8,1,5],tent:[6.1,5.15,6.1],vendor:[5.7,4.2,4.2],
+    gazebo:[6.1,4.35,6.1],food:[3.7,2.6,2],toilet:[1.25,2.35,1.2],structure:[2.7,2.6,2.7]}[kind];
+  if(!nominal) return;
+  // Bounds define footprint and height. Tents retain the agreed ten-foot
+  // eave/roof treatment; scrim is handled separately at exactly six feet.
+  const sx=Math.max(.45,Math.min(4,w/nominal[0]));
+  const sz=Math.max(.45,Math.min(4,d/nominal[2]));
+  let sy=kind==='tent'||kind==='vendor'?1:Math.max(.45,Math.min(3,h/nominal[1]));
+  proxy.scale.multiply(new THREE.Vector3(sx,sy,sz));
+}
+function treeSpecies(actorOrText){
+  const text=typeof actorOrText==='string'?actorOrText:unrealPreviewText(actorOrText);
+  if(/palm/.test(text)) return 'palm';
+  if(/pine|conifer/.test(text)) return 'pine';
+  if(/noleaf|dead/.test(text)) return 'bare';
+  if(/birch/.test(text)) return 'birch';
+  if(/pepper/.test(text)) return 'pepper';
+  if(/poplar|narrowleaf/.test(text)) return 'poplar';
+  return 'deciduous';
+}
+function makeTreeProxy(species,height=12,crownWidth=5){
+  const g=new THREE.Group(), trunkMat=new THREE.MeshStandardMaterial({color:0x6c4b2f,roughness:1});
+  const greens={palm:0x4f9f58,pine:0x356b43,bare:0x78634d,birch:0x74a957,pepper:0x557f43,poplar:0x629b4c,deciduous:0x4f8f45};
+  const leafMat=new THREE.MeshStandardMaterial({color:greens[species]||greens.deciduous,roughness:1});
+  const add=(geo,mat,x,y,z)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);g.add(m);return m;};
+  const trunkH=species==='palm'?height*.72:height*.42;
+  add(new THREE.CylinderGeometry(Math.max(.12,crownWidth*.055),Math.max(.18,crownWidth*.085),trunkH,7),trunkMat,0,trunkH/2,0);
+  if(species==='palm'){
+    for(let i=0;i<9;i++){const frond=add(new THREE.BoxGeometry(crownWidth*.58,.08,.24),leafMat,0,trunkH+.25,0);frond.rotation.y=i*Math.PI/4.5;frond.rotation.z=(i%2?.18:-.18);frond.position.x=Math.cos(frond.rotation.y)*crownWidth*.2;frond.position.z=Math.sin(frond.rotation.y)*crownWidth*.2;}
+  } else if(species==='pine'){
+    add(new THREE.ConeGeometry(crownWidth*.48,height*.52,8),leafMat,0,trunkH+height*.2,0);
+    add(new THREE.ConeGeometry(crownWidth*.34,height*.42,8),leafMat,0,trunkH+height*.42,0);
+  } else if(species==='bare'){
+    for(let i=0;i<7;i++){const b=add(new THREE.CylinderGeometry(.035,.07,height*.35,5),trunkMat,0,trunkH,0);b.rotation.z=(i-3)*.17;b.rotation.y=i*1.31;}
+  } else {
+    add(new THREE.SphereGeometry(crownWidth*.5,8,6),leafMat,0,trunkH+height*.16,0);
+    add(new THREE.SphereGeometry(crownWidth*.38,8,6),leafMat,-crownWidth*.26,trunkH+height*.31,0);
+    add(new THREE.SphereGeometry(crownWidth*.36,8,6),leafMat,crownWidth*.28,trunkH+height*.28,0);
+  }
+  return g;
 }
 function addDirectFenceSegment(parent,start,end,color){
   const a={web:{position:start}},b={web:{position:end}};
@@ -5515,13 +5582,26 @@ function addExportedInstances(parent,manifest){
     if(!kind) return;
     (component.instances||[]).forEach(instance=>{
       const position=unrealCmToWeb(instance.locationCm,manifest); if(!position) return;
-      const proxy=unrealFreshProxyShape(kind,unrealKindColor(kind));
+      const s=instance.scale||[1,1,1], horizontal=Math.max(.35,Math.min(2.5,(Math.abs(s[0])+Math.abs(s[1]))/2));
+      const meshHeight=(component.staticMesh?.localBounds?.sizeCm?.[2]||1500)*.01*horizontal;
+      const meshWidth=Math.max(component.staticMesh?.localBounds?.sizeCm?.[0]||500,component.staticMesh?.localBounds?.sizeCm?.[1]||500)*.01*horizontal;
+      const proxy=makeTreeProxy(treeSpecies(text),Math.max(4,Math.min(28,meshHeight)),Math.max(2,Math.min(11,meshWidth)));
       proxy.position.set(position[0],0,position[2]);
-      const s=instance.scale||[1,1,1], horizontal=Math.max(.45,Math.min(1.8,(Math.abs(s[0])+Math.abs(s[1]))/2));
-      proxy.scale.multiplyScalar(horizontal*.72); parent.add(proxy); count++;
+      parent.add(proxy); count++;
     });
   }));
   return count;
+}
+function addActorScrimPanel(parent,actor){
+  const [x,,z]=actor.web.position, [w,d]=actorFootprintWeb(actor);
+  // The exported actor yaw is authoritative. Bounds choose only the panel
+  // length; never rotate toward a guessed neighboring actor.
+  const length=Math.max(w,d), group=new THREE.Group();
+  const black=new THREE.MeshStandardMaterial({color:0x050505,roughness:1,side:THREE.DoubleSide});
+  const steel=new THREE.MeshStandardMaterial({color:0x202328,roughness:.75,metalness:.35});
+  const wall=new THREE.Mesh(new THREE.BoxGeometry(length,1.8288,.065),black); wall.position.y=.9144; group.add(wall);
+  [-length/2,length/2].forEach(px=>{const post=new THREE.Mesh(new THREE.BoxGeometry(.09,1.95,.09),steel);post.position.set(px,.975,0);group.add(post);});
+  group.position.set(x,0,z); group.rotation.y=actor.web.rotationYRadians||0; parent.add(group); return true;
 }
 function addExportedSplineFence(parent,actor){
   const splineData=actor.webSplines||{}, connected=false;
@@ -5588,28 +5668,28 @@ function loadFreshUnrealMap(){
     fenceActors.forEach(actor=>{
       if(addExportedSplineFence(layer,actor)) fenceActorsWithConnections.add(actor);
     });
-    // Black scrim is reconstructed spatially. Never sort it by actor suffix:
-    // Unreal reuses SCRIM_FENCELINE0... across unrelated site areas.
+    // Standalone scrim actors carry their own authoritative rotation and
+    // world bounds. Render each panel directly; neighbor-based rotation was
+    // the source of the broken/zig-zag fence lines.
     const scrimActors=fenceActors.filter(actor=>!fenceActorsWithConnections.has(actor)&&/scrim/i.test(unrealPreviewText(actor)));
-    addSpatialScrimRuns(layer,scrimActors).forEach(actor=>fenceActorsWithConnections.add(actor));
-    // Non-scrim fence families may still use reliable numbered sequences.
-    const fenceSeries=new Map();
-    fenceActors.filter(actor=>!fenceActorsWithConnections.has(actor)&&!scrimActors.includes(actor)).forEach(actor=>{const key=unrealFenceSeriesKey(actor); if(!fenceSeries.has(key)) fenceSeries.set(key,[]); fenceSeries.get(key).push(actor);});
-    fenceSeries.forEach(series=>{
-      series.sort((a,b)=>unrealFenceIndex(a)-unrealFenceIndex(b));
-      for(let i=0;i<series.length-1;i++){
-        if(addContinuousFenceSegment(layer,series[i],series[i+1],unrealKindColor('fence'))){
-          fenceActorsWithConnections.add(series[i]); fenceActorsWithConnections.add(series[i+1]);
-        }
-      }
+    scrimActors.forEach(actor=>{if(addActorScrimPanel(layer,actor)) fenceActorsWithConnections.add(actor);});
+    // The remaining standalone fence actors also keep their own exported yaw.
+    // Numeric suffixes are identifiers, not a safe ordering signal.
+    fenceActors.filter(actor=>!fenceActorsWithConnections.has(actor)).forEach(actor=>{
+      if(addActorScrimPanel(layer,actor)) fenceActorsWithConnections.add(actor);
     });
     actors.forEach(actor=>{
       const kind=unrealFreshKind(actor), [x,,z]=actor.web.position;
       // Connected fence endpoints are represented by the run geometry above.
       // Keep singletons (gates / isolated panels) visible as individual walls.
       if(kind==='fence' && fenceActorsWithConnections.has(actor)) {counts[kind]=(counts[kind]||0)+1; return;}
-      const proxy=unrealFreshProxyShape(kind,unrealKindColor(kind));
-      proxy.position.set(x,0,z);
+      let proxy;
+      if(kind==='tree'){
+        const [w,d,h]=actorFootprintWeb(actor);
+        proxy=makeTreeProxy(treeSpecies(actor),Math.max(4,Math.min(30,h)),Math.max(2,Math.min(12,Math.max(w,d))));
+      } else proxy=unrealFreshProxyShape(kind,unrealKindColor(kind));
+      sizeActorProxy(proxy,actor,kind);
+      proxy.position.set(x,actorBottomOffsetWeb(actor,kind),z);
       proxy.rotation.y=actor.web.rotationYRadians||0;
       proxy.userData={unrealId:actor.id,unrealName:actor.name,kind};
       layer.add(proxy); counts[kind]=(counts[kind]||0)+1;

@@ -5254,6 +5254,10 @@ const unrealPreviewEnabled=new URLSearchParams(location.search).get('unrealPrevi
 // The asset pass uses a stricter classifier plus proper low-poly proxy shapes.
 // It is a separate private URL while we validate it against the hand-built map.
 const unrealAssetPreviewEnabled=new URLSearchParams(location.search).get('unrealPreview')==='assets';
+// A clean-room pass: the Unreal export drives every festival object.  The
+// legacy web build is retained only as a ground/sky reference, never as a
+// source of object placement.
+const unrealFreshEnabled=new URLSearchParams(location.search).get('unrealFresh')==='1';
 let editorActive=editorEnabled;
 let editorSelected=null;
 let editorBaseObjects=[];
@@ -5285,8 +5289,24 @@ function unrealPreviewKind(actor){
   if(/container|trailer|scaffold|\btower\b|\bbuilding\b|\bhouse\b/.test(text)) return 'structure';
   return null;
 }
+function unrealFreshKind(actor){
+  // Actor names are intentional labels in Peter's new export.  Do not inspect
+  // arbitrary mesh paths here: package paths create false positives such as
+  // "Content" accidentally matching "tent".
+  const name=(actor.name||'').toLowerCase();
+  if(/fence|gate|barricade|velvet.?rope/.test(name)) return 'fence';
+  if(/bathroom|restroom|porta.?potty|toilet/.test(name)) return 'toilet';
+  if(/same.?stage|different.?but|but.?stage|cococove|coconut|famgarden|innerspace|grandmahouse|\bstage\b|dj.?booth/.test(name)) return 'stage';
+  if(/tent|canopy|gazebo|awning/.test(name)) return 'tent';
+  if(/food|bar(top)?|vendor|concession|grill|catering/.test(name)) return 'food';
+  if(/limitless|platform|deck|container|trailer|tower|scaffold|house|building|\brv\b|generator|dumpster/.test(name)) return 'structure';
+  return null;
+}
 function unrealPreviewColor(actor){
   const kind=unrealPreviewKind(actor);
+  return new THREE.Color({stage:0xffb347,fence:0xb86cff,tent:0x47d9e8,food:0xff7da8,toilet:0x54d6ff,structure:0x80ed99}[kind]||0x708090);
+}
+function unrealKindColor(kind){
   return new THREE.Color({stage:0xffb347,fence:0xb86cff,tent:0x47d9e8,food:0xff7da8,toilet:0x54d6ff,structure:0x80ed99}[kind]||0x708090);
 }
 function unrealPreviewLabel(text,position,color){
@@ -5321,8 +5341,46 @@ function unrealProxyShape(kind,color){
   }
   return group;
 }
+function unrealFreshProxyShape(kind,color){
+  const proxy=unrealProxyShape(kind,color);
+  // Make the clean pass feel like a site plan, rather than the old toy-like
+  // cubes.  These proportions are web proxies, not guesses at Unreal height.
+  if(kind==='stage') proxy.scale.set(1.55,1.15,1.35);
+  if(kind==='tent') proxy.scale.set(.9,.85,.9);
+  if(kind==='fence') proxy.scale.set(.72,.82,.72);
+  if(kind==='food') proxy.scale.set(.86,.92,.86);
+  if(kind==='toilet') proxy.scale.set(.9,.92,.9);
+  return proxy;
+}
+function loadFreshUnrealMap(){
+  if(!unrealFreshEnabled) return;
+  // The old site is useful for its terrain only. Hide every legacy festival
+  // object before assembling the new layer; keep the environmental meshes and
+  // lighting that make the terrain legible.
+  const keep=new Set([skyDome,sun,sunDisc,base,lawn,beach,lake,foam]);
+  scene.children.forEach(obj=>{if(!keep.has(obj) && !obj.isLight) obj.visible=false;});
+  fetch('unreal-web-preview.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(manifest=>{
+    const actors=(manifest?.actors||[]).filter(actor=>actor.visible!==false && actor.web && unrealFreshKind(actor));
+    if(!actors.length) throw new Error('No labelled Unreal actors');
+    const layer=new THREE.Group(); layer.name='Fresh Unreal-driven festival map';
+    const counts={};
+    actors.forEach(actor=>{
+      const kind=unrealFreshKind(actor), [x,,z]=actor.web.position;
+      const proxy=unrealFreshProxyShape(kind,unrealKindColor(kind));
+      proxy.position.set(x,0,z);
+      proxy.rotation.y=actor.web.rotationYRadians||0;
+      proxy.userData={unrealId:actor.id,unrealName:actor.name,kind};
+      layer.add(proxy); counts[kind]=(counts[kind]||0)+1;
+    });
+    scene.add(layer);
+    [['SAME STAGE','Same_Stage_4_29_26__REVIEW_'],['BUT STAGE','Cube78'],['COCONUT COVE','cococove_single'],['LIMITLESS','Limitless_Platform']]
+      .forEach(([label,name])=>{const a=(manifest.actors||[]).find(actor=>actor.name===name);if(a?.web){const [x,,z]=a.web.position;scene.add(unrealPreviewLabel(label,new THREE.Vector3(x,0,z),'#fff1a8'));}});
+    const summary=Object.entries(counts).map(([kind,count])=>`${count} ${kind}`).join(' · ');
+    toast(`FRESH UNREAL MAP — ${summary}. Legacy festival objects are hidden.`);
+  }).catch(error=>{console.error('Fresh Unreal map failed',error);toast('Could not load fresh Unreal map.');});
+}
 function loadUnrealPreview(){
-  if(!unrealPreviewEnabled && !unrealAssetPreviewEnabled) return;
+  if(unrealFreshEnabled || (!unrealPreviewEnabled && !unrealAssetPreviewEnabled)) return;
   fetch('unreal-web-preview.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(manifest=>{
     const allActors=(manifest&&manifest.actors||[]).filter(actor=>actor.visible!==false && actor.web && (Array.isArray(actor.staticMeshes) && actor.staticMeshes.length || /same_stage|different-but|cococove|cube78/i.test(actor.name||'')));
     const actors=unrealAssetPreviewEnabled ? allActors.filter(actor=>unrealPreviewKind(actor)) : allActors;
@@ -5521,6 +5579,7 @@ function editorSetMode(mode){
   document.querySelectorAll('#editorPanel [data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
 }
 function setupEditor(){
+  if(unrealFreshEnabled) return;
   editorBaseObjects=scene.children.slice();
   fetch('scene-layout.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(layout=>{
     editorApplyLayout(layout);
@@ -5558,6 +5617,7 @@ function setupEditor(){
   document.getElementById('editorExit').onclick=()=>{editorActive=false;editorPanel.classList.remove('show');editorSelect(null);toast('Editor closed. Reload with ?editor=1 to edit again.');};
   toast('Editor ready — click an object to edit it.');
 }
+loadFreshUnrealMap();
 loadUnrealPreview();
 setupEditor();
 

@@ -66,7 +66,7 @@
  <div class="editorRow"><button data-editor-mode="translate">Move</button><button data-editor-mode="rotate">Rotate</button><button data-editor-mode="scale">Scale</button></div>
  <div class="editorRow"><button id="editorFly">Fly viewport</button><button id="editorOverview">Bird's-eye view</button></div>
  <div class="editorRow"><button id="editorSave">Save locally</button><button id="editorExport">Download layout</button></div>
- <div class="editorHint">WASD fly · Q/E up/down · Shift boosts · drag to look. Bird's-eye is a quick reset. Browser saves stay local; download the layout to publish it.</div>
+ <div class="editorHint">WASD fly · Q/E up/down · Shift boosts · arrows turn. Mouse selects and moves objects. Bird's-eye is a quick reset.</div>
 </aside>
 <div id="startOverlay">
   <h1>Same Same But Different</h1>
@@ -5562,10 +5562,9 @@ addEventListener('mousedown', ()=>{ if(started && !document.pointerLockElement) 
 addEventListener('mouseup', ()=> dragging = false);
 addEventListener('mousemove', e=>{
   if(!started) return;
-  if(window.ssbdEditorActive){
-    if(!window.ssbdTransformDragging && window.ssbdEditorLook) window.ssbdEditorLook(e.movementX,e.movementY);
-    return;
-  }
+  // Arrow keys steer the editor camera, leaving the mouse entirely for
+  // selecting and manipulating objects, as in a conventional level editor.
+  if(window.ssbdEditorActive) return;
   const locked = !!document.pointerLockElement;
   if(!locked && !dragging) return;
   player.yaw   -= e.movementX * 0.0022;
@@ -5683,10 +5682,19 @@ function animate(){
 
   if(!locked){
     const lookSpeed=1.65;
-    if(keys['ArrowLeft']) player.yaw += lookSpeed*dt;
-    if(keys['ArrowRight']) player.yaw -= lookSpeed*dt;
-    if(keys['ArrowUp']) player.pitch = Math.min(1.35,player.pitch+lookSpeed*0.72*dt);
-    if(keys['ArrowDown']) player.pitch = Math.max(-1.35,player.pitch-lookSpeed*0.72*dt);
+    if(window.ssbdEditorActive && window.ssbdEditorCamera){
+      const ec=window.ssbdEditorCamera;
+      if(keys['ArrowLeft']) ec.yaw += lookSpeed*dt;
+      if(keys['ArrowRight']) ec.yaw -= lookSpeed*dt;
+      if(keys['ArrowUp']) ec.pitch = Math.min(1.48,ec.pitch+lookSpeed*0.72*dt);
+      if(keys['ArrowDown']) ec.pitch = Math.max(-1.48,ec.pitch-lookSpeed*0.72*dt);
+      if(keys['ArrowLeft']||keys['ArrowRight']||keys['ArrowUp']||keys['ArrowDown']) window.ssbdEditorOverview=false;
+    } else {
+      if(keys['ArrowLeft']) player.yaw += lookSpeed*dt;
+      if(keys['ArrowRight']) player.yaw -= lookSpeed*dt;
+      if(keys['ArrowUp']) player.pitch = Math.min(1.35,player.pitch+lookSpeed*0.72*dt);
+      if(keys['ArrowDown']) player.pitch = Math.max(-1.35,player.pitch-lookSpeed*0.72*dt);
+    }
   }
 
   let fx=0, fz=0;

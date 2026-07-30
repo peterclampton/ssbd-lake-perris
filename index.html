@@ -34,13 +34,15 @@
   @keyframes pu{0%,100%{opacity:.4}50%{opacity:1}}
   #toast{position:absolute;top:22px;right:26px;color:#1b2a44;font-size:13px;background:rgba(255,255,255,.78);
     border:1px solid rgba(0,0,0,.15);border-radius:8px;padding:8px 14px;opacity:0;transition:opacity .4s;max-width:340px;}
-  #respawnBtn,#partyBtn{position:absolute;bottom:22px;pointer-events:auto;cursor:pointer;
+  #respawnBtn,#partyBtn,#gfxBtn{position:static;pointer-events:auto;cursor:pointer;
     color:#152238;background:rgba(255,255,255,.78);border:1px solid rgba(0,0,0,.24);
     border-radius:7px;padding:7px 12px;font:600 12px/1.2 'Segoe UI',system-ui,sans-serif;
     letter-spacing:.35px;box-shadow:0 2px 8px rgba(20,35,50,.12);}
-  #respawnBtn{right:26px;}
-  #partyBtn{right:112px;}
-  #respawnBtn:hover,#partyBtn:hover{background:#fff;}
+  /* Fixed right offsets can't know how wide each button renders, and the party
+     button changes width when its label flips to 'Party On'. Lay them out. */
+  #hudBtns{position:absolute;right:26px;bottom:22px;display:flex;gap:10px;
+    align-items:center;pointer-events:none;flex-wrap:wrap;justify-content:flex-end;}
+  #respawnBtn:hover,#partyBtn:hover,#gfxBtn:hover{background:#fff;}
   #partyBtn.active{color:#fff;border-color:rgba(255,255,255,.65);
     background:linear-gradient(100deg,
       #ff1744,#ff6d00,#ffea00,#76ff03,#00e676,#00e5ff,
@@ -48,38 +50,9 @@
     background-size:500% 100%;animation:partyButton 2.4s linear infinite;
     box-shadow:0 0 18px rgba(228,59,54,.38);}
   @keyframes partyButton{to{background-position:500% 0}}
-  #mobileControls{display:none;position:fixed;inset:0;z-index:12;pointer-events:none;touch-action:none;}
-  #movePad{position:absolute;left:max(20px,env(safe-area-inset-left));bottom:max(24px,env(safe-area-inset-bottom));width:132px;height:132px;border-radius:50%;background:rgba(18,32,51,.30);border:1px solid rgba(255,255,255,.38);box-shadow:0 3px 18px rgba(0,0,0,.2);pointer-events:auto;}
-  #moveKnob{position:absolute;left:36px;top:36px;width:58px;height:58px;border-radius:50%;background:rgba(255,255,255,.67);border:1px solid rgba(16,30,46,.35);}
-  #mobileActions{position:absolute;right:max(18px,env(safe-area-inset-right));bottom:max(24px,env(safe-area-inset-bottom));display:grid;grid-template-columns:70px 70px;gap:10px;pointer-events:auto;}
-  .mobileAction{height:58px;border:1px solid rgba(255,255,255,.58);border-radius:16px;background:rgba(20,35,55,.55);color:#fff;font:700 12px/1 system-ui,sans-serif;letter-spacing:.4px;text-shadow:0 1px 2px #000;}
-  .mobileAction:active{transform:scale(.94);background:rgba(48,92,126,.82);}
-  .mobileAction.active{background:#8a3cc9;border-color:#fff;box-shadow:0 0 16px rgba(205,96,255,.7);}
-  #rotateOverlay{display:none;position:fixed;inset:0;z-index:30;align-items:center;justify-content:center;flex-direction:column;background:linear-gradient(145deg,#183a61,#0b1c30);color:#fff;text-align:center;padding:28px;}
-  #editorPanel{display:none;position:fixed;z-index:50;top:16px;right:16px;width:248px;padding:14px;border:1px solid rgba(255,255,255,.26);border-radius:12px;background:rgba(11,20,34,.91);color:#eef5ff;font:12px/1.35 system-ui,sans-serif;box-shadow:0 12px 34px rgba(0,0,0,.34);backdrop-filter:blur(10px);}
-  #editorPanel.show{display:block;} #editorPanel h2{margin:0 0 5px;font-size:15px;letter-spacing:1px;} #editorPanel p{margin:0 0 10px;color:#b9cce0;}
-  #editorPanel .editorRow{display:flex;gap:6px;margin:7px 0;} #editorPanel button,#editorPanel label{flex:1;box-sizing:border-box;border:1px solid #6285a8;border-radius:6px;background:#1f3b59;color:#fff;padding:7px 6px;font:600 11px/1 system-ui,sans-serif;text-align:center;cursor:pointer;}
-  #editorPanel button:hover,#editorPanel label:hover{background:#2f5c87;} #editorPanel button.active{background:#d47e2e;border-color:#ffc276;} #editorPanel label input{display:none;}
-  #editorSelected{min-height:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#ffd18a;margin:8px 0 4px;}.editorHint{color:#9db4cc;font-size:10px;}
-  #rotateIcon{font-size:52px;line-height:1;margin-bottom:18px;animation:rotateHint 1.8s ease-in-out infinite;}
-  #rotateOverlay h2{margin:0 0 10px;font-size:21px;letter-spacing:2px;text-transform:uppercase;}
-  #rotateOverlay p{margin:0;color:#bdd4ea;font-size:14px;line-height:1.5;}
-  @keyframes rotateHint{0%,100%{transform:rotate(0deg)}50%{transform:rotate(90deg)}}
-  @media (pointer:coarse){#mobileControls{display:block;}#controls{display:none;}#partyBtn,#respawnBtn{display:none;}#title{top:max(14px,env(safe-area-inset-top));left:16px;}#title h1{font-size:14px;}#title p{font-size:10px;}#startOverlay h1{font-size:26px;letter-spacing:4px;text-align:center;padding:0 18px;}#startOverlay h2{font-size:11px;letter-spacing:2px;text-align:center;}#startOverlay p{font-size:12px;line-height:1.6;text-align:center;padding:0 28px;}}
-  @media (pointer:coarse) and (orientation:portrait){#rotateOverlay{display:flex;}}
 </style>
 </head>
 <body>
-<div id="rotateOverlay"><div id="rotateIcon">↻</div><h2>Rotate your phone</h2><p>SSBD is built to explore in landscape.</p></div>
-<aside id="editorPanel" aria-label="Scene editor">
-  <h2>SCENE EDITOR</h2><p>Click an object, then use the handles.</p>
-  <div id="editorSelected">Nothing selected</div>
-  <div class="editorRow"><button data-mode="translate">Move</button><button data-mode="rotate">Rotate</button><button data-mode="scale">Scale</button></div>
-  <div class="editorRow"><button id="editorUndo" disabled>Undo</button><button id="editorDuplicate" disabled>Duplicate</button><button id="editorDelete" disabled>Delete</button></div>
-  <div class="editorRow"><label>Import GLB<input id="editorImport" type="file" accept=".glb,model/gltf-binary"></label><button id="editorSave">Save locally</button></div>
-  <div class="editorRow"><button id="editorExport">Download layout</button><button id="editorExit">Exit editor</button></div>
-  <div class="editorHint">WASD moves · arrows/mouse looks · Q/F up/down. Save stays on this computer; download a layout when you want it published.</div>
-</aside>
 <div id="startOverlay">
   <h1>Same Same But Different</h1>
   <h2>Lake Perris &middot; Festival Day</h2>
@@ -90,128 +63,379 @@
   <div id="crosshair"></div>
   <div id="prompt"></div>
   <div id="title"><h1>SSBD // Lake Perris</h1><p>Version 1</p></div>
-  <div id="controls"><span>W A S D</span>move &nbsp;<span>Arrow keys</span>look &nbsp;<span>Space</span>jump &nbsp;<span>Shift</span>run &nbsp;<span>E</span>interact &nbsp;<span>L</span>party mode &nbsp;<span>R</span>respawn &nbsp;<span>Esc</span>release mouse</div>
-  <button id="partyBtn" type="button" aria-label="Toggle party mode">L · Party Mode</button>
-  <button id="respawnBtn" type="button" aria-label="Respawn at the East Entrance">Respawn</button>
-  <div id="mobileControls" aria-label="Touch controls">
-    <div id="movePad" aria-label="Move"><div id="moveKnob"></div></div>
-    <div id="mobileActions">
-      <button class="mobileAction" id="mobileInteract" type="button">INTERACT</button><button class="mobileAction" id="mobileJump" type="button">JUMP</button>
-      <button class="mobileAction" id="mobileParty" type="button">PARTY</button><button class="mobileAction" id="mobileRespawn" type="button">RESPAWN</button>
-    </div>
+  <div id="controls"><span>W A S D</span>move &nbsp;<span>Arrow keys</span>look &nbsp;<span>Space</span>jump &nbsp;<span>Shift</span>run &nbsp;<span>E</span>interact &nbsp;<span>L</span>party mode &nbsp;<span>G</span>graphics &nbsp;<span>R</span>respawn &nbsp;<span>Esc</span>release mouse</div>
+  <div id="hudBtns">
+    <button id="gfxBtn" type="button" aria-label="Cycle graphics quality">G · Ultra</button>
+    <button id="partyBtn" type="button" aria-label="Toggle party mode">L · Party Mode</button>
+    <button id="respawnBtn" type="button" aria-label="Respawn at the East Entrance">Respawn</button>
   </div>
   <div id="toast"></div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script>
 // ================= SETUP =================
 // PLAYER-RELATIVE TRUTH (facing the Same Stage from the lawn):
 //   stage = ahead (+z) · Butwood = LEFT (+x) · entrance/food/Innerspace = RIGHT (-x)
 //   beach/Coco Cove/island = BEHIND (-z)
-const scene = new THREE.Scene();
-const isTouchDevice = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
-scene.background = new THREE.Color(0x8ec8f7);
-scene.fog = new THREE.FogExp2(0xcfe3f2, 0.0026);
+//
+// RENDERING NOTE: sky, fog and water are authored in SCENE-LINEAR RADIANCE, not
+// in screen colours. Those values are resolved to the display by ACES filmic
+// tone mapping at the end of the post chain. The numbers below were solved by
+// inverting that exact tone curve, so e.g. the zenith really does land on
+// rgb(61,122,201) once it reaches your monitor.
+const SKY = {
+  zenith:  new THREE.Color(0.0459, 0.1545, 0.5238),  // -> #3d7ac9
+  horizon: new THREE.Color(0.5399, 0.8614, 1.1607),  // -> #d2e0e8 dusty inland haze
+  ground:  new THREE.Color(0.4737, 0.3699, 0.2281),  // -> #c6b89c bounce off the basin
+  sun:     new THREE.Color(1.0,    0.74,   0.46  )
+};
 
-const camera = new THREE.PerspectiveCamera(72, innerWidth/innerHeight, 0.1, 1600);
-const renderer = new THREE.WebGLRenderer({antialias:true, powerPreference:'high-performance'});
+const scene = new THREE.Scene();
+scene.background = SKY.horizon.clone();
+scene.fog = new THREE.FogExp2(0xffffff, 0.0017);
+scene.fog.color.copy(SKY.horizon);
+
+// 62° vertical is roughly a 28mm still lens — wide enough to read a festival
+// site, narrow enough to stop the edges from smearing like a fisheye.
+const camera = new THREE.PerspectiveCamera(62, innerWidth/innerHeight, 0.22, 2600);
+const renderer = new THREE.WebGLRenderer({
+  antialias:true, powerPreference:'high-performance', stencil:false
+});
 renderer.setSize(innerWidth, innerHeight);
-renderer.setPixelRatio(Math.min(devicePixelRatio,isTouchDevice ? 1.25 : 2));
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.08;
 renderer.physicallyCorrectLights = true;
-renderer.shadowMap.enabled = !isTouchDevice;
+renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.body.appendChild(renderer.domElement);
+const MAXANISO = renderer.capabilities.getMaxAnisotropy();
+const IS_WEBGL2 = renderer.capabilities.isWebGL2;
+// Half-float buffers are what let highlights go above 1.0 so bloom and the tone
+// curve have real headroom to work with. Fall back to bytes if the driver won't
+// render to them, in which case the pipeline still works, just clipped.
+const HDR_TYPE = (renderer.extensions.has('EXT_color_buffer_float') ||
+                  renderer.extensions.has('EXT_color_buffer_half_float'))
+  ? THREE.HalfFloatType : THREE.UnsignedByteType;
+let MSAA_SAMPLES = 4;
 
 // ================= LIGHT / SKY =================
-const skyDome=new THREE.Mesh(
-  new THREE.SphereGeometry(1250,32,18),
+// ~44° solar elevation: high enough to read as festival afternoon, low enough
+// that everything on site casts a shadow with some length and direction to it.
+const SUN_DIR = new THREE.Vector3(0.604, 0.695, 0.388).normalize();
+
+const skyUniforms = {
+  uSunDir:    {value: SUN_DIR.clone()},
+  uZenith:    {value: SKY.zenith.clone()},
+  uHorizon:   {value: SKY.horizon.clone()},
+  uGround:    {value: SKY.ground.clone()},
+  uSunCol:    {value: SKY.sun.clone()},
+  uPartyTint: {value: new THREE.Color(0,0,0)}
+};
+const skyDome = new THREE.Mesh(
+  new THREE.SphereGeometry(1500, 64, 32),
   new THREE.ShaderMaterial({
-    side:THREE.BackSide,depthWrite:false,
-    uniforms:{
-      topColor:{value:new THREE.Color(0x4e9fe0)},
-      horizonColor:{value:new THREE.Color(0xd8edf4)},
-      lowColor:{value:new THREE.Color(0xf0d6aa)}
-    },
-    vertexShader:'varying float vH; void main(){vH=normalize(position).y; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
-    fragmentShader:'uniform vec3 topColor; uniform vec3 horizonColor; uniform vec3 lowColor; varying float vH; void main(){float up=smoothstep(-0.05,0.65,vH); float low=smoothstep(-0.4,0.08,vH); vec3 c=mix(lowColor,horizonColor,low); c=mix(c,topColor,up); gl_FragColor=vec4(c,1.0);}'
+    side: THREE.BackSide, depthWrite: false, fog: false,
+    uniforms: skyUniforms,
+    vertexShader: `
+      varying vec3 vDir;
+      void main(){
+        vDir = position;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }`,
+    fragmentShader: `
+      uniform vec3 uSunDir, uZenith, uHorizon, uGround, uSunCol, uPartyTint;
+      varying vec3 vDir;
+      float hash12(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+      void main(){
+        vec3 d = normalize(vDir);
+        float h = d.y;
+
+        // Grazing rays travel through far more air, which scatters the blue out
+        // of them and leaves the pale band you actually see near the skyline.
+        float k = pow(clamp(1.0 - max(h, 0.0), 0.0, 1.0), 4.0);
+        vec3 col = mix(uZenith, uHorizon, k);
+        col = mix(col, uHorizon, smoothstep(0.13, -0.01, h) * 0.7);
+
+        // Mie forward scattering: broad wash, aureole, then the disc itself.
+        float mu = clamp(dot(d, uSunDir), 0.0, 1.0);
+        col += uSunCol * pow(mu,    5.0) *  0.10;
+        col += uSunCol * pow(mu,   90.0) *  0.55;
+        col += uSunCol * pow(mu, 2600.0) * 14.0;
+
+        // Dust bounce fills in everything below the horizon line.
+        col = mix(col, uGround, smoothstep(-0.005, -0.10, h));
+        col += uPartyTint;
+
+        // Wide smooth gradients band hard on 8-bit panels; sub-LSB noise hides it.
+        col += (hash12(gl_FragCoord.xy) - 0.5) * 0.0025;
+
+        gl_FragColor = vec4(col, 1.0);
+        #include <tonemapping_fragment>
+        #include <encodings_fragment>
+      }`
   })
 );
+skyDome.frustumCulled = false;
 scene.add(skyDome);
-scene.add(new THREE.HemisphereLight(0xc8e2ff, 0x66744d, 1.7));
-const sun = new THREE.DirectionalLight(0xfff0d0, 3.2);
-sun.position.set(140, 220, 90); scene.add(sun);
-sun.castShadow = true;
-sun.shadow.mapSize.set(2048,2048);
-sun.shadow.camera.left = -190; sun.shadow.camera.right = 190;
-sun.shadow.camera.top = 190; sun.shadow.camera.bottom = -190;
-sun.shadow.camera.near = 20; sun.shadow.camera.far = 520;
-sun.shadow.bias = -0.00015;
-const sunDisc = new THREE.Mesh(new THREE.SphereGeometry(18,16,16),
-  new THREE.MeshBasicMaterial({color:0xfff6d8, fog:false}));
-sunDisc.position.set(560, 700, 360); scene.add(sunDisc);
+
+// Image-based lighting. Without this every MeshStandardMaterial in the scene is
+// lit by nothing but a sun and a flat hemisphere, which is exactly why untouched
+// three.js scenes read as plastic. Capturing the real sky into a PMREM probe
+// gives all 400-odd materials proper directional ambient and specular response.
+let envRT = null;
 {
-  const cm = new THREE.MeshBasicMaterial({color:0xffffff, transparent:true, opacity:0.85, fog:false});
-  for(let i=0;i<12;i++){
-    const cl = new THREE.Group();
-    const n = 3+Math.floor(Math.random()*3);
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  const envScene = new THREE.Scene();
+  const domeClone = new THREE.Mesh(skyDome.geometry, skyDome.material);
+  domeClone.frustumCulled = false;
+  envScene.add(domeClone);
+  // A ground disc so surfaces pick up warm bounce from the basin floor rather
+  // than sampling black from below.
+  const envFloor = new THREE.Mesh(
+    new THREE.CircleGeometry(1400, 24),
+    new THREE.MeshBasicMaterial({color: SKY.ground.clone().multiplyScalar(0.62)})
+  );
+  envFloor.rotation.x = -Math.PI/2;
+  envFloor.position.y = -2;
+  envScene.add(envFloor);
+  try {
+    envRT = pmrem.fromScene(envScene, 0.03, 1, 5000);
+    scene.environment = envRT.texture;
+  } catch(e){
+    console.warn('IBL probe unavailable, falling back to analytic ambient', e);
+  }
+  pmrem.dispose();
+}
+
+// With the sky probe carrying the ambient, the hemisphere light drops to a small
+// fill instead of doing all the work and flattening everything out.
+scene.add(new THREE.HemisphereLight(0xbcd8f5, 0x6b7048, 0.38));
+
+const sun = new THREE.DirectionalLight(0xfff1d6, 3.1);
+sun.position.copy(SUN_DIR).multiplyScalar(420);
+scene.add(sun);
+scene.add(sun.target);
+sun.castShadow = true;
+sun.shadow.mapSize.set(4096, 4096);
+// Recentred on the site's actual footprint rather than the world origin, so the
+// texel budget is spent on the festival instead of empty lakebed.
+// Following the player at 160m gives 0.078m shadow texels instead of 0.107m at
+// the old static 218m. Snapping the centre to a coarse grid means the frustum is
+// completely static between steps, so shadows never shimmer while walking — the
+// usual cost of a following shadow camera.
+const SHADOW_CENTER = new THREE.Vector3(-10, 0, -55);
+const SHADOW_EXTENT = 160;
+const SHADOW_SNAP = 32;
+sun.shadow.camera.left = -SHADOW_EXTENT; sun.shadow.camera.right = SHADOW_EXTENT;
+sun.shadow.camera.top  =  SHADOW_EXTENT; sun.shadow.camera.bottom = -SHADOW_EXTENT;
+sun.shadow.camera.near = 1; sun.shadow.camera.far = 900;
+sun.shadow.bias = -0.0002;
+sun.shadow.normalBias = 0.045;
+sun.position.copy(SHADOW_CENTER).addScaledVector(SUN_DIR, 420);
+sun.target.position.copy(SHADOW_CENTER);
+sun.target.updateMatrixWorld();
+sun.shadow.camera.updateProjectionMatrix();
+
+let _shadowGX = 1e9, _shadowGZ = 1e9;
+function updateSunShadow(px, pz){
+  const gx = Math.round(px/SHADOW_SNAP)*SHADOW_SNAP;
+  const gz = Math.round(pz/SHADOW_SNAP)*SHADOW_SNAP;
+  if(gx === _shadowGX && gz === _shadowGZ) return;
+  _shadowGX = gx; _shadowGZ = gz;
+  sun.target.position.set(gx, 0, gz);
+  sun.position.set(gx, 0, gz).addScaledVector(SUN_DIR, 420);
+  sun.target.updateMatrixWorld();
+  sun.updateMatrixWorld();
+}
+
+// ---------- CLOUDS ----------
+// Camera-facing puffs with a lit/shaded gradient read far more like weather than
+// the flattened spheres they replace.
+function cloudPuffTexture(){
+  const S = 256;
+  const cv = document.createElement('canvas'); cv.width = cv.height = S;
+  const ctx = cv.getContext('2d');
+  const g = ctx.createRadialGradient(S/2, S/2, S*0.04, S/2, S/2, S*0.49);
+  g.addColorStop(0.00, 'rgba(255,255,255,1)');
+  g.addColorStop(0.42, 'rgba(255,255,255,0.80)');
+  g.addColorStop(0.74, 'rgba(255,255,255,0.28)');
+  g.addColorStop(1.00, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, S, S);
+  // Chew irregular bites out of the circle so the silhouette isn't a bubble.
+  ctx.globalCompositeOperation = 'destination-out';
+  for(let i=0;i<80;i++){
+    const a = Math.random()*Math.PI*2, r = S*(0.24 + Math.random()*0.26);
+    const x = S/2 + Math.cos(a)*r, y = S/2 + Math.sin(a)*r*0.82;
+    const rad = S*(0.05 + Math.random()*0.13);
+    const g2 = ctx.createRadialGradient(x, y, 0, x, y, rad);
+    g2.addColorStop(0, 'rgba(0,0,0,'+(0.22+Math.random()*0.5)+')');
+    g2.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g2;
+    ctx.beginPath(); ctx.arc(x, y, rad, 0, 6.2832); ctx.fill();
+  }
+  ctx.globalCompositeOperation = 'source-over';
+  const tex = new THREE.CanvasTexture(cv);
+  tex.anisotropy = MAXANISO;
+  return tex;
+}
+const clouds = [];
+{
+  const puffTex = cloudPuffTexture();
+  const litCol   = new THREE.Color(1.55, 1.52, 1.44);   // sun-struck tops
+  const shadeCol = new THREE.Color(0.50, 0.56, 0.70);   // cool shadowed bases
+  for(let i=0;i<24;i++){
+    const cloud = new THREE.Group();
+    const n = 5 + Math.floor(Math.random()*5);
     for(let j=0;j<n;j++){
-      const s = new THREE.Mesh(new THREE.SphereGeometry(14+Math.random()*16, 10, 8), cm);
-      s.position.set(j*18-((n-1)*9), Math.random()*5, Math.random()*10);
-      s.scale.y = 0.45; cl.add(s);
+      const up = j/(n-1);                                // base -> top of the stack
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: puffTex, transparent: true, depthWrite: false, fog: false,
+        opacity: 0.42 + Math.random()*0.30,
+        color: shadeCol.clone().lerp(litCol, 0.22 + up*0.72)
+      }));
+      const w = 70 + Math.random()*110;
+      s.scale.set(w, w*(0.46 + Math.random()*0.24), 1);
+      s.position.set(
+        (Math.random()-0.5)*190,
+        up*34 + (Math.random()-0.5)*16,
+        (Math.random()-0.5)*100
+      );
+      s.renderOrder = -10 + up;
+      cloud.add(s);
     }
-    const a = Math.random()*Math.PI*2, d = 350+Math.random()*500;
-    cl.position.set(Math.cos(a)*d, 150+Math.random()*90, Math.sin(a)*d);
-    scene.add(cl);
+    const a = Math.random()*Math.PI*2, d = 430 + Math.random()*820;
+    cloud.position.set(Math.cos(a)*d, 240 + Math.random()*180, Math.sin(a)*d);
+    cloud.userData.drift = 0.5 + Math.random()*0.9;
+    scene.add(cloud);
+    clouds.push(cloud);
   }
 }
 
 // ================= TERRAIN =================
-function terrainTexture(baseColor, flecks, repeat=18){
-  const cv=document.createElement('canvas'); cv.width=cv.height=256;
-  const ctx=cv.getContext('2d');
-  ctx.fillStyle=baseColor; ctx.fillRect(0,0,256,256);
-  for(let i=0;i<4200;i++){
-    ctx.globalAlpha=0.08+Math.random()*0.18;
-    ctx.fillStyle=flecks[i%flecks.length];
-    const s=0.5+Math.random()*2.2;
-    ctx.fillRect(Math.random()*256,Math.random()*256,s,s);
-  }
-  ctx.globalAlpha=1;
-  const tex=new THREE.CanvasTexture(cv);
-  tex.wrapS=tex.wrapT=THREE.RepeatWrapping;
-  tex.repeat.set(repeat,repeat);
-  tex.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
-  tex.encoding=THREE.sRGBEncoding;
-  return tex;
+// Ground materials are the surface the player spends the whole session looking
+// at, so they get real normal maps derived from the albedo plus a low-frequency
+// breakup pass. Flat colour + bump was the single biggest "this is a game engine"
+// tell in the old build.
+function hexA(hex, a){
+  const h = hex.replace('#','');
+  return 'rgba('+parseInt(h.slice(0,2),16)+','+parseInt(h.slice(2,4),16)+','+parseInt(h.slice(4,6),16)+','+a+')';
 }
-const earthTex=terrainTexture('#a9955f',['#776b43','#c2ad70','#8c7a4d'],24);
-const grassTex=terrainTexture('#5d954a',['#355f31','#79aa58','#4b7d3d','#8bb867'],22);
-const sandTex=terrainTexture('#dfca93',['#bca66f','#f2dfab','#cdb982'],28);
+function groundCanvas(baseColor, flecks, size=512){
+  const cv = document.createElement('canvas'); cv.width = cv.height = size;
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = baseColor; ctx.fillRect(0, 0, size, size);
+  // Low-frequency mottling first: real ground has patches, not uniform static.
+  for(let i=0;i<110;i++){
+    const x = Math.random()*size, y = Math.random()*size;
+    const r = size*(0.05 + Math.random()*0.20);
+    const c = flecks[(Math.random()*flecks.length)|0];
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, hexA(c, 0.10 + Math.random()*0.17));
+    g.addColorStop(1, hexA(c, 0));
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill();
+  }
+  // High-frequency grain on top for close-range detail.
+  const n = (size*size)/11;
+  for(let i=0;i<n;i++){
+    ctx.globalAlpha = 0.07 + Math.random()*0.20;
+    ctx.fillStyle = flecks[i % flecks.length];
+    const s = 0.5 + Math.random()*2.6;
+    ctx.fillRect(Math.random()*size, Math.random()*size, s, s);
+  }
+  ctx.globalAlpha = 1;
+  return cv;
+}
+// Sobel the albedo's luminance into a tangent-space normal map. Cheap, and it
+// gives the ground actual relief under a low sun instead of a painted-on look.
+function normalFromCanvas(cv, strength){
+  const size = cv.width;
+  const src = cv.getContext('2d').getImageData(0, 0, size, size).data;
+  const lum = new Float32Array(size*size);
+  for(let i=0;i<size*size;i++){
+    lum[i] = (src[i*4]*0.299 + src[i*4+1]*0.587 + src[i*4+2]*0.114)/255;
+  }
+  const at = (x,y)=> lum[((y+size)%size)*size + ((x+size)%size)];
+  const out = document.createElement('canvas'); out.width = out.height = size;
+  const octx = out.getContext('2d');
+  const img = octx.createImageData(size, size);
+  for(let y=0;y<size;y++){
+    for(let x=0;x<size;x++){
+      const dx = (at(x+1,y) - at(x-1,y)) * strength;
+      const dy = (at(x,y+1) - at(x,y-1)) * strength;
+      let nx = -dx, ny = -dy, nz = 1;
+      const l = Math.sqrt(nx*nx + ny*ny + nz*nz);
+      const i = (y*size + x)*4;
+      img.data[i]   = ((nx/l)*0.5 + 0.5)*255;
+      img.data[i+1] = ((ny/l)*0.5 + 0.5)*255;
+      img.data[i+2] = ((nz/l)*0.5 + 0.5)*255;
+      img.data[i+3] = 255;
+    }
+  }
+  octx.putImageData(img, 0, 0);
+  return out;
+}
+function groundMaps(baseColor, flecks, repeat, normStrength=2.6){
+  const cv  = groundCanvas(baseColor, flecks, 512);
+  const map = new THREE.CanvasTexture(cv);
+  const nrm = new THREE.CanvasTexture(normalFromCanvas(cv, normStrength));
+  for(const t of [map, nrm]){
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(repeat, repeat);
+    t.anisotropy = MAXANISO;
+  }
+  map.encoding = THREE.sRGBEncoding;   // normal map stays linear
+  return {map, normalMap: nrm};
+}
+// Sample the same tile again at a much larger scale and multiply it in. Costs one
+// texture fetch and kills the visible repeat grid across a 2.4km ground plane.
+function breakUpTiling(mat, scale, amount){
+  mat.onBeforeCompile = (sh)=>{
+    sh.uniforms.uMacroScale  = {value: scale};
+    sh.uniforms.uMacroAmount = {value: amount};
+    sh.fragmentShader = 'uniform float uMacroScale;\nuniform float uMacroAmount;\n' + sh.fragmentShader;
+    sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', `
+      #ifdef USE_MAP
+        vec4 texelColor = texture2D( map, vUv );
+        vec3 macro = texture2D( map, vUv * uMacroScale ).rgb;
+        texelColor.rgb *= mix( vec3(1.0), macro * 1.75, uMacroAmount );
+        texelColor = mapTexelToLinear( texelColor );
+        diffuseColor *= texelColor;
+      #endif
+    `);
+  };
+  mat.customProgramCacheKey = ()=> 'macro_' + scale + '_' + amount;
+}
 
-const base = new THREE.Mesh(new THREE.CircleGeometry(1200, 48),
-  new THREE.MeshStandardMaterial({
-    color:0xffffff,map:earthTex,bumpMap:earthTex,bumpScale:0.08,roughness:1
-  }));
+const earthMaps = groundMaps('#a9955f', ['#776b43','#c2ad70','#8c7a4d'], 24, 2.4);
+const grassMaps = groundMaps('#5d954a', ['#355f31','#79aa58','#4b7d3d','#8bb867','#9a9a55','#7d8443'], 22, 3.2);
+const sandMaps  = groundMaps('#dfca93', ['#bca66f','#f2dfab','#cdb982','#a89467'], 28, 3.4);
+// Kept so any later code that still reaches for the old names keeps working.
+const earthTex = earthMaps.map, grassTex = grassMaps.map, sandTex = sandMaps.map;
+
+const baseMat = new THREE.MeshStandardMaterial({
+  color: 0xffffff, map: earthMaps.map, normalMap: earthMaps.normalMap,
+  normalScale: new THREE.Vector2(1.0, 1.0), roughness: 0.97, metalness: 0.0
+});
+breakUpTiling(baseMat, 0.1367, 0.50);
+const base = new THREE.Mesh(new THREE.CircleGeometry(1200, 64), baseMat);
 base.rotation.x = -Math.PI/2; base.position.y = -0.1; scene.add(base);
 
-const lawn = new THREE.Mesh(new THREE.CircleGeometry(160, 48),
-  new THREE.MeshStandardMaterial({
-    color:0xffffff,map:grassTex,bumpMap:grassTex,bumpScale:0.12,roughness:0.98
-  }));
-lawn.rotation.x = -Math.PI/2; lawn.position.set(-5,0,5); scene.add(lawn);
-for(let i=0;i<26;i++){
-  const p = new THREE.Mesh(new THREE.CircleGeometry(6+Math.random()*14, 14),
-    new THREE.MeshStandardMaterial({color: Math.random()<0.5?0x549043:0x6aa953, roughness:1}));
-  p.rotation.x = -Math.PI/2;
-  const a=Math.random()*Math.PI*2, d=Math.random()*140;
-  p.position.set(-5+Math.cos(a)*d, 0.01+Math.random()*0.01, 5+Math.sin(a)*d*0.8);
-  scene.add(p);
-}
+const lawnMat = new THREE.MeshStandardMaterial({
+  color: 0xffffff, map: grassMaps.map, normalMap: grassMaps.normalMap,
+  normalScale: new THREE.Vector2(1.25, 1.25), roughness: 0.94, metalness: 0.0
+});
+breakUpTiling(lawnMat, 0.1091, 0.46);
+const lawn = new THREE.Mesh(new THREE.CircleGeometry(160, 64), lawnMat);
+lawn.rotation.x = -Math.PI/2; lawn.position.set(-5, 0, 5); scene.add(lawn);
+
+// The 26 tonal patch discs that used to sit here were 6-20m circles in a
+// different green, without the tiling breakup the lawn itself gets. They read as
+// hard-edged discs at range and then vanished as you walked up and the blades
+// covered them. The macro breakup on the lawn material already supplies the
+// large-scale variation they were meant to provide.
 
 // Broad Lake Perris beach. The northern edge follows the aerial's diagonal
 // grass/sand transition; the eastern edge terminates at Gate 2 and the ferry
@@ -221,6 +445,37 @@ const beachOutline = [
   [-69,-43],[-97,-53],[-119,-69],[-118,-93],[-96,-127],[-90,-132],
   [350,-132],[350,8]
 ];
+// A surveyed polygon gives a dead-straight grass/sand boundary, and a straight
+// edge between two ground types is the one thing the eye reads instantly as
+// artificial. Resample the outline every few metres and push each point along
+// its segment normal with layered noise, so the sand wanders into the grass the
+// way a real shoreline does. Only the inland edge moves — the waterline and the
+// off-site boundaries stay put so nothing opens a gap under the lake.
+{
+  const src = beachOutline.slice();
+  const out = [];
+  const wob = t => Math.sin(t*0.90)*2.4 + Math.sin(t*2.31 + 1.7)*1.25 + Math.sin(t*5.13 + 0.4)*0.6;
+  let run = 0;
+  for(let i=0;i<src.length;i++){
+    const [x0,z0] = src[i];
+    const [x1,z1] = src[(i+1) % src.length];
+    const dx = x1-x0, dz = z1-z0;
+    const len = Math.hypot(dx,dz) || 1;
+    const nx = -dz/len, nz = dx/len;
+    const steps = Math.max(1, Math.round(len/4));
+    for(let k=0;k<steps;k++){
+      const f = k/steps;
+      const px = x0 + dx*f, pz = z0 + dz*f;
+      const inland = (pz > -122 && Math.abs(px) < 260) ? 1 : 0;
+      const d = wob((run + f*len)*0.11) * inland;
+      out.push([px + nx*d, pz + nz*d]);
+    }
+    run += len;
+  }
+  beachOutline.length = 0;
+  for(const pt of out) beachOutline.push(pt);
+}
+
 function isBeachPoint(x,z){
   let inside=false;
   for(let i=0,j=beachOutline.length-1;i<beachOutline.length;j=i++){
@@ -239,20 +494,308 @@ beachOutline.forEach(([x,z],i)=>{
 });
 beachShape.closePath();
 const beachGeo = new THREE.ShapeGeometry(beachShape);
-const beach = new THREE.Mesh(beachGeo,new THREE.MeshStandardMaterial({
-  color:0xffffff,map:sandTex,bumpMap:sandTex,bumpScale:0.1,roughness:0.96
-}));
-beach.rotation.x=-Math.PI/2; beach.position.y=0.02; scene.add(beach);
+// ShapeGeometry hands back UVs in world units, so the beach was previously
+// tiling its sand every ~3cm and averaging out to a flat wash. A repeat around
+// 0.14 puts one tile every ~7m, which is where sand actually reads.
+const beachMaps = groundMaps('#dfca93', ['#bca66f','#f2dfab','#cdb982','#a89467'], 0.14, 3.6);
+const beachMat = new THREE.MeshStandardMaterial({
+  color: 0xffffff, map: beachMaps.map, normalMap: beachMaps.normalMap,
+  normalScale: new THREE.Vector2(1.7, 1.7), roughness: 0.93, metalness: 0.0
+});
+breakUpTiling(beachMat, 0.1237, 0.42);
+const beach = new THREE.Mesh(beachGeo, beachMat);
+beach.rotation.x = -Math.PI/2; beach.position.y = 0.02; scene.add(beach);
 
-const lakeGeo = new THREE.PlaneGeometry(1400, 900, 80, 60);
-const lake = new THREE.Mesh(lakeGeo, new THREE.MeshPhysicalMaterial({
-  color:0x2778b8, roughness:0.1, metalness:0.12, clearcoat:1,
-  clearcoatRoughness:0.08, reflectivity:0.78, transparent:true, opacity:0.94 }));
-lake.rotation.x = -Math.PI/2; lake.position.set(0, 0.12, -582); scene.add(lake);
-const lakeBase = lakeGeo.attributes.position.array.slice();
-const foam = new THREE.Mesh(new THREE.PlaneGeometry(700, 3),
-  new THREE.MeshBasicMaterial({color:0xeef7ff, transparent:true, opacity:0.55}));
-foam.rotation.x = -Math.PI/2; foam.position.set(0,0.14,-132); scene.add(foam);
+// SUBMERGED SHELF — the fix for the green line at the waterline.
+// The beach polygon stops at z=-132 and the water plane starts there, so the
+// 10cm height difference between them is a step no geometry fills. Looking
+// along the shore you see straight through that step, and what sits behind it
+// is the lawn: the 160m lawn circle centred at (-5,5) reaches z=-155, a full
+// 23m out under the lake. Hence a green line.
+//
+// Rather than reshape the surveyed lawn or beach, put sand under the water for
+// exactly the span where the lawn is submerged. It lives below the surface and
+// is never seen directly — it just means the sliver at the seam is sand
+// coloured instead of green.
+{
+  const X = 120, zNear = -129, zFar = -158, y = 0.04;
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute([
+    -X, y, zNear,   X, y, zNear,   X, y, zFar,   -X, y, zFar
+  ], 3));
+  // ShapeGeometry-style world-unit UVs so it tiles identically to the beach.
+  g.setAttribute('uv', new THREE.Float32BufferAttribute([
+    -X, zNear,   X, zNear,   X, zFar,   -X, zFar
+  ], 2));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute([
+    0,1,0,  0,1,0,  0,1,0,  0,1,0
+  ], 3));
+  g.setIndex([0, 1, 2, 0, 2, 3]);
+  const shelf = new THREE.Mesh(g, beachMat);
+  shelf.castShadow = false;
+  shelf.receiveShadow = true;
+  scene.add(shelf);
+}
+
+// ---------- LAKE PERRIS: planar-reflection water ----------
+// The old lake was a clearcoat plane, which can only ever reflect the abstract
+// environment. This renders the world a second time through a mirrored camera,
+// so the actual mountains, sky and shoreline land on the surface.
+const LAKE_Y = 0.12;
+const SHORE_Z = -132;
+
+function waterNormalTexture(size=256){
+  const waves = [];
+  for(let i=0;i<10;i++){
+    waves.push({
+      fx: 1 + ((Math.random()*7)|0),   // integer frequencies keep the tile seamless
+      fy: 1 + ((Math.random()*7)|0),
+      a: 1/(1 + i*0.55),
+      p: Math.random()*6.2832
+    });
+  }
+  const h = new Float32Array(size*size);
+  let mn = 1e9, mx = -1e9;
+  for(let y=0;y<size;y++){
+    for(let x=0;x<size;x++){
+      const u = (x/size)*6.2832, w = (y/size)*6.2832;
+      let v = 0;
+      for(const s of waves) v += s.a*Math.sin(u*s.fx + w*s.fy + s.p);
+      h[y*size+x] = v;
+      if(v < mn) mn = v;
+      if(v > mx) mx = v;
+    }
+  }
+  const cv = document.createElement('canvas'); cv.width = cv.height = size;
+  const ctx = cv.getContext('2d');
+  const img = ctx.createImageData(size, size);
+  for(let i=0;i<size*size;i++){
+    const g = ((h[i]-mn)/(mx-mn))*255;
+    img.data[i*4] = img.data[i*4+1] = img.data[i*4+2] = g;
+    img.data[i*4+3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(normalFromCanvas(cv, 3.4));
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = MAXANISO;
+  return t;
+}
+
+const REFLECT_SIZE = 1024;
+const reflectRT = new THREE.WebGLRenderTarget(REFLECT_SIZE, REFLECT_SIZE, {
+  minFilter: THREE.LinearFilter,
+  magFilter: THREE.LinearFilter,
+  format: THREE.RGBAFormat,
+  type: HDR_TYPE,
+  depthBuffer: true,
+  stencilBuffer: false
+});
+reflectRT.texture.encoding = THREE.LinearEncoding;
+reflectRT.texture.generateMipmaps = false;
+const reflectCam = new THREE.PerspectiveCamera();
+
+const lakeGeo = new THREE.PlaneGeometry(1400, 900, 150, 96);
+const waterMat = new THREE.ShaderMaterial({
+  fog: true,
+  uniforms: {
+    tReflect:   {value: reflectRT.texture},
+    tNormal:    {value: waterNormalTexture(256)},
+    uTime:      {value: 0},
+    uCamPos:    {value: new THREE.Vector3()},
+    uTexMat:    {value: new THREE.Matrix4()},
+    uSunDir:    {value: SUN_DIR.clone()},
+    uSunCol:    {value: new THREE.Color(2.9, 2.3, 1.6)},
+    uDeep:      {value: new THREE.Color(0.0273, 0.0830, 0.1512)},  // -> #1b4f74
+    uShallow:   {value: new THREE.Color(0.0377, 0.1900, 0.3054)},  // -> #2f88a8
+    uRipple:    {value: 0.105},
+    uDistort:   {value: 0.028},
+    uShoreZ:    {value: SHORE_Z},
+    uSkyCol:    {value: SKY.horizon.clone()},
+    uPartyTint: {value: new THREE.Color(0, 0, 0)},
+    fogColor:   {value: new THREE.Color(0xffffff)},
+    fogDensity: {value: 0.0017},
+    fogNear:    {value: 1},
+    fogFar:     {value: 2000}
+  },
+  vertexShader: `
+    uniform mat4 uTexMat;
+    uniform float uTime, uShoreZ;
+    varying vec4 vReflUv;
+    varying vec3 vWorld;
+    #include <fog_pars_vertex>
+    void main(){
+      // Local +z becomes world +Y once the plane is laid flat, so displacing z
+      // is what raises the swell.
+      vec4 flat0 = modelMatrix * vec4(position, 1.0);
+      // Amplitude is capped so the trough never drops below the ground planes
+      // underneath: lawn sits at y=0, beach at 0.02, base earth at -0.10, and the
+      // old +/-0.66 swell pulled the surface down to -0.54. That let the green
+      // lawn and brown earth surface through the lake as each wave passed, then
+      // vanish again behind the crest. Total here is 0.20, so the trough bottoms
+      // out at -0.08 and stays clear.
+      //
+      // It also tapers to nothing at the waterline, which is both what real water
+      // does and what keeps the shoreline reliably above the sand.
+      float shoreFade = smoothstep(0.0, 80.0, uShoreZ - flat0.z);
+      float swell = (sin(flat0.x*0.020 + uTime*0.50)*0.090
+                   + cos(flat0.z*0.016 - uTime*0.38)*0.070
+                   + sin((flat0.x + flat0.z)*0.041 - uTime*0.90)*0.040) * shoreFade;
+      vec3 displaced = position;
+      displaced.z += swell;
+
+      vec4 worldPosition = modelMatrix * vec4(displaced, 1.0);
+      vWorld = worldPosition.xyz;
+      vReflUv = uTexMat * worldPosition;
+      vec4 mvPosition = viewMatrix * worldPosition;
+      gl_Position = projectionMatrix * mvPosition;
+      #include <fog_vertex>
+    }`,
+  fragmentShader: `
+    uniform sampler2D tReflect, tNormal;
+    uniform vec3 uCamPos, uSunDir, uSunCol, uDeep, uShallow, uSkyCol, uPartyTint;
+    uniform float uTime, uRipple, uDistort, uShoreZ;
+    varying vec4 vReflUv;
+    varying vec3 vWorld;
+    #include <fog_pars_fragment>
+    void main(){
+      vec2 wuv = vWorld.xz;
+      // Three ripple octaves at different scales and drift directions; one layer
+      // alone always reads as a scrolling texture.
+      vec3 na = texture2D(tNormal, wuv*0.0450 + vec2( uTime*0.019, uTime*0.013)).xyz*2.0 - 1.0;
+      vec3 nb = texture2D(tNormal, wuv*0.0135 + vec2(-uTime*0.011, uTime*0.016)).xyz*2.0 - 1.0;
+      vec3 nc = texture2D(tNormal, wuv*0.1150 + vec2( uTime*0.032,-uTime*0.028)).xyz*2.0 - 1.0;
+      vec2 slope = na.xy*0.50 + nb.xy*0.42 + nc.xy*0.22;
+
+      // Chop calms down toward the shore so it isn't open ocean at the waterline.
+      float openness = smoothstep(uShoreZ, uShoreZ - 190.0, vWorld.z);
+      slope *= mix(0.42, 1.0, openness);
+
+      vec3 N = normalize(vec3(slope.x*uRipple, 1.0, slope.y*uRipple));
+      vec3 V = normalize(uCamPos - vWorld);
+
+      // Schlick Fresnel. Water is nearly transparent looking straight down and a
+      // mirror at grazing angles — this ratio is most of what sells it.
+      float f = pow(1.0 - clamp(dot(V, N), 0.0, 1.0), 5.0);
+      f = clamp(0.02 + 0.98*f, 0.0, 1.0);
+
+      vec2 ruv = vReflUv.xy / max(vReflUv.w, 0.0001);
+      ruv += slope * uDistort;
+      // Outside the reflection buffer there is no information to sample, and
+      // clamping smears whatever sits on its edge — the green lawn and brown
+      // beach — in bands across open water. Fall back to sky, which is what a
+      // lake mostly reflects anyway.
+      vec2 rb = step(vec2(0.0), ruv) * step(ruv, vec2(1.0));
+      float valid = rb.x * rb.y * step(0.0, vReflUv.w);
+      vec3 refl = mix(uSkyCol,
+                      texture2D(tReflect, clamp(ruv, vec2(0.001), vec2(0.999))).rgb,
+                      valid);
+
+      float depth = smoothstep(uShoreZ, uShoreZ - 150.0, vWorld.z);
+      vec3 body = mix(uShallow, uDeep, depth);
+      vec3 col = mix(body, refl, f*0.94);
+
+      // Specular glitter track from the sun.
+      vec3 H = normalize(V + uSunDir);
+      col += uSunCol * pow(max(dot(N, H), 0.0), 420.0) * 2.4;
+
+      // Shoreline foam, broken up by the local chop so the band isn't a stripe.
+      float band = 1.0 - smoothstep(0.0, 10.0, uShoreZ - vWorld.z);
+      float lip  = 1.0 - smoothstep(-2.0, 0.5, uShoreZ - vWorld.z);
+      float foam = clamp(band - lip, 0.0, 1.0);
+      foam *= 0.5 + 0.5*sin(vWorld.x*0.55 + uTime*1.9 + slope.x*8.0);
+      col = mix(col, vec3(1.05, 1.10, 1.14), clamp(foam, 0.0, 1.0)*0.7);
+
+      col += uPartyTint;
+
+      gl_FragColor = vec4(col, 1.0);
+      #include <tonemapping_fragment>
+      #include <encodings_fragment>
+      #include <fog_fragment>
+    }`
+});
+const lake = new THREE.Mesh(lakeGeo, waterMat);
+lake.rotation.x = -Math.PI/2;
+lake.position.set(0, LAKE_Y, -582);
+lake.matrixAutoUpdate = false;
+lake.updateMatrix();
+lake.updateMatrixWorld(true);
+lake.receiveShadow = false;
+lake.castShadow = false;
+scene.add(lake);
+
+// Mirror the camera through the water plane and re-render. Because the shore is
+// at y≈0 and the surface at y=0.12, there is nothing meaningful below the plane
+// to clip, so this skips the oblique near-plane trick entirely.
+const _reflEye = new THREE.Vector3();
+const _reflTgt = new THREE.Vector3();
+const _reflUp  = new THREE.Vector3();
+const _reflLook = new THREE.Vector3();
+const _reflRot = new THREE.Matrix4();
+const _reflBias = new THREE.Matrix4().set(
+  0.5, 0.0, 0.0, 0.5,
+  0.0, 0.5, 0.0, 0.5,
+  0.0, 0.0, 0.5, 0.5,
+  0.0, 0.0, 0.0, 1.0
+);
+let reflectSkipFrame = 0;
+
+function waterInView(){
+  // Cheap gate: skip the second pass only when the lake genuinely cannot be on
+  // screen. The old threshold stopped updating as soon as you turned partly
+  // away, which left a frozen reflection painted on still-visible water — the
+  // gate has to be looser than the field of view, not tighter.
+  if(camera.position.z < SHORE_Z + 40) return true;        // in it or right on it
+  if(camera.position.z - SHORE_Z > 900) return false;      // too far inland to matter
+  camera.getWorldDirection(_reflLook);
+  return _reflLook.z < 0.92;                               // anything but facing fully away
+}
+
+function renderWaterReflection(){
+  // The camera's world matrix is normally only refreshed inside renderer.render(),
+  // which happens AFTER this. Without this line the mirrored camera is built from
+  // last frame's orientation while the water is drawn with this frame's, so the
+  // projective lookup is inconsistent and the reflection slides across the
+  // surface whenever you move or turn.
+  camera.updateMatrixWorld(true);
+  if(!waterInView()) return;
+  if(REFLECT_EVERY > 1 && (reflectSkipFrame++ % REFLECT_EVERY) !== 0) return;
+
+  _reflEye.set(camera.position.x, 2*LAKE_Y - camera.position.y, camera.position.z);
+  _reflRot.extractRotation(camera.matrixWorld);
+  _reflLook.set(0, 0, -1).applyMatrix4(_reflRot).add(camera.position);
+  _reflTgt.set(_reflLook.x, 2*LAKE_Y - _reflLook.y, _reflLook.z);
+  _reflUp.set(0, 1, 0).applyMatrix4(_reflRot);
+  _reflUp.y *= -1;                                          // keeps the basis right-handed
+
+  reflectCam.position.copy(_reflEye);
+  reflectCam.up.copy(_reflUp);
+  reflectCam.lookAt(_reflTgt);
+  reflectCam.fov = camera.fov;
+  reflectCam.aspect = camera.aspect;
+  reflectCam.near = camera.near;
+  reflectCam.far = camera.far;
+  reflectCam.updateProjectionMatrix();
+  reflectCam.updateMatrixWorld(true);
+
+  waterMat.uniforms.uTexMat.value
+    .copy(_reflBias)
+    .multiply(reflectCam.projectionMatrix)
+    .multiply(reflectCam.matrixWorldInverse);
+
+  const prevTarget = renderer.getRenderTarget();
+  const prevTone = renderer.toneMapping;
+  const prevShadowAuto = renderer.shadowMap.autoUpdate;
+  lake.visible = false;
+  renderer.toneMapping = THREE.NoToneMapping;   // reflection stays linear HDR
+  renderer.shadowMap.autoUpdate = false;        // reuse last frame's shadow map
+  renderer.setRenderTarget(reflectRT);
+  renderer.clear();
+  renderer.render(scene, reflectCam);
+  renderer.setRenderTarget(prevTarget);
+  renderer.shadowMap.autoUpdate = prevShadowAuto;
+  renderer.toneMapping = prevTone;
+  lake.visible = true;
+}
 
 // PARKING LOT — beyond the east entrance (player's right; world -x)
 const PARKING = {x:-181,z:-34,rot:2.50};
@@ -273,31 +816,65 @@ const PARKING = {x:-181,z:-34,rot:2.50};
   makeLabel("ADA PARKING",PARKING.x,4.2,PARKING.z,0.85);
 }
 
-// Mountains surrounding Lake Perris
+// Mountains surrounding Lake Perris.
+// Smooth 7-sided cones read as cones. Displacing the profile with a couple of
+// noise octaves gives spurs, gullies and an irregular skyline, and the exponential
+// fog does the aerial-perspective work of pushing them back.
 {
-  const cols = [0x9b8756, 0x8c7a4e, 0xa89263, 0x7f7048];
-  for(let i=0;i<10;i++){
-    const x = -600 + i*135 + Math.random()*60;
-    const h = 120+Math.random()*140, w = 220+Math.random()*180;
-    const m = new THREE.Mesh(new THREE.ConeGeometry(w, h, 7),
-      new THREE.MeshStandardMaterial({color:cols[i%4], roughness:1, flatShading:true}));
-    m.position.set(x, h/2-4, -950 - Math.random()*120);
-    m.rotation.y = Math.random()*Math.PI; m.scale.y *= 0.8; scene.add(m);
+  // Distant rock has to be dark for aerial perspective to leave any silhouette:
+  // fog mixes ~88% of the way to sky colour out here, so bright tan reads as sky.
+  const cols = [0x46505f, 0x3c4654, 0x515a63, 0x394251];
+  const ridges = [];
+
+  function ridge(x, z, h, w, color, yScale){
+    const geo = new THREE.ConeGeometry(w, h, 26, 8);
+    const p = geo.attributes.position;
+    const v = new THREE.Vector3();
+    for(let i=0;i<p.count;i++){
+      v.fromBufferAttribute(p, i);
+      const t = (v.y + h/2)/h;                 // 0 at the base, 1 at the summit
+      const ang = Math.atan2(v.z, v.x);
+      // Two octaves around the axis carve ridgelines and drainages.
+      const n = Math.sin(ang*3.0 + x*0.013)*0.62
+              + Math.sin(ang*7.0 - z*0.009)*0.30
+              + Math.sin(ang*13.0 + x*0.021)*0.14
+              + Math.sin(ang*23.0 - z*0.031)*0.07
+              + Math.sin(v.y*0.09 + ang*5.0)*0.11;
+      const radial = 1 + n*0.20*(1 - t*0.55);
+      p.setXYZ(i, v.x*radial, v.y + n*h*0.055*(1 - t*0.8), v.z*radial);
+    }
+    geo.computeVertexNormals();
+    const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+      color: color, roughness: 1, metalness: 0, flatShading: false
+    }));
+    m.position.set(x, h/2 - 4, z);
+    m.rotation.y = Math.random()*Math.PI;
+    m.scale.y *= yScale;
+    m.castShadow = false;      // far outside the shadow frustum; pure cost
+    m.receiveShadow = false;
+    scene.add(m);
+    ridges.push(m);
+    return m;
   }
-  for(const side of [-1,1]) for(let i=0;i<7;i++){
-    const h = 90+Math.random()*120, w = 180+Math.random()*140;
-    const m = new THREE.Mesh(new THREE.ConeGeometry(w, h, 7),
-      new THREE.MeshStandardMaterial({color:cols[(i+1)%4], roughness:1, flatShading:true}));
-    m.position.set(side*(480+Math.random()*160), h/2-4, -500 + i*130 + Math.random()*60);
-    m.rotation.y = Math.random()*Math.PI; m.scale.y*=0.85; scene.add(m);
+
+  // Main range across the far shore. Pulled in from -950 to ~-820 so it stays a
+  // readable silhouette through the haze rather than dissolving completely.
+  for(let i=0;i<10;i++){
+    ridge(-600 + i*135 + Math.random()*60, -820 - Math.random()*130,
+          120 + Math.random()*140, 220 + Math.random()*180, cols[i%4], 0.8);
+  }
+  // A second, nearer tier for depth layering.
+  for(let i=0;i<6;i++){
+    ridge(-520 + i*190 + Math.random()*90, -640 - Math.random()*90,
+          80 + Math.random()*90, 190 + Math.random()*150, cols[(i+3)%4], 0.72);
+  }
+  for(const side of [-1, 1]) for(let i=0;i<7;i++){
+    ridge(side*(480 + Math.random()*160), -500 + i*130 + Math.random()*60,
+          90 + Math.random()*120, 180 + Math.random()*140, cols[(i+1)%4], 0.85);
   }
   for(let i=0;i<8;i++){
-    const x = -520 + i*150 + Math.random()*70;
-    const h = 70+Math.random()*90, w = 160+Math.random()*140;
-    const m = new THREE.Mesh(new THREE.ConeGeometry(w, h, 7),
-      new THREE.MeshStandardMaterial({color:cols[(i+2)%4], roughness:1, flatShading:true}));
-    m.position.set(x, h/2-4, 560 + Math.random()*120);
-    m.rotation.y = Math.random()*Math.PI; m.scale.y*=0.7; scene.add(m);
+    ridge(-520 + i*150 + Math.random()*70, 560 + Math.random()*120,
+          70 + Math.random()*90, 160 + Math.random()*140, cols[(i+2)%4], 0.7);
   }
 }
 
@@ -517,16 +1094,13 @@ function scrimFenceRun(x1,z1,x2,z2,height=3.35){
   for(let i=0;i<=n;i++){
     const px=x1+dx*i/n, pz=z1+dz*i/n;
     const post=new THREE.Mesh(new THREE.BoxGeometry(0.11,height+0.25,0.11),postMat);
-    post.userData.legacySiteGeometry='scrim';
     post.position.set(px,(height+0.25)/2,pz); scene.add(post);
   }
   const panel=new THREE.Mesh(new THREE.PlaneGeometry(len,height),scrimMat);
-  panel.userData.legacySiteGeometry='scrim';
   panel.position.set((x1+x2)/2,height/2,(z1+z2)/2);
   panel.rotation.y=ang+Math.PI/2; scene.add(panel);
   for(const hy of [0.12,height-0.1]){
     const rail=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.1,len),postMat);
-    rail.userData.legacySiteGeometry='scrim';
     rail.position.set((x1+x2)/2,hy,(z1+z2)/2);
     rail.rotation.y=ang; scene.add(rail);
   }
@@ -540,15 +1114,12 @@ function bikeRackRun(x1,z1,x2,z2){
   for(let i=0;i<=n;i++){
     const px=x1+dx*i/n,pz=z1+dz*i/n;
     const post=new THREE.Mesh(new THREE.CylinderGeometry(0.045,0.045,1.05,7),green);
-    post.userData.legacySiteGeometry='barrier';
     post.position.set(px,0.55,pz); scene.add(post);
     const foot=new THREE.Mesh(new THREE.BoxGeometry(0.62,0.06,0.1),green);
-    foot.userData.legacySiteGeometry='barrier';
     foot.position.set(px,0.05,pz); foot.rotation.y=ang; scene.add(foot);
   }
   for(const y of [0.38,0.92]){
     const rail=new THREE.Mesh(new THREE.BoxGeometry(0.07,0.07,len),green);
-    rail.userData.legacySiteGeometry='barrier';
     rail.position.set((x1+x2)/2,y,(z1+z2)/2);
     rail.rotation.y=ang; scene.add(rail);
   }
@@ -712,6 +1283,286 @@ let gateDoors = [];
 }
 let gateOpen = false;
 
+// ---------- STALL DRESSING ----------
+// Menu boards and merchandise. A stall with a blank dark rectangle where the
+// menu should be reads as a placeholder; a stall with a legible chalkboard and
+// product on the counter reads as a business.
+
+function chalkMenuTexture(title, items, bg, accent){
+  const W = 512, H = 448;
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const c = cv.getContext('2d');
+  c.fillStyle = bg || '#1e2a25'; c.fillRect(0, 0, W, H);
+  // Chalk dust and ghosting from previous services.
+  for(let i=0;i<3200;i++){
+    c.fillStyle = 'rgba(255,255,255,' + (0.010 + Math.random()*0.030) + ')';
+    c.fillRect(Math.random()*W, Math.random()*H, 1.7, 1.7);
+  }
+  const ink = '#f4ecd8', acc = accent || '#ffd166';
+  c.strokeStyle = 'rgba(255,255,255,0.30)'; c.lineWidth = 3;
+  c.strokeRect(13, 13, W-26, H-26);
+  c.textAlign = 'center';
+  c.fillStyle = acc;
+  c.font = 'bold 44px Georgia, "Times New Roman", serif';
+  c.fillText(title, W/2, 64);
+  c.strokeStyle = acc; c.lineWidth = 2;
+  c.beginPath(); c.moveTo(66, 84); c.lineTo(W-66, 84); c.stroke();
+  c.font = '29px Georgia, "Times New Roman", serif';
+  let y = 136;
+  for(const it of items){
+    c.textAlign = 'left';  c.fillStyle = ink; c.fillText(it[0], 42, y);
+    c.textAlign = 'right'; c.fillStyle = acc; c.fillText(it[1], W-42, y);
+    y += 50;
+  }
+  const t = new THREE.CanvasTexture(cv);
+  t.encoding = THREE.sRGBEncoding;
+  t.anisotropy = MAXANISO;
+  return t;
+}
+
+// Box with artwork on its -Z face, which is the customer-facing side of every
+// stall in this build.
+function signBoard(w, h, tex, frameCol){
+  const frame = new THREE.MeshStandardMaterial({color: frameCol || 0x2a2a30, roughness: 0.9});
+  const face  = new THREE.MeshStandardMaterial({map: tex, roughness: 0.92});
+  face.userData.noDetail = true;
+  return new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.12),
+    [frame, frame, frame, frame, frame, face]);
+}
+
+const FOOD_MENUS = [
+  ['EPIC EATS',      [['Smash Burger','14'],['Loaded Fries','11'],['Chicken Sando','13'],['Veggie Melt','12']], '#241f1c', '#ffb347'],
+  ['BUDDAH BOWLS',   [['Buddha Bowl','15'],['Poke Bowl','16'],['Miso Ramen','14'],['Spring Rolls','8']],       '#16302c', '#9fd8cf'],
+  ['EAST AFRICA',    [['Suya Skewers','13'],['Injera Plate','15'],['Sambusa','7'],['Chapati Wrap','12']],      '#2b1d16', '#e8a33d'],
+  ['VEGGIE BOMB',    [['Falafel Wrap','12'],['Rainbow Salad','11'],['Hummus Plate','10'],['Green Juice','9']], '#1c2a18', '#a8d96a'],
+  ['KALIKOS',        [['Al Pastor','12'],['Baja Fish','13'],['Birria Trio','16'],['Elote','7']],               '#2c1a18', '#ff9d5c'],
+  ['WARM & FLUFFY',  [['Belgian Waffle','10'],['Churro Stack','9'],['Funnel Cake','11'],['Soft Serve','7']],   '#2a2118', '#ffd9a0'],
+  ['JAVA GOGO',      [['Cold Brew','6'],['Oat Latte','7'],['Espresso','4'],['Chai','6']],                      '#1d1815', '#d8b48a']
+];
+
+// Product on the counter, keyed to what the stall actually sells.
+function counterWares(kind, w, rnd){
+  const g = new THREE.Group();
+  const R = (a,b)=> a + rnd()*(b-a);
+  const mat = (c, r, m)=> new THREE.MeshStandardMaterial({color:c, roughness:r===undefined?0.8:r, metalness:m||0});
+  const woodM  = mat(0x8a6440, 0.9);
+  const steelM = mat(0xb8bec4, 0.4, 0.55);
+
+  // Every stall gets a napkin caddy and a till.
+  const till = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.22, 0.28), mat(0x30343a, 0.6));
+  till.position.set(w*0.34, 0.11, 0); g.add(till);
+
+  if(kind === 'coffee'){
+    for(let i=0;i<3;i++){
+      const urn = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.12, 0.42, 12), steelM);
+      urn.position.set(-w*0.28 + i*0.30, 0.21, 0.02); g.add(urn);
+    }
+    for(let i=0;i<12;i++){
+      const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.033, 0.10, 8), mat(0xf2ede2, 0.85));
+      cup.position.set(R(-w*0.1, w*0.22), 0.05 + Math.floor(i/6)*0.10, R(-0.16, 0.16)); g.add(cup);
+    }
+    const beans = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.34, 0.14), mat(0x5a3d28, 0.92));
+    beans.position.set(-w*0.38, 0.17, 0); g.add(beans);
+  } else if(kind === 'produce'){
+    const crateM = woodM;
+    for(let i=0;i<3;i++){
+      const cr = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.16, 0.34), crateM);
+      cr.position.set(-w*0.30 + i*0.52, 0.08, 0); g.add(cr);
+      const cols = [0x6f9e3f, 0xd94f3d, 0xe8a93a, 0x7d4f8a];
+      for(let k=0;k<9;k++){
+        const v = new THREE.Mesh(new THREE.SphereGeometry(R(0.045,0.070), 8, 6), mat(cols[(i+k)%4], 0.78));
+        v.position.set(-w*0.30 + i*0.52 + R(-0.17,0.17), 0.19, R(-0.12,0.12));
+        v.scale.y = R(0.75, 1.05); g.add(v);
+      }
+    }
+  } else if(kind === 'waffles'){
+    for(let i=0;i<6;i++){
+      const wf = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.045, 0.19), mat(0xdca85c, 0.85));
+      wf.position.set(-w*0.22 + (i%3)*0.24, 0.03 + Math.floor(i/3)*0.05, R(-0.1,0.1));
+      wf.rotation.y = R(-0.3, 0.3); g.add(wf);
+    }
+    const syrup = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.24, 10), mat(0x8a4b1e, 0.5));
+    syrup.position.set(w*0.14, 0.12, 0.1); g.add(syrup);
+  } else if(kind === 'bowls'){
+    for(let i=0;i<5;i++){
+      const bowl = new THREE.Mesh(new THREE.SphereGeometry(0.115, 12, 8, 0, 6.283, 0, 1.05),
+        mat([0xe8e2d2, 0x2f5f56, 0xc9713f][i%3], 0.8));
+      bowl.position.set(-w*0.26 + i*0.27, 0.055, 0);
+      bowl.rotation.x = Math.PI; g.add(bowl);
+      const fill = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.075, 0.05, 10),
+        mat([0x7fa54a, 0xd9a13b, 0xc4573a][i%3], 0.85));
+      fill.position.set(-w*0.26 + i*0.27, 0.085, 0); g.add(fill);
+    }
+  } else {
+    // grill / skewers / tacos: a hot line with product working on it.
+    const tray = new THREE.Mesh(new THREE.BoxGeometry(w*0.5, 0.05, 0.36), steelM);
+    tray.position.set(-w*0.06, 0.025, 0); g.add(tray);
+    const foodCols = kind === 'tacos' ? [0xe8c07a, 0xc4552f, 0x6f9e3f]
+                   : kind === 'skewers' ? [0x8b4a2f, 0xc4713a, 0x6f9e3f]
+                   : [0x8b3f2f, 0xd9a05b, 0x5f9b47];
+    for(let i=0;i<9;i++){
+      const item = new THREE.Mesh(
+        kind === 'skewers' ? new THREE.BoxGeometry(0.035, 0.035, 0.30)
+                           : new THREE.CylinderGeometry(R(0.05,0.075), R(0.05,0.075), 0.045, 10),
+        mat(foodCols[i%3], 0.86));
+      item.position.set(-w*0.24 + (i%5)*0.11, 0.06, -0.09 + Math.floor(i/5)*0.14);
+      item.rotation.y = R(-0.4, 0.4); g.add(item);
+    }
+    for(let i=0;i<3;i++){
+      const sq = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.038, 0.17, 8),
+        mat([0xc03a2b, 0xe8c23a, 0x3f7a45][i], 0.55));
+      sq.position.set(w*0.20, 0.085, -0.12 + i*0.12); g.add(sq);
+    }
+  }
+  return g;
+}
+
+// Merchandise for the artisan banks. Storefront is the tent's local -Z face.
+function merchWares(name, idx){
+  const g = new THREE.Group();
+  let seed = idx*7919 + 13;
+  const rnd = ()=>{ seed = (seed*16807) % 2147483647; return seed/2147483647; };
+  const R = (a,b)=> a + rnd()*(b-a);
+  const mat = (c, r, m)=> new THREE.MeshStandardMaterial({color:c, roughness:r===undefined?0.85:r, metalness:m||0});
+
+  const APPAREL = ['MOON THREADS','DESERT DENIM','SOFT GOODS','PATCHWORK'];
+  const JEWEL   = ['GOLDEN HOUR','SILVER & STONE','SUN CHARMS'];
+  const CLAY    = ['CLAY DAY','PRISM GLASS'];
+  const PLANTS  = ['HOUSE PLANTS'];
+  const RECORDS = ['VINYL FIENDS','ROAD CASE'];
+  const HATS    = ['WILD HATS'];
+
+  // Trestle table across the front of every booth.
+  const table = new THREE.Mesh(new THREE.BoxGeometry(2.9, 0.08, 0.75), mat(0x9a7a52, 0.88));
+  table.position.set(0, 0.86, -1.05); g.add(table);
+  const cloth = new THREE.Mesh(new THREE.BoxGeometry(2.95, 0.72, 0.80),
+    mat([0x3f5f6d, 0x7a4b5e, 0x4f6b4a, 0x6d5f8a][idx%4], 0.95));
+  cloth.position.set(0, 0.46, -1.05); g.add(cloth);
+  for(const sx of [-1.32, 1.32]){
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.86, 0.07), mat(0x6d5636, 0.9));
+    leg.position.set(sx, 0.43, -1.05); g.add(leg);
+  }
+
+  if(APPAREL.indexOf(name) >= 0 || HATS.indexOf(name) >= 0){
+    // Hanging rail with garments across the back of the booth.
+    const rail = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 2.7, 8), mat(0xb8bec4, 0.35, 0.6));
+    rail.rotation.z = Math.PI/2; rail.position.set(0, 2.05, 0.9); g.add(rail);
+    const palette = HATS.indexOf(name) >= 0
+      ? [0xd9c08a, 0x8a6a45, 0x3f4652, 0xb04a3a, 0xe0d6c0]
+      : [0xd96a4f, 0x3f6b8a, 0xe8c86a, 0x6a8a5f, 0xb05f8a, 0x4f4a6b];
+    for(let i=0;i<9;i++){
+      const col = palette[i % palette.length];
+      const gm = new THREE.Mesh(new THREE.BoxGeometry(0.26, R(0.62, 0.86), 0.07), mat(col, 0.92));
+      gm.position.set(-1.15 + i*0.29, 1.62, 0.9);
+      gm.rotation.y = R(-0.12, 0.12); g.add(gm);
+      const hanger = new THREE.Mesh(new THREE.TorusGeometry(0.045, 0.008, 4, 8), mat(0xb8bec4, 0.4, 0.6));
+      hanger.position.set(-1.15 + i*0.29, 2.0, 0.9); g.add(hanger);
+    }
+    if(HATS.indexOf(name) >= 0){
+      for(let i=0;i<6;i++){
+        const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.20, 0.22, 0.02, 14), mat(palette[i%5], 0.9));
+        const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.115, 0.13, 12), mat(palette[i%5], 0.9));
+        const hx = -1.05 + i*0.42;
+        brim.position.set(hx, 0.92, -1.05); crown.position.set(hx, 0.99, -1.05);
+        g.add(brim); g.add(crown);
+      }
+    } else {
+      for(let stack=0; stack<4; stack++){
+        for(let k=0;k<3;k++){
+          const fold = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.055, 0.34),
+            mat(palette[(stack*3+k) % palette.length], 0.94));
+          fold.position.set(-1.0 + stack*0.66, 0.93 + k*0.056, -1.05);
+          fold.rotation.y = R(-0.05, 0.05); g.add(fold);
+        }
+      }
+    }
+  } else if(JEWEL.indexOf(name) >= 0){
+    const velvet = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.03, 0.55), mat(0x241a2a, 0.95));
+    velvet.position.set(0, 0.92, -1.05); g.add(velvet);
+    const metalM = mat(name === 'SILVER & STONE' ? 0xd8dde2 : 0xe8c24a, 0.22, 0.95);
+    for(let i=0;i<16;i++){
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(R(0.030,0.055), 0.010, 5, 10), metalM);
+      ring.position.set(-1.10 + (i%8)*0.31, 0.955, -1.20 + Math.floor(i/8)*0.26);
+      ring.rotation.x = Math.PI/2; g.add(ring);
+    }
+    for(let i=0;i<5;i++){
+      const stand = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.30, 10), mat(0x1a1420, 0.9));
+      stand.position.set(-0.95 + i*0.48, 1.06, -0.88); g.add(stand);
+      const bead = new THREE.Mesh(new THREE.TorusGeometry(0.075, 0.012, 5, 14), metalM);
+      bead.position.set(-0.95 + i*0.48, 1.12, -0.86); g.add(bead);
+    }
+  } else if(CLAY.indexOf(name) >= 0){
+    const glass = name === 'PRISM GLASS';
+    for(let i=0;i<11;i++){
+      const h = R(0.16, 0.34), rad = R(0.07, 0.13);
+      const m = glass
+        ? new THREE.MeshStandardMaterial({color:[0x6ac6d8,0xd88ac6,0xe8d06a,0x8ad8a0][i%4],
+            roughness:0.12, metalness:0.0, transparent:true, opacity:0.62})
+        : mat([0xb4703f, 0x8a5a3a, 0xd8b48a, 0x6d4a35][i%4], 0.88);
+      const pot = new THREE.Mesh(new THREE.CylinderGeometry(rad*0.72, rad, h, 14), m);
+      pot.position.set(-1.20 + (i%6)*0.48, 0.90 + h/2, -1.22 + Math.floor(i/6)*0.30);
+      g.add(pot);
+    }
+  } else if(PLANTS.indexOf(name) >= 0){
+    for(let i=0;i<9;i++){
+      const px = -1.15 + (i%5)*0.58, pz = -1.25 + Math.floor(i/5)*0.34;
+      const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.075, 0.16, 12), mat(0xb4703f, 0.9));
+      pot.position.set(px, 0.98, pz); g.add(pot);
+      for(let k=0;k<5;k++){
+        const leaf = new THREE.Mesh(new THREE.SphereGeometry(R(0.06,0.10), 7, 5),
+          mat([0x3f7a45, 0x4f9b52, 0x2f6238][k%3], 0.9));
+        leaf.position.set(px + R(-0.09,0.09), 1.12 + R(0,0.13), pz + R(-0.07,0.07));
+        leaf.scale.set(1, R(0.5,0.9), 0.55); g.add(leaf);
+      }
+    }
+    for(let i=0;i<3;i++){
+      const big = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.14, 0.30, 12), mat(0xa8663a, 0.9));
+      big.position.set(-1.1 + i*1.1, 0.15, 0.35); g.add(big);
+      for(let k=0;k<7;k++){
+        const fr = new THREE.Mesh(new THREE.SphereGeometry(R(0.10,0.17), 7, 5), mat(0x3f7a45, 0.9));
+        fr.position.set(-1.1 + i*1.1 + R(-0.18,0.18), 0.45 + R(0,0.34), 0.35 + R(-0.14,0.14));
+        fr.scale.set(1, R(0.45,0.8), 0.6); g.add(fr);
+      }
+    }
+  } else if(RECORDS.indexOf(name) >= 0){
+    for(let bin=0; bin<3; bin++){
+      const crate = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.30, 0.42), mat(0x6d5636, 0.9));
+      crate.position.set(-0.92 + bin*0.92, 1.05, -1.05);
+      crate.rotation.x = -0.22; g.add(crate);
+      for(let k=0;k<10;k++){
+        const sleeve = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.36, 0.012),
+          mat([0xd94f3d,0x2f5f8a,0xe8c23a,0x3f7a45,0x8a4f8a,0x2a2a30][k%6], 0.9));
+        sleeve.position.set(-0.92 + bin*0.92, 1.10, -1.16 + k*0.026);
+        sleeve.rotation.x = -0.22; g.add(sleeve);
+      }
+    }
+  } else {
+    // TINY ART / ODD OBJECTS / LOCAL COLOR: framed pieces and curios.
+    for(let i=0;i<7;i++){
+      const fw = R(0.20, 0.34), fh = R(0.20, 0.34);
+      const frame = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.03), mat(0x4a3a28, 0.85));
+      frame.position.set(-1.15 + i*0.39, 1.62 + (i%2)*0.34, 1.48); g.add(frame);
+      const art = new THREE.Mesh(new THREE.PlaneGeometry(fw*0.84, fh*0.84),
+        mat([0xd96a4f,0x3f6b8a,0xe8c86a,0x6a8a5f,0xb05f8a][i%5], 0.92));
+      art.position.set(-1.15 + i*0.39, 1.62 + (i%2)*0.34, 1.46); g.add(art);
+    }
+    for(let i=0;i<8;i++){
+      const curio = new THREE.Mesh(
+        i%3===0 ? new THREE.IcosahedronGeometry(R(0.06,0.10), 0)
+                : new THREE.CylinderGeometry(R(0.04,0.07), R(0.05,0.08), R(0.10,0.20), 9),
+        mat([0xc4713a,0x4f8a8a,0xd8c07a,0x8a5f8a][i%4], 0.7));
+      curio.position.set(-1.15 + i*0.33, 0.98, -1.05 + R(-0.14,0.14)); g.add(curio);
+    }
+  }
+
+  // Price card so the booth reads as trading, not staged.
+  const card = signBoard(0.52, 0.34,
+    chalkMenuTexture(name.split(' ')[0], [['handmade','$'],['ask us','\u00b7']], '#221c18', '#e8c86a'), 0x3a2f24);
+  card.position.set(1.05, 1.12, -1.32);
+  card.rotation.set(-0.5, 0.1, 0); g.add(card);
+  return g;
+}
+
 // ---------- FOOD VENDORS — production-lot edge, clear of The Same Stage ----------
 {
   const names = ["EPIC EATS","HAPPY BUDDAH BOWLS","FLAVOR OF EAST AFRICA","VEGGIE BOMB","KALIKOS","WARM & FLUFFY","JAVA GOGO"];
@@ -761,9 +1612,19 @@ let gateOpen = false;
       valance.position.set(0,bh,-2.77); b.add(valance);
     }
 
-    const menu = new THREE.Mesh(new THREE.BoxGeometry(1.5+(i%2)*0.45,1.35,0.12),
-      new THREE.MeshStandardMaterial({color:i%2?0x28372f:0x2a2a30,roughness:0.9}));
-    menu.position.set((i%2?1:-1)*bw*0.32,2.15,-2.58); menu.rotation.z=(i%2?-.05:.06); b.add(menu);
+    const mdef = FOOD_MENUS[i];
+    // Booth pitch along this row is ~5.8m while the booths are 6.6-7.7m wide, so
+    // the boards have to sit at the same offset on every stall. Alternating them
+    // put neighbouring menus 1.3m apart with 1.8m of combined width.
+    const menu = signBoard(1.38, 1.24,
+      chalkMenuTexture(mdef[0], mdef[1], mdef[2], mdef[3]), i%2?0x28372f:0x2a2a30);
+    menu.position.set(-bw*0.36, 2.12, -2.66); menu.rotation.z = 0.02; b.add(menu);
+
+    // Product on the service counter, matched to what this operator sells.
+    let fseed = i*104729 + 7;
+    const frnd = ()=>{ fseed = (fseed*16807) % 2147483647; return fseed/2147483647; };
+    const wares = counterWares(foodKinds[i], bw*0.88, frnd);
+    wares.position.set(0, 0.95, -2.9); b.add(wares);
 
     // Food is visibly prepared and handed across the counter.
     const steel=new THREE.MeshStandardMaterial({color:0xb8bec4,metalness:0.5,roughness:0.42});
@@ -1694,17 +2555,15 @@ window.sideLeds = [];
 
   // Dedicated black-scrim pocket around Limitless Lounge and the raised deck.
   // The lounge entrance remains open at the lower stage-side corner.
-  scrimFenceRun(39, 50, 30.4, 38.5);
-  scrimFenceRun(30.4, 38.5, 22.2, 32.1);
-  scrimFenceRun(22.2, 32.1, 15.7, 33.7);
-  scrimFenceRun(26.5, 50.3, 16.3, 44.6);
+  scrimFenceRun(22, 59, 13.4, 47.5);
+  scrimFenceRun(13.4, 47.5, 5.2, 41.1);
+  scrimFenceRun(5.2, 41.1, -1.3, 42.7);
+  scrimFenceRun(9.5, 59.3, -0.7, 53.6);
 
   // LIMITLESS VIEWING DECK — RAISED 32'x20' platform hugging the stage's east flank,
   // angled with the stage line. Its floor and guests sit above the 3.35m scrim.
   {
-    // The plan puts this in the viewing pit, clear of The Same Stage—not
-    // against the stage deck.  The lounge sits immediately to its west.
-    const deckX=16.5, deckZ=36.4, deckRot=1.48;
+    const deckX=-0.5, deckZ=45.4, deckRot=1.48;
     const dg = new THREE.Group(); dg.position.set(deckX, 0, deckZ); dg.rotation.y = deckRot; scene.add(dg);
     const dMat = new THREE.MeshStandardMaterial({color:0x2e2e38, roughness:0.8});
     const floor = new THREE.Mesh(new THREE.BoxGeometry(9.6, 0.35, 6), dMat);
@@ -1731,7 +2590,7 @@ window.sideLeds = [];
 
   // LIMITLESS LOUNGE — 40x20 shade lounge just off the deck, same angle, inside VIP
   {
-    const llx=22.1, llz=44.2, llrot=1.48;
+    const llx=5.1, llz=53.2, llrot=1.48;
     const lg = new THREE.Group(); lg.position.set(llx, 0, llz); lg.rotation.y = llrot; scene.add(lg);
     const ltMat = new THREE.MeshStandardMaterial({color:0x1e1e28, roughness:0.85});
     const top = new THREE.Mesh(new THREE.BoxGeometry(12, 0.2, 6), ltMat);
@@ -3039,6 +3898,7 @@ window.grandmaDoor = null;
     const wallMat=new THREE.MeshStandardMaterial({color:idx%2?0xf1e4cf:0xdbe6df,roughness:0.96});
     const back=new THREE.Mesh(new THREE.BoxGeometry(3.2,2.2,0.1),wallMat);
     back.position.set(0,1.35,1.55); vg.add(back);
+    vg.add(merchWares(names[idx], idx));
     for(const [px,pz] of [[-1.55,-1.55],[1.55,-1.55],[-1.55,1.55],[1.55,1.55]]){
       const post=new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.06,2.5,6),trussMat);
       post.position.set(px,1.25,pz); vg.add(post);
@@ -4580,10 +5440,10 @@ const interactables = [
   { x:9.3, z:33.7, r:7,
     label:()=> "flash your Limitless wristband",
     act(){ toast("Limitless access confirmed. The view really is better up here."); } },
-  { x:22.1, z:44.2, r:6,
+  { x:5.1, z:53.2, r:6,
     label:()=> "flash your Limitless band",
     act(){ toast("Gold wristbands only — couches, cold drinks, and the stage right there."); } },
-  { x:16.5, z:36.4, r:5.5,
+  { x:-0.5, z:45.4, r:5.5,
     label:()=> "climb the Limitless viewing deck",
     act(){ toast("Up top: the whole pit below you, the DJ at eye level."); } },
   { x:49.8, z:21.9, r:7,
@@ -4632,7 +5492,6 @@ function respawnPlayer(){
 function togglePartyMode(force){
   partyMode = typeof force === 'boolean' ? force : !partyMode;
   partyBtn.classList.toggle('active',partyMode);
-  if(window.mobilePartyBtn) mobilePartyBtn.classList.toggle('active',partyMode);
   partyBtn.textContent = partyMode ? 'L · Party On' : 'L · Party Mode';
   partyBtn.setAttribute('aria-pressed',partyMode?'true':'false');
   toast(partyMode
@@ -4645,16 +5504,16 @@ addEventListener('keydown', e=>{
   if(e.code==='KeyE') tryInteract();
   if(e.code==='KeyL' && !e.repeat) togglePartyMode();
   if(e.code==='KeyR') respawnPlayer();
-  if(e.code==='Space'){ e.preventDefault(); doJump(); }
+  if(e.code==='Space'){
+    e.preventDefault();
+    if(started && player.grounded && !riding && rideY < 0.5){ player.vy = 5.6; player.grounded = false; }
+  }
 });
 addEventListener('keyup', e=> keys[e.code]=false);
 
 const overlay = document.getElementById('startOverlay');
 const respawnBtn = document.getElementById('respawnBtn');
 const partyBtn = document.getElementById('partyBtn');
-function doJump(){
-  if(started && player.grounded && !riding && rideY < 0.5){ player.vy = 5.6; player.grounded = false; }
-}
 respawnBtn.addEventListener('pointerdown',e=>e.stopPropagation());
 respawnBtn.addEventListener('mousedown',e=>e.stopPropagation());
 respawnBtn.addEventListener('click',e=>{ e.stopPropagation(); respawnPlayer(); });
@@ -4669,7 +5528,6 @@ function startGame(){
 }
 overlay.addEventListener('click', ()=>{
   startGame();
-  if(isTouchDevice){ toast('Left thumb moves · drag the right side to look'); return; }
   try{
     const p = renderer.domElement.requestPointerLock();
     if(p && p.catch) p.catch(()=>{ dragLook = true; toast("Mouse capture blocked — click & drag to look around"); });
@@ -4696,45 +5554,6 @@ addEventListener('mousemove', e=>{
 });
 renderer.domElement.setAttribute('tabindex','0');
 
-// Touch controls: left joystick moves, any free screen space swipes the camera.
-const mobileMove = {x:0,y:0};
-const movePad = document.getElementById('movePad');
-const moveKnob = document.getElementById('moveKnob');
-const mobilePartyBtn = document.getElementById('mobileParty');
-window.mobilePartyBtn = mobilePartyBtn;
-let padTouchId = null, lookTouchId = null, lastLookX = 0, lastLookY = 0, lastMobileTap = 0;
-function setPadFromTouch(t){
-  const r=movePad.getBoundingClientRect(), cx=r.left+r.width/2, cy=r.top+r.height/2;
-  let dx=t.clientX-cx, dy=t.clientY-cy; const max=42, d=Math.hypot(dx,dy);
-  if(d>max){ dx*=max/d; dy*=max/d; }
-  moveKnob.style.transform=`translate(${dx}px,${dy}px)`;
-  mobileMove.x=dx/max; mobileMove.y=-dy/max;
-}
-function resetPad(){ padTouchId=null; mobileMove.x=0; mobileMove.y=0; moveKnob.style.transform='translate(0,0)'; }
-movePad.addEventListener('touchstart',e=>{ const t=e.changedTouches[0]; padTouchId=t.identifier; setPadFromTouch(t); e.preventDefault(); },{passive:false});
-movePad.addEventListener('touchmove',e=>{ for(const t of e.changedTouches) if(t.identifier===padTouchId) setPadFromTouch(t); e.preventDefault(); },{passive:false});
-movePad.addEventListener('touchend',e=>{ for(const t of e.changedTouches) if(t.identifier===padTouchId) resetPad(); },{passive:false});
-movePad.addEventListener('touchcancel',resetPad,{passive:true});
-function mobileButton(id, fn){
-  const el=document.getElementById(id); el.addEventListener('touchstart',e=>{ lastMobileTap=Date.now(); e.preventDefault(); e.stopPropagation(); fn(); },{passive:false});
-  el.addEventListener('click',e=>{ e.preventDefault(); e.stopPropagation(); if(Date.now()-lastMobileTap>600) fn(); });
-}
-mobileButton('mobileInteract',tryInteract); mobileButton('mobileJump',doJump);
-mobileButton('mobileParty',togglePartyMode); mobileButton('mobileRespawn',respawnPlayer);
-renderer.domElement.addEventListener('touchstart',e=>{
-  if(!isTouchDevice || !started || e.touches.length!==1) return;
-  const t=e.touches[0]; lookTouchId=t.identifier; lastLookX=t.clientX; lastLookY=t.clientY; e.preventDefault();
-},{passive:false});
-renderer.domElement.addEventListener('touchmove',e=>{
-  if(!isTouchDevice || lookTouchId===null) return;
-  for(const t of e.touches) if(t.identifier===lookTouchId){
-    player.yaw-=(t.clientX-lastLookX)*0.008; player.pitch-=(t.clientY-lastLookY)*0.008;
-    player.pitch=Math.max(-1.35,Math.min(1.35,player.pitch)); lastLookX=t.clientX; lastLookY=t.clientY; e.preventDefault(); break;
-  }
-},{passive:false});
-renderer.domElement.addEventListener('touchend',e=>{ for(const t of e.changedTouches) if(t.identifier===lookTouchId) lookTouchId=null; },{passive:true});
-renderer.domElement.addEventListener('touchcancel',()=>lookTouchId=null,{passive:true});
-
 const promptEl = document.getElementById('prompt');
 let nearInteract = null;
 function tryInteract(){
@@ -4749,7 +5568,7 @@ const DOCK = {minX:-69.7, maxX:-66.3, endZ:-158.2};
 function onDock(x,z){ return x>DOCK.minX-0.6 && x<DOCK.maxX+0.6 && z<=-116 && z>=DOCK.endZ; }
 function onIslandDock(x,z){ return x>-37.2 && x<-32.8 && z>-283.6 && z<-270.4; }
 function limitlessDeckH(x,z){
-  const th=1.48, dx=x-16.5, dz=z-36.4;
+  const th=1.48, dx=x+0.5, dz=z-45.4;
   const lx=dx*Math.cos(th)-dz*Math.sin(th);
   const lz=dx*Math.sin(th)+dz*Math.cos(th);
   if(lx>-4.8 && lx<4.8 && Math.abs(lz)<3.0) return 4.18;
@@ -4759,6 +5578,15 @@ function limitlessDeckH(x,z){
   return 0;
 }
 function distToIsland(x,z){ return Math.hypot(x - ISL.x, z - ISL.z); }
+// Mirrors the swell in the water vertex shader so the player floats on the
+// surface they can actually see rather than on a nominal flat plane.
+function waterHeightAt(x, z, t){
+  const f = Math.max(0, Math.min(1, (SHORE_Z - z)/80));
+  const fade = f*f*(3 - 2*f);                       // matches GLSL smoothstep
+  return LAKE_Y + (Math.sin(x*0.020 + t*0.50)*0.090
+                 + Math.cos(z*0.016 - t*0.38)*0.070
+                 + Math.sin((x + z)*0.041 - t*0.90)*0.040) * fade;
+}
 
 function collide(nx, nz){
   for(const c of colliders){
@@ -4812,9 +5640,9 @@ function collide(nx, nz){
       } else if(onDock(player.x, player.z)){
         nx = Math.max(DOCK.minX, Math.min(player.x, DOCK.maxX));
         nz = Math.max(DOCK.endZ, Math.min(player.z, LAKE_Z));
-      } else {
-        nz = LAKE_Z;
       }
+      // Past the dock you're free to wade straight in. Buoyancy and swim speed
+      // are handled in the frame loop.
     }
     const dd = Math.hypot(nx,nz);
     if(dd > WORLD_R){ nx = nx/dd*WORLD_R; nz = nz/dd*WORLD_R; }
@@ -4846,17 +5674,10 @@ function animate(){
   if(keys['KeyS']) fz -= 1;
   if(keys['KeyA']) fx -= 1;
   if(keys['KeyD']) fx += 1;
-  fx += mobileMove.x;
-  fz += mobileMove.y;
-  const run = keys['ShiftLeft']||keys['ShiftRight'] ? 1.7 : 1;
-  if((fx||fz) && editorActive){
-    const len=Math.hypot(fx,fz); fx/=len; fz/=len;
-    const s=Math.sin(player.yaw), c=Math.cos(player.yaw), speed=26*dt;
-    player.x+=(-s*fz+c*fx)*speed;
-    player.z+=(-c*fz-s*fx)*speed;
-    player.x=Math.max(-340,Math.min(340,player.x));
-    player.z=Math.max(-340,Math.min(240,player.z));
-  } else if((fx||fz) && !locked){
+  // You can't sprint through water.
+  const swimDrag = player.swimming ? 0.42 : 1;
+  const run = (keys['ShiftLeft']||keys['ShiftRight'] ? 1.7 : 1) * swimDrag;
+  if((fx||fz) && !locked){
     const len = Math.hypot(fx,fz); fx/=len; fz/=len;
     const s = Math.sin(player.yaw), c = Math.cos(player.yaw);
     const mx = ( -s*fz + c*fx );
@@ -4874,15 +5695,25 @@ function animate(){
   if(!riding && rideY < 0.05) rideY = Math.max(0, rideY);
 
   const moving = (fx||fz) ? 1 : 0;
-  if(editorActive){
-    if(keys['KeyQ']) editorHeight=Math.min(160,editorHeight+22*dt);
-    if(keys['KeyF']) editorHeight=Math.max(2,editorHeight-22*dt);
-  }
   let groundH = 0;
   if(onDock(player.x, player.z) || onIslandDock(player.x, player.z)) groundH = 0.75;
   else if(distToIsland(player.x, player.z) < 53) groundH = 2.25;
   const lh = limitlessDeckH(player.x, player.z);
   if(lh > groundH) groundH = lh;
+
+  // Buoyancy. The surface height has to be evaluated with the same swell the
+  // water vertex shader uses, or you bob out of sync with what you can see.
+  const onSolid = onDock(player.x, player.z) || onIslandDock(player.x, player.z)
+                || distToIsland(player.x, player.z) < 53 || lh > 0;
+  const wasSwimming = player.swimming;
+  player.swimming = (player.z < SHORE_Z + 1.2) && !onSolid && !locked;
+  if(player.swimming){
+    // Ride the surface with the head just clear of it.
+    groundH = waterHeightAt(player.x, player.z, t) - 1.12;
+    if(!wasSwimming) toast("You're in the lake — swim out and float. Shore is behind you.");
+  } else if(wasSwimming){
+    toast("Back on dry land.");
+  }
   if(player.grounded && player.y < groundH) player.y = groundH;
   if(!locked){
     player.vy -= 14 * dt;
@@ -4902,9 +5733,6 @@ function animate(){
     player.x = BALLOON_X; player.z = BALLOON_Z - 3.2;   // where you'll step off
   } else if(sailing){
     camera.position.set(pontoon.position.x, pontoon.position.y + 2.6, pontoon.position.z);
-  } else if(editorActive){
-    // Editor starts above the central lawn, looking toward the Same Stage.
-    camera.position.set(player.x, editorHeight, player.z);
   } else {
     const bob = player.grounded ? Math.sin(t*10*run)*0.05*moving : 0;
     camera.position.set(player.x, 1.7 + player.y + bob, player.z);
@@ -4966,13 +5794,15 @@ function animate(){
     s.target.position.z=-5+Math.cos(t*(0.42+cocoKick*1.9)+s.phase)*10;
   });
 
-  const pos = lakeGeo.attributes.position;
-  for(let i=0;i<pos.count;i++){
-    const bx = lakeBase[i*3], by = lakeBase[i*3+1];
-    pos.setZ(i, Math.sin(bx*0.05 + t*1.1)*0.45 + Math.cos(by*0.07 + t*0.7)*0.4);
-  }
-  pos.needsUpdate = true;
-  lakeGeo.computeVertexNormals();
+  // The swell now runs in the water vertex shader, so this is just uniforms
+  // instead of rewriting 14k vertices and recomputing normals every frame.
+  waterMat.uniforms.uTime.value = t;
+  waterMat.uniforms.uCamPos.value.copy(camera.position);
+
+  clouds.forEach(c=>{
+    c.position.x += c.userData.drift * dt;
+    if(c.position.x > 1320) c.position.x = -1320;
+  });
 
   buoys.forEach((b,i)=>{ b.position.y = 0.35 + Math.sin(t*1.6+i)*0.18; });
 
@@ -5091,18 +5921,21 @@ function animate(){
   });
 
   updatePartyWorld(t,dt);
-  renderer.render(scene, camera);
-}
 
-addEventListener('resize', ()=>{
-  camera.aspect = innerWidth/innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
-});
+  // Keep the sky centred on the viewer so the dome radius never has to cover the
+  // whole 2.4km world, and update the grass tile before anything draws.
+  skyDome.position.copy(camera.position);
+  updateSunShadow(camera.position.x, camera.position.z);
+  updateGrass(camera.position.x, camera.position.z, t);
+
+  renderWaterReflection();
+  renderFrame(t);
+}
 
 // Final quality pass after the complete world has been assembled.
 scene.traverse(o=>{
   if(!o.isMesh) return;
+  if(o === skyDome || o === lake) return;
   const mats=Array.isArray(o.material)?o.material:[o.material];
   const opaque=mats.every(m=>m && !m.transparent);
   const type=o.geometry && o.geometry.type;
@@ -5110,7 +5943,817 @@ scene.traverse(o=>{
   o.castShadow=opaque && type!=='PlaneGeometry' && type!=='CircleGeometry';
 });
 base.receiveShadow=true; lawn.receiveShadow=true; beach.receiveShadow=true;
+skyDome.castShadow=false; skyDome.receiveShadow=false;
 
+// ================= MATERIAL REALISM PASS =================
+// Nothing in the real world is perfectly Lambertian. Every material sitting at
+// roughness 1.0 was reflecting no sky at all, which is what made painted wood,
+// canvas and vinyl all read as the same matte plastic. Pulling them off the peg
+// lets the new sky probe put a faint sheen on everything.
+
+// Tileable value noise, used as world-space surface detail below.
+const detailTex = (()=>{
+  const S = 256;
+  const cv = document.createElement('canvas'); cv.width = cv.height = S;
+  const ctx = cv.getContext('2d');
+  const img = ctx.createImageData(S, S);
+  const lat = 32, grid = new Float32Array(lat*lat);
+  for(let i=0;i<lat*lat;i++) grid[i] = Math.random();
+  const at = (x,y)=> grid[((y%lat)+lat)%lat*lat + ((x%lat)+lat)%lat];
+  const sm = t => t*t*(3-2*t);
+  for(let y=0;y<S;y++){
+    for(let x=0;x<S;x++){
+      let v = 0, amp = 0.5, f = lat/S;
+      for(let o=0;o<3;o++){
+        const gx = x*f, gy = y*f;
+        const x0 = Math.floor(gx), y0 = Math.floor(gy);
+        const tx = sm(gx-x0), ty = sm(gy-y0);
+        v += amp * (
+          at(x0,y0)*(1-tx)*(1-ty) + at(x0+1,y0)*tx*(1-ty) +
+          at(x0,y0+1)*(1-tx)*ty   + at(x0+1,y0+1)*tx*ty);
+        amp *= 0.5; f *= 2;
+      }
+      const g = Math.max(0, Math.min(255, v*255));
+      const i4 = (y*S+x)*4;
+      img.data[i4] = img.data[i4+1] = img.data[i4+2] = g;
+      img.data[i4+3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(cv);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = MAXANISO;
+  return t;
+})();
+
+// Painted flats are the remaining tell: every surface in the build is one exact
+// colour at one exact gloss. Sampling noise by WORLD position (rather than UV)
+// gives consistent grain at a real-world scale no matter how the box is sized or
+// unwrapped, so a 30m tent and a 20cm crate get detail at the same physical size.
+function addSurfaceDetail(m){
+  m.onBeforeCompile = (sh)=>{
+    sh.uniforms.tDetail = {value: detailTex};
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>',
+               '#include <common>\nvarying vec3 vWPos;\nvarying vec3 vWNrm;')
+      .replace('#include <begin_vertex>',
+               '#include <begin_vertex>\n\tvWPos = (modelMatrix * vec4(transformed, 1.0)).xyz;\n\tvWNrm = normalize(mat3(modelMatrix) * objectNormal);');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>',
+               '#include <common>\nuniform sampler2D tDetail;\nvarying vec3 vWPos;\nvarying vec3 vWNrm;')
+      .replace('#include <roughnessmap_fragment>', `
+        #include <roughnessmap_fragment>
+        {
+          vec3 bw = abs(normalize(vWNrm));
+          bw /= (bw.x + bw.y + bw.z + 1e-5);
+          float d1 = texture2D(tDetail, vWPos.xz * 0.9).r;
+          float d2 = texture2D(tDetail, vWPos.xy * 0.9).r;
+          float d3 = texture2D(tDetail, vWPos.zy * 0.9).r;
+          float dtl = d1*bw.y + d2*bw.z + d3*bw.x;
+          float fine = texture2D(tDetail, (vWPos.xz + vWPos.yy) * 6.5).r;
+          // Vary tone and gloss together: real surfaces get grubbier and duller
+          // in the same places.
+          diffuseColor.rgb *= 0.88 + dtl*0.24;
+          roughnessFactor = clamp(roughnessFactor * (0.80 + dtl*0.34 + fine*0.10), 0.04, 1.0);
+        }
+      `);
+  };
+  m.customProgramCacheKey = ()=> 'sdetail1';
+}
+
+{
+  const seen = new Set();
+  let i = 0;
+  scene.traverse(o=>{
+    if(!o.material) return;
+    const mats = Array.isArray(o.material) ? o.material : [o.material];
+    mats.forEach(m=>{
+      if(!m || seen.has(m.uuid)) return;
+      seen.add(m.uuid);
+      m.dithering = true;                         // kills banding on big gradients
+      if(m.isMeshStandardMaterial || m.isMeshPhysicalMaterial){
+        if(m.roughness === 1 && m.metalness === 0){
+          // Deterministic spread so the site doesn't shimmer between reloads.
+          m.roughness = 0.84 + ((i*0.61803398875) % 1) * 0.13;
+        }
+        m.envMapIntensity = 1.0;
+        // Skip anything already carrying its own detail, anything that glows,
+        // and anything see-through, where grime would read as dirt on glass.
+        const glows = m.emissive && (m.emissive.r + m.emissive.g + m.emissive.b) > 0.02;
+        if(!m.map && !m.normalMap && !m.onBeforeCompile.length &&
+           !m.transparent && !glows && !m.userData.noDetail){
+          addSurfaceDetail(m);
+        }
+      }
+      i++;
+    });
+  });
+}
+
+// ================= INSTANCED GRASS =================
+// Rewritten. The previous version placed ~2 blades per square metre from the CPU
+// and rebuilt the buffer every time the player walked 10m, which is why it read
+// as sparse moving spikes rather than turf.
+//
+// This version puts a fixed lattice of ~80k blades in the buffer once, snaps the
+// whole lattice to a world-aligned grid each frame, and derives every per-blade
+// property from a hash of its world position. Nothing is ever rebuilt, blades
+// never shift as you walk, and coverage is decided by a mask texture baked from
+// the site's own colliders instead of per-blade collision tests.
+
+// 35 blades/m2 over a 27m disc covered about 6% of the ground and read as
+// nothing. The same instance budget spent on a 12m disc gives ~178 blades/m2,
+// which is where turf starts to look like turf. Past 12m the ground texture and
+// its normal map carry it.
+// A single 12m disc of dense blades ends in a visible ring, and no amount of
+// height fading hides a density cliff. Two world-snapped Cartesian lattices are
+// used instead: a fine one for the near field and a coarse one that carries out
+// to 32m. Both snap to their own grid, so blades stay pinned in world space and
+// nothing swims as you walk.
+const GRASS = {
+  fineSp: 0.095, fineR: 11,      // ~110 blades/m2 near field
+  coarseSp: 0.22, coarseR: 28,   // ~21 blades/m2 out to the fade
+  coarseMin: 10.2,
+  jitter: 0.07,
+  lattice: 0,
+  dists: null
+};
+const GRASS_MASK = {size: 1024, half: 175, cx: -5, cz: 5};
+
+// Bake where grass is allowed to grow. Drawing this with canvas fills is far
+// cheaper than testing a million points, and it gives soft edges for free — so
+// the sward thins out toward paths and tent walls instead of stopping dead.
+function buildGrassMask(){
+  const S = GRASS_MASK.size, H = GRASS_MASK.half;
+  const cv = document.createElement('canvas'); cv.width = cv.height = S;
+  const ctx = cv.getContext('2d');
+  const sc = S/(2*H);
+  const px = x => (x - (GRASS_MASK.cx - H))*sc;
+  const pz = z => (z - (GRASS_MASK.cz - H))*sc;
+
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, S, S);
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(px(-5), pz(5), 156*sc, 0, 6.2832); ctx.fill();
+
+  // The beach is sand, not lawn.
+  ctx.fillStyle = '#000';
+  ctx.beginPath();
+  beachOutline.forEach(([x,z],i)=>{ i ? ctx.lineTo(px(x), pz(z)) : ctx.moveTo(px(x), pz(z)); });
+  ctx.closePath(); ctx.fill();
+
+  // Erode the sand edge inward. Feathering alone let ~25% of blades survive a
+  // metre onto the sand, which reads as grass growing out of the beach. Stroking
+  // the same path pulls the grass boundary back so it lands at the sand line
+  // instead of across it.
+  ctx.strokeStyle = '#000';
+  ctx.lineJoin = ctx.lineCap = 'round';
+  ctx.lineWidth = 2.0*sc;
+  ctx.beginPath();
+  beachOutline.forEach(([x,z],i)=>{ i ? ctx.lineTo(px(x), pz(z)) : ctx.moveTo(px(x), pz(z)); });
+  ctx.closePath(); ctx.stroke();
+
+  // The beach isn't the only surface grass shouldn't grow through — there are
+  // asphalt lots, service drives, rugs, yoga mats and towels lying on the
+  // ground too. Rather than maintaining a list of them, find every flat
+  // upward-facing decal and stamp its actual triangles into the mask, which
+  // stays exact for irregular shapes like the production lot.
+  {
+    scene.updateMatrixWorld(true);
+    const skip = new Set([base, lawn, beach, lake, skyDome]);
+    const q = new THREE.Quaternion(), nrm = new THREE.Vector3(), wp = new THREE.Vector3();
+    const v = new THREE.Vector3();
+    scene.traverse(o=>{
+      if(!o.isMesh || skip.has(o)) return;
+      const g = o.geometry;
+      if(!g || !g.attributes || !g.attributes.position) return;
+      const t = g.type;
+      if(t !== 'PlaneGeometry' && t !== 'CircleGeometry' && t !== 'ShapeGeometry') return;
+      // A plane's normal is its local +Z; flat ground decals point it at world +Y.
+      o.getWorldQuaternion(q);
+      nrm.set(0, 0, 1).applyQuaternion(q);
+      if(Math.abs(nrm.y) < 0.9) return;          // walls, signs and banners aren't ground
+      o.getWorldPosition(wp);
+      if(wp.y > 0.8) return;                     // stage decks and platforms aren't ground
+      const pos = g.attributes.position, idx = g.index;
+      const count = idx ? idx.count : pos.count;
+      ctx.beginPath();
+      for(let i=0;i<count;i+=3){
+        for(let k=0;k<3;k++){
+          const j = idx ? idx.getX(i+k) : (i+k);
+          v.fromBufferAttribute(pos, j).applyMatrix4(o.matrixWorld);
+          const cx = px(v.x), cz = pz(v.z);
+          if(k === 0) ctx.moveTo(cx, cz); else ctx.lineTo(cx, cz);
+        }
+        ctx.closePath();
+      }
+      ctx.fill();
+      ctx.lineWidth = 1.2*sc;                    // small margin around each decal
+      ctx.stroke();
+    });
+  }
+
+  // Nothing grows under a structure. These keep tight margins — a wide erosion
+  // here would clear a metre of lawn around every tent post.
+  boxColliders.forEach(b=>{
+    ctx.fillRect(px(b.minX-0.4), pz(b.minZ-0.4),
+                 (b.maxX-b.minX+0.8)*sc, (b.maxZ-b.minZ+0.8)*sc);
+  });
+  colliders.forEach(c=>{
+    ctx.beginPath(); ctx.arc(px(c.x), pz(c.z), (c.r+0.3)*sc, 0, 6.2832); ctx.fill();
+  });
+
+  // Feather so edges thin naturally rather than cutting hard.
+  try {
+    ctx.filter = 'blur(2px)';
+    ctx.drawImage(cv, 0, 0);
+    ctx.filter = 'none';
+  } catch(e){ /* older canvas without filter support: hard edges are acceptable */ }
+
+  const tex = new THREE.CanvasTexture(cv);
+  tex.flipY = false;                       // canvas row 0 maps to v=0
+  tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+  tex.minFilter = tex.magFilter = THREE.LinearFilter;
+  tex.generateMipmaps = false;
+  return tex;
+}
+
+let grassMesh = null, grassGeo = null, grassMat = null;
+
+if(renderer.capabilities.vertexTextures){
+  // Blade: four rows, tapering, curved along its length so it reads as a leaf
+  // rather than a spike.
+  const SEG = 3;
+  const pos = [], idx = [];
+  for(let i=0;i<=SEG;i++){
+    const v = i/SEG;
+    pos.push(-0.5, v, 0,   0.5, v, 0);
+  }
+  for(let i=0;i<SEG;i++){
+    const a = i*2, b = i*2+1, c = i*2+2, d = i*2+3;
+    idx.push(a, c, b,  b, c, d);
+  }
+
+  // Both tiers, sorted together by distance, so drawing the first N instances is
+  // still exactly a disc and the quality tiers stay a single count.
+  const pts = [];
+  let nn = Math.ceil(GRASS.fineR/GRASS.fineSp);
+  for(let ix=-nn; ix<=nn; ix++){
+    for(let iz=-nn; iz<=nn; iz++){
+      const x = ix*GRASS.fineSp, z = iz*GRASS.fineSp;
+      const d2 = x*x + z*z;
+      if(d2 > GRASS.fineR*GRASS.fineR) continue;
+      pts.push([x, z, 0, Math.sqrt(d2)]);
+    }
+  }
+  nn = Math.ceil(GRASS.coarseR/GRASS.coarseSp);
+  for(let ix=-nn; ix<=nn; ix++){
+    for(let iz=-nn; iz<=nn; iz++){
+      const x = ix*GRASS.coarseSp, z = iz*GRASS.coarseSp;
+      const d2 = x*x + z*z;
+      if(d2 > GRASS.coarseR*GRASS.coarseR || d2 < GRASS.coarseMin*GRASS.coarseMin) continue;
+      pts.push([x, z, 1, Math.sqrt(d2)]);
+    }
+  }
+  pts.sort((a,b)=>a[3]-b[3]);
+  GRASS.lattice = pts.length;
+  GRASS.dists = new Float32Array(GRASS.lattice);
+  const off = new Float32Array(GRASS.lattice*3);
+  for(let i=0;i<GRASS.lattice;i++){
+    off[i*3] = pts[i][0]; off[i*3+1] = pts[i][1]; off[i*3+2] = pts[i][2];
+    GRASS.dists[i] = pts[i][3];
+  }
+
+  grassGeo = new THREE.InstancedBufferGeometry();
+  grassGeo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  grassGeo.setIndex(idx);
+  grassGeo.setAttribute('iOffset', new THREE.InstancedBufferAttribute(off, 3));
+  grassGeo.instanceCount = GRASS.lattice;
+  grassGeo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6);
+
+  grassMat = new THREE.ShaderMaterial({
+    side: THREE.DoubleSide, fog: true,
+    uniforms: {
+      tMask:       {value: buildGrassMask()},
+      uMaskCenter: {value: new THREE.Vector2(GRASS_MASK.cx, GRASS_MASK.cz)},
+      uMaskHalf:   {value: GRASS_MASK.half},
+      uOriginFine:   {value: new THREE.Vector2()},
+      uOriginCoarse: {value: new THREE.Vector2()},
+      uPlayer:     {value: new THREE.Vector2()},
+      uRadius:     {value: GRASS.coarseR},
+      uFineR:      {value: GRASS.fineR},
+      uShoreZ:     {value: SHORE_Z},
+      uLawnCenter: {value: new THREE.Vector2(GRASS_MASK.cx, GRASS_MASK.cz)},
+      uLawnRadius: {value: 156},
+      uJitter:     {value: GRASS.jitter},
+      uTime:       {value: 0},
+      uSunDir:     {value: SUN_DIR.clone()},
+      // Matched to what the lawn material resolves to, so blades sit into the
+      // ground plane instead of hovering brighter than it.
+      uSunCol:     {value: new THREE.Color(0.60, 0.57, 0.50)},
+      uAmbTop:     {value: new THREE.Color(0.21, 0.25, 0.31)},
+      uAmbBottom:  {value: new THREE.Color(0.07, 0.08, 0.06)},
+      uBase:       {value: new THREE.Color(0.085, 0.135, 0.055)},
+      uTip:        {value: new THREE.Color(0.275, 0.400, 0.150)},
+      uDry:        {value: new THREE.Color(0.330, 0.320, 0.165)},
+      fogColor:    {value: new THREE.Color(0xffffff)},
+      fogDensity:  {value: 0.0017},
+      fogNear:     {value: 1},
+      fogFar:      {value: 2000}
+    },
+    vertexShader: `
+      attribute vec3 iOffset;   // xy = lattice offset, z = tier
+      uniform sampler2D tMask;
+      uniform vec2 uMaskCenter, uOriginFine, uOriginCoarse, uPlayer, uLawnCenter;
+      uniform float uMaskHalf, uRadius, uFineR, uJitter, uTime, uShoreZ, uLawnRadius;
+      varying float vH, vTint, vDry, vFade;
+      varying vec3 vNormalW;
+      #include <fog_pars_vertex>
+
+      // Multiplying by a SMALL constant before the first fract() is the whole
+      // point here. The previous hash multiplied world coordinates by ~123-456
+      // first, so out over the lake the intermediate reached 1e5-1e6, where a
+      // float32 has ~0.03 resolution — fract() then returned a badly quantised
+      // value, and exactly 0.0 often enough to leak blades through a zeroed mask.
+      float hash21(vec2 p){
+        p = fract(p * 0.3183099 + vec2(0.71, 0.113));
+        p *= 17.0;
+        return fract(p.x * p.y * (p.x + p.y));
+      }
+
+      void main(){
+        // The lattice is snapped to a world grid, so a blade's cell coordinate is
+        // fixed in world space and its hash never changes as the player moves.
+        vec2 cell = (iOffset.z < 0.5 ? uOriginFine : uOriginCoarse) + iOffset.xy;
+        float r1 = hash21(cell * 1.7 + 0.13);
+        float r2 = hash21(cell * 2.3 + 7.71);
+        float r3 = hash21(cell * 3.1 + 19.3);
+        float r4 = hash21(cell * 4.7 + 31.7);
+        vec2 world2 = cell + (vec2(r1, r2) - 0.5) * uJitter;
+
+        vec2 muv = (world2 - uMaskCenter) / (2.0*uMaskHalf) + 0.5;
+        float mask = texture2D(tMask, muv).r;
+        // Anything outside the baked mask has no coverage information, so treat
+        // it as bare rather than trusting the clamped edge texel.
+        vec2 inb = step(vec2(0.0), muv) * step(muv, vec2(1.0));
+        mask *= inb.x * inb.y;
+        // Hard stop at the waterline. Nothing grows in the lake, and this is
+        // cheap enough to be worth stating outright rather than relying on the
+        // mask geometry to imply it.
+        mask *= step(uShoreZ, world2.y);
+        // The lawn is a known circle, so test it analytically rather than
+        // trusting a baked texture for a hard invariant. Coverage detail still
+        // comes from the mask; this just makes grass outside the lawn — over
+        // water, over the far beach, past the site edge — geometrically
+        // impossible no matter what the texture or the hash do.
+        mask *= step(distance(world2, uLawnCenter), uLawnRadius);
+
+        float dist = distance(world2, uPlayer);
+        // Fine tier hands over to the coarse tier across an overlap band, and the
+        // coarse tier fades out at the draw limit.
+        float fade = (iOffset.z < 0.5)
+          ? 1.0 - smoothstep(uFineR*0.62, uFineR, dist)
+          : smoothstep(uFineR*0.55, uFineR*0.92, dist);
+        fade *= 1.0 - smoothstep(uRadius*0.70, uRadius, dist);
+
+        // Thin by dropping whole blades rather than shrinking every blade at
+        // once. Real grass LOD reads this way, and it hides both the handover
+        // and the draw limit completely — shrinking leaves a visible ring.
+        // The epsilon matters: step(x, 0.0) returns 1.0 when x is also 0.0, so a
+        // zeroed mask could still spawn a blade if the hash degenerated.
+        float keep = step(r3 + 0.001, mask * min(fade*1.05, 1.0));
+        vFade = keep;
+
+        float h = position.y;
+        // Mown festival turf, not a hayfield.
+        float height = (0.055 + r4*0.075) * keep * (0.72 + 0.28*min(fade*2.0, 1.0));
+        // Distant blades widen so they stay above a pixel and stop shimmering.
+        float width  = (0.011 + r1*0.009) * (1.0 + smoothstep(9.0, 26.0, dist)*0.85);
+        float taper  = pow(1.0 - h, 0.65);
+
+        float ang = r2 * 6.2832;
+        float s = sin(ang), c = cos(ang);
+
+        // Localised gusts rather than one global sine, at a much lower amplitude
+        // than before — turf ripples, it doesn't wave.
+        float gust = sin(world2.x*0.16 + world2.y*0.13 + uTime*0.9)
+                   + 0.45*sin(world2.x*0.51 - world2.y*0.37 + uTime*1.7);
+        float bend = h*h*(0.16 + gust*0.055);
+
+        vec3 local = vec3(position.x * width * taper, h*height, 0.0);
+        vec3 world = vec3(local.x*c, local.y, local.x*s);
+        world.x += (bend + 0.10*h*h) * height * (0.6 + r1*0.8);
+        world.z += (bend*0.45) * height;
+        world += vec3(world2.x, 0.02, world2.y);
+
+        vNormalW = normalize(vec3(-s, 0.62, c));
+        vH = h;
+        vTint = 0.55 + r4*0.45;
+        vDry = smoothstep(0.70, 1.0, hash21(floor(world2*0.55)));   // sun-bleached patches
+
+        vec4 worldPosition = vec4(world, 1.0);
+        vec4 mvPosition = viewMatrix * worldPosition;
+        gl_Position = projectionMatrix * mvPosition;
+        #include <fog_vertex>
+      }`,
+    fragmentShader: `
+      uniform vec3 uSunDir, uSunCol, uAmbTop, uAmbBottom, uBase, uTip, uDry;
+      varying float vH, vTint, vDry, vFade;
+      varying vec3 vNormalW;
+      #include <fog_pars_fragment>
+      void main(){
+        if(vFade < 0.02) discard;
+        vec3 N = normalize(vNormalW);
+        // Blades are thin enough to transmit light, so both faces shade alike.
+        float wrap = abs(dot(N, uSunDir))*0.55 + 0.30;
+        vec3 green = mix(uBase, uTip, vH*vTint);
+        vec3 albedo = mix(green, uDry, vDry*0.40);
+        // Light doesn't reach the bottom of a dense sward.
+        float ao = mix(0.52, 1.0, smoothstep(0.0, 0.6, vH));
+        vec3 col = albedo * (uSunCol*wrap + mix(uAmbBottom, uAmbTop, vH)) * ao;
+        gl_FragColor = vec4(col, 1.0);
+        #include <tonemapping_fragment>
+        #include <encodings_fragment>
+        #include <fog_fragment>
+      }`
+  });
+
+  grassMesh = new THREE.Mesh(grassGeo, grassMat);
+  grassMesh.frustumCulled = false;
+  grassMesh.castShadow = false;
+  grassMesh.receiveShadow = false;
+  scene.add(grassMesh);
+} else {
+  console.warn('No vertex texture units available; grass disabled.');
+}
+
+function updateGrass(px, pz, t){
+  if(!grassMesh || !grassMesh.visible) return;
+  const u = grassMat.uniforms;
+  u.uTime.value = t;
+  u.uPlayer.value.set(px, pz);
+  // Each tier snaps to its own grid so both stay pinned in world space.
+  const f = GRASS.fineSp, c = GRASS.coarseSp;
+  u.uOriginFine.value.set(Math.round(px/f)*f, Math.round(pz/f)*f);
+  u.uOriginCoarse.value.set(Math.round(px/c)*c, Math.round(pz/c)*c);
+}
+
+// ================= ELEVATED WALKWAY CLEARANCE =================
+// collide() is purely 2D — a collider blocks you at every height. The black
+// scrim around Limitless is 3.35m tall and the viewing deck floor sits at 4.0m,
+// so the fence is meant to pass underneath it. Four of that run's posts land
+// inside the deck footprint though, which put an invisible wall across the deck
+// right where you step off the stairs.
+//
+// Anything the player can stand on top of needs its ground colliders cleared.
+// Done here, after the grass mask has already been baked, so the mask still
+// knows the fence is physically there and doesn't grow turf through it.
+{
+  const th = 1.48, dc = Math.cos(th), ds = Math.sin(th);
+  function onDeckFootprint(x, z){
+    const dx = x + 0.5, dz = z - 45.4;
+    const lx = dx*dc - dz*ds;
+    const lz = dx*ds + dz*dc;
+    if(lx > -5.3 && lx < 5.3 && Math.abs(lz) < 3.5) return true;   // platform
+    if(lx >= 5.3 && lx < 9.7 && Math.abs(lz) < 2.2) return true;   // stair run
+    return false;
+  }
+  let cleared = 0;
+  for(let i = colliders.length - 1; i >= 0; i--){
+    if(onDeckFootprint(colliders[i].x, colliders[i].z)){ colliders.splice(i, 1); cleared++; }
+  }
+  for(let i = boxColliders.length - 1; i >= 0; i--){
+    const b = boxColliders[i];
+    // Only small props — never clear a whole building because its centre lands here.
+    if((b.maxX-b.minX) > 3 || (b.maxZ-b.minZ) > 3) continue;
+    if(onDeckFootprint((b.minX+b.maxX)/2, (b.minZ+b.maxZ)/2)){ boxColliders.splice(i, 1); cleared++; }
+  }
+  if(cleared) console.info('Limitless deck: cleared ' + cleared + ' ground collider(s) under the platform.');
+}
+
+// ================= CAMERA-GRADE POST =================
+// Rendering straight to the canvas is what gives real-time work its clean,
+// synthetic look. Everything below runs the frame through an HDR buffer and then
+// out through a lens: bloom on the highlights, ACES, vignette, grain and a
+// touch of lateral chromatic aberration.
+const POST = {
+  ok: false, bloom: 0.62, threshold: 1.05, knee: 0.7,
+  grain: 0.020, vignette: 0.52, aberration: 0.55
+};
+let REFLECT_EVERY = 1;
+
+let rtScene = null;
+const bloomA = [], bloomB = [];
+const quadScene = new THREE.Scene();
+const quadCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+const quadMesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), null);
+quadMesh.frustumCulled = false;
+quadScene.add(quadMesh);
+
+const QUAD_VERT = `
+  varying vec2 vUv;
+  void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`;
+
+const copyMat = new THREE.ShaderMaterial({
+  uniforms: {tDiffuse: {value: null}},
+  vertexShader: QUAD_VERT,
+  fragmentShader: `
+    uniform sampler2D tDiffuse; varying vec2 vUv;
+    void main(){ gl_FragColor = vec4(texture2D(tDiffuse, vUv).rgb, 1.0); }`
+});
+
+const brightMat = new THREE.ShaderMaterial({
+  uniforms: {tDiffuse: {value: null}, uThreshold: {value: 1.05}, uKnee: {value: 0.7}},
+  vertexShader: QUAD_VERT,
+  fragmentShader: `
+    uniform sampler2D tDiffuse;
+    uniform float uThreshold, uKnee;
+    varying vec2 vUv;
+    void main(){
+      vec3 c = texture2D(tDiffuse, vUv).rgb;
+      float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
+      // Soft knee so highlights ease into the bloom instead of switching on.
+      float w = smoothstep(uThreshold, uThreshold + uKnee, l);
+      gl_FragColor = vec4(c*w, 1.0);
+    }`
+});
+
+const blurMat = new THREE.ShaderMaterial({
+  uniforms: {tDiffuse: {value: null}, uTexel: {value: new THREE.Vector2()}},
+  vertexShader: QUAD_VERT,
+  fragmentShader: `
+    uniform sampler2D tDiffuse;
+    uniform vec2 uTexel;
+    varying vec2 vUv;
+    void main(){
+      // Five-tap linear-sampled gaussian: nine taps' worth of reach for five reads.
+      vec3 c  = texture2D(tDiffuse, vUv).rgb * 0.2270270270;
+      c += (texture2D(tDiffuse, vUv + uTexel*1.3846153846).rgb
+          + texture2D(tDiffuse, vUv - uTexel*1.3846153846).rgb) * 0.3162162162;
+      c += (texture2D(tDiffuse, vUv + uTexel*3.2307692308).rgb
+          + texture2D(tDiffuse, vUv - uTexel*3.2307692308).rgb) * 0.0702702703;
+      gl_FragColor = vec4(c, 1.0);
+    }`
+});
+
+const finalMat = new THREE.ShaderMaterial({
+  uniforms: {
+    tScene: {value: null}, tB0: {value: null}, tB1: {value: null}, tB2: {value: null},
+    uExposure: {value: 1.08}, uBloom: {value: POST.bloom}, uGrain: {value: POST.grain},
+    uVignette: {value: POST.vignette}, uAberr: {value: POST.aberration}, uTime: {value: 0}
+  },
+  vertexShader: QUAD_VERT,
+  fragmentShader: `
+    uniform sampler2D tScene, tB0, tB1, tB2;
+    uniform float uExposure, uBloom, uGrain, uVignette, uAberr, uTime;
+    varying vec2 vUv;
+
+    vec3 RRTAndODTFit(vec3 v){
+      vec3 a = v * (v + 0.0245786) - 0.000090537;
+      vec3 b = v * (0.983729*v + 0.4329510) + 0.238081;
+      return a / b;
+    }
+    // Byte-for-byte the same curve three.js applies internally, so the fallback
+    // path and the post path grade identically.
+    vec3 acesFilmic(vec3 color, float exposure){
+      const mat3 ACESInputMat = mat3(
+        0.59719, 0.07600, 0.02840,
+        0.35458, 0.90834, 0.13383,
+        0.04823, 0.01566, 0.83777);
+      const mat3 ACESOutputMat = mat3(
+         1.60475, -0.10208, -0.00327,
+        -0.53108,  1.10813, -0.07276,
+        -0.07367, -0.00605,  1.07602);
+      color *= exposure / 0.6;
+      color = ACESInputMat * color;
+      color = RRTAndODTFit(color);
+      color = ACESOutputMat * color;
+      return clamp(color, 0.0, 1.0);
+    }
+    vec3 toSRGB(vec3 c){
+      return mix(c*12.92,
+                 1.055*pow(max(c, vec3(1e-6)), vec3(0.4166666667)) - 0.055,
+                 step(vec3(0.0031308), c));
+    }
+    void main(){
+      vec2 d = vUv - 0.5;
+      float r2 = dot(d, d);
+      // Lateral chromatic aberration scales with distance from the axis, the way
+      // an uncorrected lens actually behaves.
+      vec2 off = d * r2 * uAberr * 0.02;
+      vec3 col;
+      col.r = texture2D(tScene, vUv + off).r;
+      col.g = texture2D(tScene, vUv).g;
+      col.b = texture2D(tScene, vUv - off).b;
+
+      vec3 bloom = texture2D(tB0, vUv).rgb * 0.50
+                 + texture2D(tB1, vUv).rgb * 0.32
+                 + texture2D(tB2, vUv).rgb * 0.22;
+      col += bloom * uBloom;
+
+      col = acesFilmic(col, uExposure);
+      col = toSRGB(col);
+
+      float v = smoothstep(1.05, 0.32, length(d)*1.42);
+      col *= mix(1.0, v, uVignette);
+
+      float g = fract(sin(dot(gl_FragCoord.xy + vec2(uTime*37.0, uTime*61.0),
+                             vec2(12.9898, 78.233))) * 43758.5453);
+      col += (g - 0.5) * uGrain;
+
+      gl_FragColor = vec4(col, 1.0);
+    }`
+});
+
+function disposePostTargets(){
+  if(rtScene) rtScene.dispose();
+  bloomA.forEach(r=>r.dispose()); bloomB.forEach(r=>r.dispose());
+  bloomA.length = 0; bloomB.length = 0;
+  rtScene = null;
+}
+function buildPostTargets(){
+  disposePostTargets();
+  const pr = renderer.getPixelRatio();
+  let w = Math.max(2, Math.floor(innerWidth * pr));
+  let h = Math.max(2, Math.floor(innerHeight * pr));
+
+  // A 4x-MSAA RGBA16F target at full Retina resolution costs about 400MB with
+  // its depth buffer at 1080p CSS, and 700MB at 1440p. That is enough to fail
+  // allocation outright or drop the WebGL context on laptop GPUs. Step MSAA
+  // down first, then cap resolution and let the final blit upscale — both are
+  // far less visible than losing the context.
+  const native = w * h;
+  const samples = native > 2.4e6 ? Math.min(MSAA_SAMPLES, 2) : MSAA_SAMPLES;
+  const PIXEL_BUDGET = 3.8e6;
+  if(native > PIXEL_BUDGET){
+    const k = Math.sqrt(PIXEL_BUDGET / native);
+    w = Math.max(2, Math.floor(w * k));
+    h = Math.max(2, Math.floor(h * k));
+  }
+  const opts = {
+    minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter,
+    format: THREE.RGBAFormat, type: HDR_TYPE,
+    depthBuffer: true, stencilBuffer: false
+  };
+  if(IS_WEBGL2){
+    rtScene = new THREE.WebGLMultisampleRenderTarget(w, h, opts);
+    rtScene.samples = samples;            // real MSAA, not a post-hoc AA filter
+  } else {
+    rtScene = new THREE.WebGLRenderTarget(w, h, opts);
+  }
+  rtScene.texture.encoding = THREE.LinearEncoding;
+  rtScene.texture.generateMipmaps = false;
+  for(let i=0;i<3;i++){
+    const s = Math.pow(2, i+1);
+    const bw = Math.max(2, Math.floor(w/s)), bh = Math.max(2, Math.floor(h/s));
+    const mk = ()=>{
+      const rt = new THREE.WebGLRenderTarget(bw, bh, {
+        minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter,
+        format: THREE.RGBAFormat, type: HDR_TYPE,
+        depthBuffer: false, stencilBuffer: false
+      });
+      rt.texture.encoding = THREE.LinearEncoding;
+      rt.texture.generateMipmaps = false;
+      return rt;
+    };
+    bloomA.push(mk()); bloomB.push(mk());
+  }
+  finalMat.uniforms.tScene.value = rtScene.texture;
+  finalMat.uniforms.tB0.value = bloomA[0].texture;
+  finalMat.uniforms.tB1.value = bloomA[1].texture;
+  finalMat.uniforms.tB2.value = bloomA[2].texture;
+}
+
+function blit(material, target){
+  quadMesh.material = material;
+  renderer.setRenderTarget(target);
+  renderer.render(quadScene, quadCam);
+}
+
+function renderFrame(t){
+  if(!POST.ok){
+    renderer.setRenderTarget(null);
+    renderer.render(scene, camera);
+    return;
+  }
+  renderer.setRenderTarget(rtScene);
+  renderer.clear();
+  renderer.render(scene, camera);
+
+  if(POST.bloom > 0){
+    brightMat.uniforms.tDiffuse.value = rtScene.texture;
+    brightMat.uniforms.uThreshold.value = POST.threshold;
+    brightMat.uniforms.uKnee.value = POST.knee;
+    blit(brightMat, bloomA[0]);
+    for(let i=0;i<3;i++){
+      if(i > 0){
+        copyMat.uniforms.tDiffuse.value = bloomA[i-1].texture;
+        blit(copyMat, bloomA[i]);                       // downsample one level
+      }
+      blurMat.uniforms.tDiffuse.value = bloomA[i].texture;
+      blurMat.uniforms.uTexel.value.set(1/bloomA[i].width, 0);
+      blit(blurMat, bloomB[i]);
+      blurMat.uniforms.tDiffuse.value = bloomB[i].texture;
+      blurMat.uniforms.uTexel.value.set(0, 1/bloomA[i].height);
+      blit(blurMat, bloomA[i]);
+    }
+  }
+
+  finalMat.uniforms.uExposure.value = renderer.toneMappingExposure;
+  finalMat.uniforms.uBloom.value = POST.bloom;
+  finalMat.uniforms.uGrain.value = POST.grain;
+  finalMat.uniforms.uVignette.value = POST.vignette;
+  finalMat.uniforms.uAberr.value = POST.aberration;
+  finalMat.uniforms.uTime.value = t;
+
+  renderer.setRenderTarget(null);
+  quadMesh.material = finalMat;
+  renderer.render(quadScene, quadCam);
+}
+
+// Bring the post chain up. If anything about this driver refuses, fall back to
+// straight forward rendering and put the tone curve back on the renderer so the
+// two paths grade the same.
+try {
+  buildPostTargets();
+  POST.ok = true;
+  renderer.toneMapping = THREE.NoToneMapping;   // ACES now lives in the final pass
+  scene.fog.color.copy(SKY.horizon);            // fog mixes in linear here
+} catch(err){
+  console.warn('Post chain unavailable, rendering forward instead:', err);
+  POST.ok = false;
+  disposePostTargets();
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  scene.fog.color.setHex(0xd2e0e8);             // fog mixes after tone mapping here
+}
+waterMat.uniforms.fogDensity.value = scene.fog.density;
+if(grassMat) grassMat.uniforms.fogDensity.value = scene.fog.density;
+
+renderer.domElement.addEventListener('webglcontextlost', e=>{
+  e.preventDefault();
+  console.error('WebGL context lost. This is almost always GPU memory pressure — '
+    + 'lower the graphics tier with G and reload.');
+  if(typeof toast === 'function') toast('Graphics context lost — press G to lower quality, then reload.');
+}, false);
+renderer.domElement.addEventListener('webglcontextrestored', ()=>{
+  console.info('WebGL context restored.');
+  try { buildPostTargets(); } catch(err){ POST.ok = false; }
+}, false);
+
+addEventListener('resize', ()=>{
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  if(POST.ok){
+    try { buildPostTargets(); }
+    catch(err){ console.warn('Post resize failed:', err); POST.ok = false; }
+  }
+});
+
+// ================= GRAPHICS QUALITY =================
+const GFX_TIERS = [
+  {name:'Ultra',    pr: 2.0, reflect: 1, grass: 1.00, bloom: 0.62, shadow: 4096, aa: 4},
+  {name:'High',     pr: 1.5, reflect: 2, grass: 0.80, bloom: 0.55, shadow: 4096, aa: 4},
+  {name:'Balanced', pr: 1.0, reflect: 3, grass: 0.55, bloom: 0.45, shadow: 2048, aa: 2},
+  {name:'Fast',     pr: 1.0, reflect: 6, grass: 0.00, bloom: 0.00, shadow: 1024, aa: 0}
+];
+let gfxTier = 0;
+function applyGfxTier(i, announce){
+  gfxTier = ((i % GFX_TIERS.length) + GFX_TIERS.length) % GFX_TIERS.length;
+  const q = GFX_TIERS[gfxTier];
+  renderer.setPixelRatio(Math.min(devicePixelRatio, q.pr));
+  REFLECT_EVERY = q.reflect;
+  POST.bloom = q.bloom;
+  MSAA_SAMPLES = q.aa;
+  if(grassMesh){
+    // The lattice is sorted by distance, so drawing a prefix of it is exactly a
+    // smaller disc. Radius follows from the count and the blade spacing.
+    const n = Math.floor(GRASS.lattice * q.grass);
+    grassGeo.instanceCount = n;
+    grassMesh.visible = n > 0;
+    // Instances are distance-sorted, so the last one drawn is the draw radius.
+    grassMat.uniforms.uRadius.value = n > 1 ? GRASS.dists[n-1] : 1;
+  }
+  if(sun.shadow.mapSize.x !== q.shadow){
+    sun.shadow.mapSize.set(q.shadow, q.shadow);
+    if(sun.shadow.map){ sun.shadow.map.dispose(); sun.shadow.map = null; }
+  }
+  if(POST.ok){
+    try { buildPostTargets(); }
+    catch(err){ console.warn('Post rebuild failed:', err); POST.ok = false; }
+  }
+  const btn = document.getElementById('gfxBtn');
+  if(btn) btn.textContent = 'G · ' + q.name;
+  if(announce && typeof toast === 'function') toast('Graphics: ' + q.name);
+}
+
+applyGfxTier(0, false);
+addEventListener('keydown', e=>{
+  if(e.code === 'KeyG' && !e.repeat) applyGfxTier(gfxTier + 1, true);
+});
+{
+  const btn = document.getElementById('gfxBtn');
+  if(btn) btn.addEventListener('click', ()=>applyGfxTier(gfxTier + 1, true));
+}
 // ================= PARTY MODE + ANIMATED SSBD GRADIENT =================
 const SSBD_STOPS=[0xffd12a,0xe43b36,0x8a3cc9].map(c=>new THREE.Color(c));
 // Twenty-four evenly spaced hues produce a complete, seamless color wheel.
@@ -5207,6 +6850,10 @@ function restorePartyWorld(){
   });
   scene.background.copy(partyBaseBackground);
   scene.fog.color.copy(partyBaseFog);
+  // Sky and water run custom shaders, so they take the party wash as a uniform
+  // rather than through the material colour sweep.
+  skyUniforms.uPartyTint.value.setRGB(0,0,0);
+  waterMat.uniforms.uPartyTint.value.setRGB(0,0,0);
   renderer.toneMappingExposure=1.08;
 }
 
@@ -5225,6 +6872,8 @@ function updatePartyWorld(t,dt){
   colorFromGradient(PARTY_STOPS,t*0.055,partyTmp);
   scene.background.copy(partyBaseBackground).lerp(partyTmp,0.24);
   scene.fog.color.copy(partyBaseFog).lerp(partyTmp,0.16);
+  skyUniforms.uPartyTint.value.copy(partyTmp).multiplyScalar(0.09);
+  waterMat.uniforms.uPartyTint.value.copy(partyTmp).multiplyScalar(0.13);
 
   // Updating at 30-ish fps keeps the global wash smooth without making every
   // material negotiate a new identity on every single render frame.
@@ -5248,848 +6897,6 @@ function updatePartyWorld(t,dt){
   });
   updateSSBDGradient(t);
 }
-
-// ================= OPTIONAL IN-BROWSER SCENE EDITOR =================
-// This is intentionally opt-in: append ?editor=1 to the URL. The festival
-// remains a clean, playable visitor experience by default.
-const editorPanel=document.getElementById('editorPanel');
-const editorEnabled=new URLSearchParams(location.search).get('editor')==='1';
-// Private Unreal comparison mode. This deliberately draws only lightweight
-// proxies from the Unreal export; it never changes the public web layout.
-const unrealPreviewEnabled=new URLSearchParams(location.search).get('unrealPreview')==='1';
-// The asset pass uses a stricter classifier plus proper low-poly proxy shapes.
-// It is a separate private URL while we validate it against the hand-built map.
-const unrealAssetPreviewEnabled=new URLSearchParams(location.search).get('unrealPreview')==='assets';
-// A clean-room pass: the Unreal export drives every festival object.  The
-// legacy web build is retained only as a ground/sky reference, never as a
-// source of object placement.
-const unrealFreshEnabled=new URLSearchParams(location.search).get('unrealFresh')==='1';
-// Hybrid pass: the mature hand-built map supplies the recognizable assets,
-// while Unreal supplies surveyed linear geometry and repeated vegetation.
-const unrealHybridEnabled=new URLSearchParams(location.search).get('unrealHybrid')==='1';
-let editorActive=editorEnabled;
-let editorSelected=null;
-let editorBaseObjects=[];
-let editorControls=null;
-let editorRaycaster=null;
-let editorPointer=null;
-let editorHeight=28;
-const editorImported=[];
-// GLBs supplied with a published layout live in the repo, so normal visitors
-// can see them too. Local-only imports are intentionally not guessed at.
-const publishedImportAssets={
-  'a857309da700437b82e8831255f491bf':'assets/a857309da700437b82e8831255f491bf.glb',
-  '3be98f0960c9405f8fe8a858bf4b2a6b':'assets/3be98f0960c9405f8fe8a858bf4b2a6b.glb'
-};
-const loadedPublishedImports=new Set();
-const EDITOR_STORAGE='ssbd-lake-perris-layout-v1';
-const editorUndoStack=[];
-let editorTransformStart=null;
-
-function unrealPreviewText(actor){
-  return `${actor.name||''} ${(actor.tags||[]).join(' ')} ${(actor.staticMeshes||[]).map(m=>m.asset||'').join(' ')}`.toLowerCase();
-}
-function unrealPreviewKind(actor){
-  const text=unrealPreviewText(actor);
-  // Never use a bare "stage" substring: it accidentally matches Landscape.
-  if(/same_stage|different-but|cococove|cube78|\bstage\d*\b|stage\.stage|dj.?booth|stagespeaker/.test(text)) return 'stage';
-  if(/fenceline|\bfence\b|fence_|fence00|4footfence|barricade|\bgate\b|velvet.?rope/.test(text)) return 'fence';
-  if(/whitetent|gazebo|\btent\b|canopy|awning|shade/.test(text)) return 'tent';
-  if(/foodstall|food.?truck|foodcart|\bbartop\b|\bbar\b|vendor|concession/.test(text)) return 'food';
-  if(/portable.?restroom|porta.?potty|\btoilet\b|\bbathrooms?\b/.test(text)) return 'toilet';
-  if(/container|trailer|scaffold|\btower\b|\bbuilding\b|\bhouse\b/.test(text)) return 'structure';
-  return null;
-}
-function unrealFreshKind(actor){
-  // Names are Peter's labels; mesh names safely fill in ordinary environment
-  // objects such as trees and the already-labelled festival infrastructure.
-  const name=(actor.name||'').toLowerCase();
-  const mesh=(actor.staticMeshes||[]).map(m=>m.asset||'').join(' ').toLowerCase();
-  const text=`${name} ${mesh}`;
-  // Site-plan semantics take precedence over generic mesh guessing.
-  if(/parking.?divider|parking.?row|parking.?lot/.test(name)) return 'parking';
-  if(/camp\+?village|camping|campground/.test(name)) return 'camp';
-  // Peter's "bike rack" label means portable steel crowd-control barricade,
-  // not a bicycle parking rack.
-  if(/bike.?rack|4footfence/.test(name)) return 'barrier';
-  if(/light.?tower|bathroom_light|dsl.?light/.test(name)) return 'light';
-  if(/production.?lot|\bhq\b|headquarters|staging/.test(name)) return 'production';
-  if(/\bada\b|ada.?ramp|accessible/.test(name)) return 'ada';
-  if(/fence|scrim|gate|barricade|velvet.?rope/.test(text)) return 'fence';
-  if(/bathroom|restroom|porta.?potty|toilet/.test(text)) return 'toilet';
-  if(/same.?stage|different.?but|but.?stage|cococove|coconut|famgarden|innerspace|grandmahouse|\bstage\b|dj.?booth/.test(text)) return 'stage';
-  if(/limitless|\bplatform\b|\bdeck\b/.test(text)) return 'platform';
-  // Vendor tents need their own treatment: a plain canopy communicates
-  // nothing about what it is, while these are actual merchant rows.
-  if(/vendor.?tent|vendor/.test(text)) return 'vendor';
-  if(/gazebo/.test(text)) return 'gazebo';
-  if(/tent|canopy|awning/.test(text)) return 'tent';
-  if(/food|bar(top)?|vendor|concession|grill|catering|foodstall/.test(text)) return 'food';
-  if(/tree|palm|foliage|birch|poplar|maple|pine|deciduous/.test(text)) return 'tree';
-  if(/container|trailer|tower|scaffold|house|building|\brv\b|generator|dumpster|cafe/.test(text)) return 'structure';
-  // Unclassified meshes stay hidden. The site plan contains intentional
-  // emergency lanes, circulation corridors and empty beach setbacks; filling
-  // every unknown Unreal actor with a box destroys that information.
-  return null;
-}
-function unrealPreviewColor(actor){
-  const kind=unrealPreviewKind(actor);
-  return new THREE.Color({stage:0xffb347,fence:0xb86cff,tent:0x47d9e8,food:0xff7da8,toilet:0x54d6ff,structure:0x80ed99}[kind]||0x708090);
-}
-function unrealKindColor(kind){
-  return new THREE.Color({stage:0xffb347,platform:0xf3d56b,fence:0x090a0c,barrier:0xbfc7cf,tent:0xf3f1e8,vendor:0xffba62,gazebo:0xd9d2bf,food:0xff7da8,toilet:0x54d6ff,tree:0x4eb36b,structure:0x80ed99,parking:0xd6d9dd,camp:0x7fcf6a,light:0xfff2a8,production:0x8aa4c8,ada:0x4b9dff}[kind]||0x708090);
-}
-function unrealPreviewLabel(text,position,color){
-  const canvas=document.createElement('canvas'); canvas.width=512; canvas.height=96;
-  const ctx=canvas.getContext('2d');
-  ctx.fillStyle='rgba(7,14,28,.84)'; ctx.fillRect(0,0,512,96);
-  ctx.strokeStyle='#ffffff'; ctx.lineWidth=3; ctx.strokeRect(2,2,508,92);
-  ctx.fillStyle=color; ctx.font='700 38px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText(text,256,48);
-  const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(canvas),depthTest:false,transparent:true}));
-  sprite.position.copy(position); sprite.position.y+=7; sprite.scale.set(18,3.4,1); return sprite;
-}
-function unrealProxyShape(kind,color){
-  const group=new THREE.Group();
-  const mat=new THREE.MeshStandardMaterial({color,roughness:.8,metalness:.05,transparent:true,opacity:.88});
-  const dark=new THREE.MeshStandardMaterial({color:0x152238,roughness:.85,transparent:true,opacity:.9});
-  const add=(geo,material,x,y,z,sx=1,sy=1,sz=1)=>{const mesh=new THREE.Mesh(geo,material);mesh.position.set(x,y,z);mesh.scale.set(sx,sy,sz);group.add(mesh);return mesh;};
-  if(kind==='stage'){
-    add(new THREE.BoxGeometry(1,1,1),dark,0,.35,0,4,.7,2.4);
-    add(new THREE.BoxGeometry(1,1,1),mat,0,1.9,.8,4,.35,.18);
-    add(new THREE.BoxGeometry(1,1,1),mat,-1.7,1.6,.1,.18,2.6,.18); add(new THREE.BoxGeometry(1,1,1),mat,1.7,1.6,.1,.18,2.6,.18);
-  } else if(kind==='platform') {
-    add(new THREE.BoxGeometry(8,.45,5),dark,0,.23,0); add(new THREE.BoxGeometry(8.25,.12,5.25),mat,0,.5,0);
-    [[-3.6,-2.1],[3.6,-2.1],[-3.6,2.1],[3.6,2.1]].forEach(([x,z])=>add(new THREE.BoxGeometry(.18,.7,.18),mat,x,.35,z));
-  } else if(kind==='tent') {
-    // Standard event tents read as 20' x 20' with a ten-foot eave.  The
-    // Unreal export's Z is deliberately ignored, but their web proxies still
-    // need a believable physical height.
-    add(new THREE.BoxGeometry(6.1,.16,6.1),dark,0,.08,0);
-    add(new THREE.ConeGeometry(3.05,1.4,4),mat,0,3.75,0,1,1,1);
-    [[-2.8,-2.8],[2.8,-2.8],[-2.8,2.8],[2.8,2.8]].forEach(([x,z])=>add(new THREE.BoxGeometry(.14,3.05,.14),mat,x,1.6,z));
-  } else if(kind==='vendor') {
-    // A vendor row needs visible frontage: canopy, counter, rear wall,
-    // merchandise crates and a sign band.  This is intentionally different
-    // from the anonymous event-tent proxy.
-    const fabric=new THREE.MeshStandardMaterial({color:0xf4efe2,roughness:.92,side:THREE.DoubleSide});
-    add(new THREE.BoxGeometry(5.7,.14,4.2),dark,0,.08,0);
-    add(new THREE.ConeGeometry(2.85,1.2,4),fabric,0,3.63,0,1,1,.74);
-    [[-2.55,-1.75],[2.55,-1.75],[-2.55,1.75],[2.55,1.75]].forEach(([x,z])=>add(new THREE.BoxGeometry(.14,3,.14),dark,x,1.55,z));
-    add(new THREE.BoxGeometry(5.2,2.25,.12),fabric,0,1.25,-1.72);
-    add(new THREE.BoxGeometry(4.8,.18,.72),dark,0,1.35,1.48);
-    [-1.65,0,1.65].forEach(x=>add(new THREE.BoxGeometry(.68,.52,.55),mat,x,.38,1.28));
-    add(new THREE.BoxGeometry(4.65,.5,.1),mat,0,2.48,1.78);
-  } else if(kind==='gazebo') {
-    // Park gazebos are permanent hexagonal shelters, not pop-up tents.
-    const roof=new THREE.MeshStandardMaterial({color:0xb8aa91,roughness:.88});
-    add(new THREE.CylinderGeometry(3.05,3.05,.18,6),dark,0,.09,0);
-    add(new THREE.ConeGeometry(3.35,1.35,6),roof,0,3.65,0);
-    for(let i=0;i<6;i++){
-      const a=i*Math.PI/3;
-      add(new THREE.CylinderGeometry(.11,.13,3.05,7),dark,Math.cos(a)*2.65,1.58,Math.sin(a)*2.65);
-    }
-  } else if(kind==='fence') {
-    // Scrim is a continuous, visible fabric wall—not a line on the ground.
-    // Segments overlap slightly because exported fence actors are commonly
-    // spaced at about four feet.
-    const scrim=new THREE.MeshStandardMaterial({color:0x050505,roughness:1,side:THREE.DoubleSide});
-    add(new THREE.BoxGeometry(4.7,1.8288,.07),scrim,0,.9144,0);
-    add(new THREE.BoxGeometry(.12,1.95,.12),dark,-2.25,.975,0);
-    add(new THREE.BoxGeometry(.12,1.95,.12),dark,2.25,.975,0);
-  } else if(kind==='food') {
-    // Food/bar assets read as stalls: a serving window, awning and sign—not
-    // a featureless box.
-    add(new THREE.BoxGeometry(3.35,1.7,1.65),dark,0,.85,0);
-    add(new THREE.BoxGeometry(3.7,.22,1.98),mat,0,1.78,0);
-    add(new THREE.BoxGeometry(2.55,.78,.08),mat,0,1.18,.88);
-    add(new THREE.BoxGeometry(2.75,.13,.72),mat,0,1.63,.95);
-    add(new THREE.BoxGeometry(2.25,.42,.1),mat,0,2.15,.91);
-  } else if(kind==='toilet') {
-    add(new THREE.BoxGeometry(1.25,2.35,1.2),mat,0,1.2,0); add(new THREE.BoxGeometry(.12,.75,.05),dark,.33,1.2,.63);
-  } else if(kind==='tree') {
-    add(new THREE.CylinderGeometry(.22,.35,3.8,7),dark,0,1.9,0);
-    add(new THREE.ConeGeometry(2.2,4.6,7),mat,0,5.4,0);
-    add(new THREE.ConeGeometry(1.65,3.6,7),mat,0,7.6,0);
-  } else if(kind==='parking') {
-    // A low wheel-stop / lane divider: readable from above without pretending
-    // the parking lot is another festival structure.
-    add(new THREE.BoxGeometry(5.4,.16,.28),mat,0,.08,0);
-    add(new THREE.BoxGeometry(.18,.28,.42),dark,-2.35,.14,0);
-    add(new THREE.BoxGeometry(.18,.28,.42),dark,2.35,.14,0);
-  } else if(kind==='camp') {
-    add(new THREE.BoxGeometry(5.6,.12,4.2),dark,0,.06,0);
-    add(new THREE.ConeGeometry(2.35,2.2,4),mat,0,1.15,0,1,1,.75);
-    add(new THREE.CylinderGeometry(.2,.3,.3,8),dark,2.25,.15,1.35);
-  } else if(kind==='barrier') {
-    // Galvanized 4-foot crowd-control barricade: top/bottom rails, feet and
-    // closely spaced vertical pickets.
-    const steel=new THREE.MeshStandardMaterial({color:0xbfc7cf,roughness:.45,metalness:.72});
-    add(new THREE.BoxGeometry(2.2,.09,.09),steel,0,1.05,0);
-    add(new THREE.BoxGeometry(2.2,.09,.09),steel,0,.22,0);
-    for(let x=-.92;x<=.93;x+=.23) add(new THREE.BoxGeometry(.045,.82,.045),steel,x,.63,0);
-    add(new THREE.BoxGeometry(.42,.08,.5),steel,-.88,.06,0);
-    add(new THREE.BoxGeometry(.42,.08,.5),steel,.88,.06,0);
-  } else if(kind==='light') {
-    add(new THREE.CylinderGeometry(.09,.13,6.5,8),dark,0,3.25,0);
-    add(new THREE.BoxGeometry(2.3,.13,.13),dark,0,6.45,0);
-    add(new THREE.BoxGeometry(.72,.38,.22),mat,-.72,6.22,.08);
-    add(new THREE.BoxGeometry(.72,.38,.22),mat,.72,6.22,.08);
-  } else if(kind==='production') {
-    add(new THREE.BoxGeometry(5.8,2.6,2.45),dark,0,1.3,0);
-    add(new THREE.BoxGeometry(5.3,.5,.08),mat,0,2.1,1.24);
-    add(new THREE.BoxGeometry(1.15,1.85,.08),mat,-1.55,1.25,1.25);
-  } else if(kind==='ada') {
-    // ADA RAMP is exported as many individually placed deck, landing and
-    // handrail actors. Keep each actor level and let its real world bounds
-    // and yaw define the footprint; a generic tilted wedge made the assembled
-    // route look like scattered blue seesaws.
-    add(new THREE.BoxGeometry(1,.12,1),mat,0,.06,0);
-    add(new THREE.BoxGeometry(1,.08,.045),dark,0,.22,-.49);
-    add(new THREE.BoxGeometry(1,.08,.045),dark,0,.22,.49);
-  } else {
-    add(new THREE.BoxGeometry(2.4,2.4,2.4),mat,0,1.2,0); add(new THREE.BoxGeometry(2.7,.2,2.7),dark,0,2.5,0);
-  }
-  return group;
-}
-function unrealFreshProxyShape(kind,color){
-  const proxy=unrealProxyShape(kind,color);
-  // Make the clean pass feel like a site plan, rather than the old toy-like
-  // cubes.  These proportions are web proxies, not guesses at Unreal height.
-  if(kind==='stage') proxy.scale.set(1.55,1.15,1.35);
-  if(kind==='platform') proxy.scale.set(1,1,1);
-  if(kind==='tent') proxy.scale.set(1,1,1);
-  if(kind==='vendor') proxy.scale.set(1,1,1);
-  if(kind==='gazebo') proxy.scale.set(1,1,1);
-  if(kind==='fence') proxy.scale.set(.9,1,.9);
-  if(kind==='food') proxy.scale.set(.86,.92,.86);
-  if(kind==='toilet') proxy.scale.set(.9,.92,.9);
-  if(kind==='tree') proxy.scale.set(.8,.8,.8);
-  if(kind==='parking') proxy.scale.set(1,1,1);
-  if(kind==='camp') proxy.scale.set(1,1,1);
-  if(kind==='barrier') proxy.scale.set(1,1,1);
-  if(kind==='light') proxy.scale.set(1,1,1);
-  if(kind==='production') proxy.scale.set(1,1,1);
-  if(kind==='ada') proxy.scale.set(1,1,1);
-  return proxy;
-}
-function unrealFenceSeriesKey(actor){
-  return (actor.name||'').toLowerCase().replace(/\d+$/,'').replace(/[_\-]+$/,'') || actor.id;
-}
-function unrealFenceIndex(actor){
-  const match=(actor.name||'').match(/(\d+)$/); return match?Number(match[1]):Number.MAX_SAFE_INTEGER;
-}
-function addContinuousFenceSegment(parent,a,b,color,maxLength=5.6){
-  const [ax,,az]=a.web.position, [bx,,bz]=b.web.position;
-  const dx=bx-ax,dz=bz-az,length=Math.hypot(dx,dz);
-  if(length<.08 || length>maxLength) return false; // a genuine break/gate, not a bridge across the site
-  const group=new THREE.Group();
-  const fabric=new THREE.MeshStandardMaterial({color:0x050505,roughness:1,side:THREE.DoubleSide});
-  const dark=new THREE.MeshStandardMaterial({color:0x152238,roughness:.85});
-  const wall=new THREE.Mesh(new THREE.BoxGeometry(length+.06,1.8288,.07),fabric);
-  wall.position.y=.9144;
-  const postA=new THREE.Mesh(new THREE.BoxGeometry(.1,1.95,.1),dark);
-  const postB=postA.clone(); postA.position.x=-length/2; postA.position.y=.975; postB.position.x=length/2; postB.position.y=.975;
-  group.add(wall,postA,postB); group.position.set((ax+bx)/2,0,(az+bz)/2); group.rotation.y=Math.atan2(dz,dx); parent.add(group); return true;
-}
-function actorFootprintWeb(actor){
-  const size=actor.worldBounds?.sizeCm||[0,0,0];
-  return [Math.max(.4,size[0]*.007107610935392121),Math.max(.4,size[1]*.007107610935392121),Math.max(.3,size[2]*.01)];
-}
-function actorBottomOffsetWeb(actor,kind){
-  // Unreal's landscape datum is ~100 cm. Only preserve deliberate elevation
-  // for structures that can actually sit above grade; terrain-following trees,
-  // tents, gazebos and fences are grounded to the web terrain.
-  if(!['platform','stage','structure','production','ada'].includes(kind)) return 0;
-  const bottom=actor.worldBounds?.minCm?.[2]; if(!Number.isFinite(bottom)) return 0;
-  return Math.max(0,Math.min(4,(bottom-100)*.01));
-}
-function sizeActorProxy(proxy,actor,kind){
-  const [w,d,h]=actorFootprintWeb(actor);
-  const nominal={stage:[6.2,3.25,3.2],platform:[8,1,5],tent:[6.1,5.15,6.1],vendor:[5.7,4.2,4.2],
-    gazebo:[6.1,4.35,6.1],food:[3.7,2.6,2],toilet:[1.25,2.35,1.2],structure:[2.7,2.6,2.7],ada:[1,.3,1]}[kind];
-  if(!nominal) return;
-  // Bounds define footprint and height. Tents retain the agreed ten-foot
-  // eave/roof treatment; scrim is handled separately at exactly six feet.
-  const sx=Math.max(.45,Math.min(4,w/nominal[0]));
-  const sz=Math.max(.45,Math.min(4,d/nominal[2]));
-  let sy=kind==='tent'||kind==='vendor'||kind==='ada'?1:Math.max(.45,Math.min(3,h/nominal[1]));
-  proxy.scale.multiply(new THREE.Vector3(sx,sy,sz));
-}
-function treeSpecies(actorOrText){
-  const text=typeof actorOrText==='string'?actorOrText:unrealPreviewText(actorOrText);
-  if(/palm/.test(text)) return 'palm';
-  if(/pine|conifer/.test(text)) return 'pine';
-  if(/noleaf|dead/.test(text)) return 'bare';
-  if(/birch/.test(text)) return 'birch';
-  if(/pepper/.test(text)) return 'pepper';
-  if(/poplar|narrowleaf/.test(text)) return 'poplar';
-  return 'deciduous';
-}
-function makeTreeProxy(species,height=12,crownWidth=5){
-  const g=new THREE.Group(), trunkMat=new THREE.MeshStandardMaterial({color:0x6c4b2f,roughness:1});
-  const greens={palm:0x4f9f58,pine:0x356b43,bare:0x78634d,birch:0x74a957,pepper:0x557f43,poplar:0x629b4c,deciduous:0x4f8f45};
-  const leafMat=new THREE.MeshStandardMaterial({color:greens[species]||greens.deciduous,roughness:1});
-  const add=(geo,mat,x,y,z)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);g.add(m);return m;};
-  const trunkH=species==='palm'?height*.72:height*.42;
-  add(new THREE.CylinderGeometry(Math.max(.12,crownWidth*.055),Math.max(.18,crownWidth*.085),trunkH,7),trunkMat,0,trunkH/2,0);
-  if(species==='palm'){
-    for(let i=0;i<9;i++){const frond=add(new THREE.BoxGeometry(crownWidth*.58,.08,.24),leafMat,0,trunkH+.25,0);frond.rotation.y=i*Math.PI/4.5;frond.rotation.z=(i%2?.18:-.18);frond.position.x=Math.cos(frond.rotation.y)*crownWidth*.2;frond.position.z=Math.sin(frond.rotation.y)*crownWidth*.2;}
-  } else if(species==='pine'){
-    add(new THREE.ConeGeometry(crownWidth*.48,height*.52,8),leafMat,0,trunkH+height*.2,0);
-    add(new THREE.ConeGeometry(crownWidth*.34,height*.42,8),leafMat,0,trunkH+height*.42,0);
-  } else if(species==='bare'){
-    for(let i=0;i<7;i++){const b=add(new THREE.CylinderGeometry(.035,.07,height*.35,5),trunkMat,0,trunkH,0);b.rotation.z=(i-3)*.17;b.rotation.y=i*1.31;}
-  } else {
-    add(new THREE.SphereGeometry(crownWidth*.5,8,6),leafMat,0,trunkH+height*.16,0);
-    add(new THREE.SphereGeometry(crownWidth*.38,8,6),leafMat,-crownWidth*.26,trunkH+height*.31,0);
-    add(new THREE.SphereGeometry(crownWidth*.36,8,6),leafMat,crownWidth*.28,trunkH+height*.28,0);
-  }
-  return g;
-}
-function addDirectFenceSegment(parent,start,end,color,overlap=.12){
-  let aPos=[...start],bPos=[...end];
-  const dx=bPos[0]-aPos[0],dz=bPos[2]-aPos[2],length=Math.hypot(dx,dz);
-  // Scrim panels are physically butted together. A tiny symmetric extension
-  // hides floating-point and mesh-pivot seams without bridging real gates.
-  if(length>.08 && overlap>0){
-    const ux=dx/length,uz=dz/length;
-    aPos[0]-=ux*overlap;aPos[2]-=uz*overlap;
-    bPos[0]+=ux*overlap;bPos[2]+=uz*overlap;
-  }
-  const a={web:{position:aPos}},b={web:{position:bPos}};
-  // Exported spline endpoints are authoritative and frequently span 10–20m.
-  return addContinuousFenceSegment(parent,a,b,color,60);
-}
-function rotateVectorByQuaternion(vector,quaternion){
-  const [x,y,z]=vector,[qx,qy,qz,qw]=quaternion||[0,0,0,1];
-  const ix=qw*x+qy*z-qz*y, iy=qw*y+qz*x-qx*z, iz=qw*z+qx*y-qy*x, iw=-qx*x-qy*y-qz*z;
-  return [
-    ix*qw+iw*-qx+iy*-qz-iz*-qy,
-    iy*qw+iw*-qy+iz*-qx-ix*-qz,
-    iz*qw+iw*-qz+ix*-qy-iy*-qx
-  ];
-}
-function componentFenceEndpointsWeb(component,manifest){
-  const bounds=component?.staticMesh?.localBounds, transform=component?.worldTransform;
-  if(!bounds?.minCm||!bounds?.maxCm||!transform?.locationCm) return null;
-  const min=bounds.minCm,max=bounds.maxCm,size=bounds.sizeCm||max.map((v,i)=>v-min[i]);
-  // The scrim source mesh is almost square in local XY, but X is scaled to
-  // become its length and Y becomes its six-foot height. Choosing the longest
-  // *unscaled* axis therefore picked vertical Y for many panels. Test every
-  // local axis after scale + quaternion and select the largest horizontal
-  // world-space projection.
-  const center=min.map((v,i)=>(v+max[i])/2);
-  const scale=transform.scale||[1,1,1],toWorld=local=>{
-    const rotated=rotateVectorByQuaternion(local.map((v,i)=>v*scale[i]),transform.rotationQuaternion);
-    return rotated.map((v,i)=>v+transform.locationCm[i]);
-  };
-  let best=null;
-  for(let axis=0;axis<3;axis++){
-    const localA=[...center],localB=[...center]; localA[axis]=min[axis];localB[axis]=max[axis];
-    const worldA=toWorld(localA),worldB=toWorld(localB);
-    const horizontal=Math.hypot(worldB[0]-worldA[0],worldB[1]-worldA[1]);
-    if(!best||horizontal>best.horizontal) best={worldA,worldB,horizontal};
-  }
-  if(!best) return null;
-  const a=unrealCmToWeb(best.worldA,manifest),b=unrealCmToWeb(best.worldB,manifest);
-  if(!a||!b||Math.hypot(b[0]-a[0],b[2]-a[2])<.08) return null;
-  return [a,b];
-}
-function addActorFenceComponents(parent,actor,manifest){
-  let rendered=0;
-  const components=(actor.components||[]).filter(component=>component.staticMesh&&component.visible!==false);
-  components.forEach(component=>{
-    const endpoints=componentFenceEndpointsWeb(component,manifest);
-    if(endpoints&&addDirectFenceSegment(parent,endpoints[0],endpoints[1],unrealKindColor('fence'))) rendered++;
-  });
-  return rendered;
-}
-function collectActorFenceSegments(actor,manifest){
-  const segments=[];
-  (actor.components||[]).filter(component=>component.staticMesh&&component.visible!==false).forEach(component=>{
-    const endpoints=componentFenceEndpointsWeb(component,manifest);
-    if(endpoints) segments.push({actor,a:endpoints[0],b:endpoints[1]});
-  });
-  return segments;
-}
-function bridgeScrimTopology(parent,segments,gateActors){
-  // Separate scrim panels exported from Unreal are not guaranteed to touch:
-  // several same-run neighbours have 1.8–2.6m endpoint holes. Join endpoints
-  // only when their panel directions are collinear and the gap continues that
-  // line. Explicitly-labelled gate actors protect intentional openings.
-  const gates=(gateActors||[]).map(actor=>actor.web?.position).filter(Boolean);
-  const endpoints=[];
-  segments.forEach((segment,index)=>{
-    const dx=segment.b[0]-segment.a[0],dz=segment.b[2]-segment.a[2],length=Math.hypot(dx,dz);
-    if(length<.08) return;
-    const dir=[dx/length,dz/length];
-    endpoints.push({segment,index,point:segment.a,dir}, {segment,index,point:segment.b,dir});
-  });
-  const used=new Set();
-  const candidates=[];
-  for(let i=0;i<endpoints.length;i++) for(let j=i+1;j<endpoints.length;j++){
-    const a=endpoints[i],b=endpoints[j];
-    if(a.index===b.index) continue;
-    const gx=b.point[0]-a.point[0],gz=b.point[2]-a.point[2],gap=Math.hypot(gx,gz);
-    if(gap<.08||gap>3.1) continue;
-    const gu=[gx/gap,gz/gap];
-    const parallel=Math.abs(a.dir[0]*b.dir[0]+a.dir[1]*b.dir[1]);
-    const alongA=Math.abs(a.dir[0]*gu[0]+a.dir[1]*gu[1]);
-    const alongB=Math.abs(b.dir[0]*gu[0]+b.dir[1]*gu[1]);
-    if(parallel<.82||alongA<.78||alongB<.78) continue;
-    const mx=(a.point[0]+b.point[0])/2,mz=(a.point[2]+b.point[2])/2;
-    // A gate label near the midpoint owns this opening; never seal it.
-    if(gates.some(g=>Math.hypot(g[0]-mx,g[2]-mz)<2.8)) continue;
-    candidates.push({i,j,gap,a,b});
-  }
-  candidates.sort((a,b)=>a.gap-b.gap);
-  let joined=0;
-  for(const candidate of candidates){
-    if(used.has(candidate.i)||used.has(candidate.j)) continue;
-    if(addDirectFenceSegment(parent,candidate.a.point,candidate.b.point,unrealKindColor('fence'),.04)){
-      used.add(candidate.i);used.add(candidate.j);joined++;
-    }
-  }
-  return joined;
-}
-function unrealCmToWeb(locationCm,manifest){
-  const same=manifest?.anchors?.sameStage;
-  if(!same || !locationCm) return null;
-  const scale=0.007107610935392121, angle=0.6117497778749903;
-  const dx=locationCm[0]-same.unrealCm[0], dy=locationCm[1]-same.unrealCm[1];
-  return [
-    same.web[0]+(dx*Math.cos(angle)-dy*Math.sin(angle))*scale,
-    0,
-    same.web[1]+(dx*Math.sin(angle)+dy*Math.cos(angle))*scale
-  ];
-}
-function addAuthoritativeSplineGeometry(parent,manifest){
-  const counts={scrim:0,road:0,sidewalk:0,wood:0};
-  (manifest.actors||[]).forEach(actor=>(actor.webSplines?.segments||[]).forEach(segment=>{
-    if(!segment.start||!segment.end) return;
-    const text=`${segment.asset||''} ${(segment.materials||[]).join(' ')}`.toLowerCase();
-    if(/privacy.?screen|privacyscreen|scrim/.test(text)){
-      if(addDirectFenceSegment(parent,segment.start,segment.end,unrealKindColor('fence'))) counts.scrim++;
-      return;
-    }
-    const [a,b]=[segment.start,segment.end], dx=b[0]-a[0],dz=b[2]-a[2],length=Math.hypot(dx,dz);
-    if(length<.08) return;
-    let color,height,width,y,kind;
-    if(/concrete|sidewalk|pavement|curb/.test(text)){color=0xc7c7c2;height=.08;width=2.15;y=.04;kind='sidewalk';}
-    else if(/wood_strip|wood.?strip/.test(text)){color=0xa98258;height=.10;width=1.25;y=.05;kind='wood';}
-    else if(/asphalt|mi_border|dirt_gardens/.test(text)){color=0x53575a;height=.045;width=5.6;y=.022;kind='road';}
-    else return;
-    const material=new THREE.MeshStandardMaterial({color,roughness:.96});
-    const mesh=new THREE.Mesh(new THREE.BoxGeometry(length,height,width),material);
-    mesh.position.set((a[0]+b[0])/2,y,(a[2]+b[2])/2);
-    mesh.rotation.y=Math.atan2(dz,dx); parent.add(mesh); counts[kind]++;
-  }));
-  return counts;
-}
-function addExportedInstances(parent,manifest){
-  let count=0;
-  (manifest.actors||[]).forEach(actor=>(actor.instancedMeshes||[]).forEach(component=>{
-    const text=`${actor.name||''} ${component.staticMesh?.asset||''} ${(component.materials||[]).join(' ')}`.toLowerCase();
-    const kind=/tree|palm|foliage|birch|poplar|maple|pine/.test(text)?'tree':null;
-    if(!kind) return;
-    (component.instances||[]).forEach(instance=>{
-      const position=unrealCmToWeb(instance.locationCm,manifest); if(!position) return;
-      const s=instance.scale||[1,1,1], horizontal=Math.max(.35,Math.min(2.5,(Math.abs(s[0])+Math.abs(s[1]))/2));
-      const meshHeight=(component.staticMesh?.localBounds?.sizeCm?.[2]||1500)*.01*horizontal;
-      const meshWidth=Math.max(component.staticMesh?.localBounds?.sizeCm?.[0]||500,component.staticMesh?.localBounds?.sizeCm?.[1]||500)*.01*horizontal;
-      const proxy=makeTreeProxy(treeSpecies(text),Math.max(4,Math.min(28,meshHeight)),Math.max(2,Math.min(11,meshWidth)));
-      proxy.position.set(position[0],0,position[2]);
-      parent.add(proxy); count++;
-    });
-  }));
-  return count;
-}
-function addExportedSplineFence(parent,actor){
-  const splineData=actor.webSplines||{}, connected=false;
-  let rendered=connected;
-  (splineData.paths||[]).forEach(path=>{
-    const points=path.points||[];
-    for(let i=0;i<points.length-1;i++) rendered=addDirectFenceSegment(parent,points[i],points[i+1],unrealKindColor('fence'))||rendered;
-    if(path.closedLoop && points.length>2) rendered=addDirectFenceSegment(parent,points[points.length-1],points[0],unrealKindColor('fence'))||rendered;
-  });
-  (splineData.segments||[]).forEach(segment=>{
-    const semanticText=`${segment.asset||''} ${(segment.materials||[]).join(' ')}`.toLowerCase();
-    // A Landscape actor can own asphalt, sidewalk and fence spline meshes at
-    // once. Never turn road/sidewalk materials into black scrim.
-    if(/asphalt|sidewalk|road|curb|concrete|pavement/.test(semanticText) && !/fence|scrim/.test(semanticText)) return;
-    if(segment.start&&segment.end) rendered=addDirectFenceSegment(parent,segment.start,segment.end,unrealKindColor('fence'))||rendered;
-  });
-  return rendered;
-}
-function addSpatialScrimRuns(parent,actors){
-  // Unreal's SCRIM_FENCELINE numeric suffixes restart in multiple areas, so
-  // actor-name ordering is not a path. Build the line from spatial neighbours
-  // instead. Greedy shortest-edge linking with degree <= 2 produces continuous
-  // non-branching runs and will not bridge intentional gate-sized gaps.
-  const candidates=[];
-  for(let i=0;i<actors.length;i++) for(let j=i+1;j<actors.length;j++){
-    const a=actors[i].web.position,b=actors[j].web.position;
-    const distance=Math.hypot(b[0]-a[0],b[2]-a[2]);
-    if(distance>.18 && distance<=4.7) candidates.push({i,j,distance});
-  }
-  candidates.sort((a,b)=>a.distance-b.distance);
-  const degree=new Array(actors.length).fill(0), connected=new Set();
-  for(const edge of candidates){
-    if(degree[edge.i]>=2 || degree[edge.j]>=2) continue;
-    if(addContinuousFenceSegment(parent,actors[edge.i],actors[edge.j],unrealKindColor('fence'))){
-      degree[edge.i]++; degree[edge.j]++;
-      connected.add(actors[edge.i]); connected.add(actors[edge.j]);
-    }
-  }
-  return connected;
-}
-function loadFreshUnrealMap(){
-  if(!unrealFreshEnabled) return;
-  // The old site is useful for its terrain only. Hide every legacy festival
-  // object before assembling the new layer; keep the environmental meshes and
-  // lighting that make the terrain legible.
-  const keep=new Set([skyDome,sun,sunDisc,base,lawn,beach,lake,foam]);
-  scene.children.forEach(obj=>{if(!keep.has(obj) && !obj.isLight) obj.visible=false;});
-  fetch('unreal-web-preview.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(manifest=>{
-    const actors=(manifest?.actors||[]).filter(actor=>actor.visible!==false && actor.web && unrealFreshKind(actor));
-    if(!actors.length) throw new Error('No labelled Unreal actors');
-    const layer=new THREE.Group(); layer.name='Fresh Unreal-driven festival map';
-    const counts={};
-    const splineCounts=addAuthoritativeSplineGeometry(layer,manifest);
-    counts['spline scrim']=splineCounts.scrim;
-    counts['road spline']=splineCounts.road;
-    counts['sidewalk spline']=splineCounts.sidewalk;
-    counts['wood spline']=splineCounts.wood;
-    counts['instanced trees']=addExportedInstances(layer,manifest);
-    const fenceActors=actors.filter(actor=>unrealFreshKind(actor)==='fence');
-    const fenceActorsWithConnections=new Set();
-    // Spline exports are authoritative fence geometry. Render their sampled
-    // curve/segment endpoints directly instead of reconstructing a path from
-    // the spline actor's single origin.
-    fenceActors.forEach(actor=>{
-      if(addExportedSplineFence(layer,actor)) fenceActorsWithConnections.add(actor);
-    });
-    // Standalone fence actors are reconstructed from each mesh component's
-    // local long axis, world scale and quaternion. This produces the actual
-    // two endpoints; actor yaw plus a world AABB produced rotated, gapped runs.
-    const scrimActors=fenceActors.filter(actor=>!fenceActorsWithConnections.has(actor)&&/scrim/i.test(unrealPreviewText(actor)));
-    scrimActors.forEach(actor=>{if(addActorFenceComponents(layer,actor,manifest)) fenceActorsWithConnections.add(actor);});
-    const scrimSegments=scrimActors.flatMap(actor=>collectActorFenceSegments(actor,manifest));
-    counts['scrim gap joins']=bridgeScrimTopology(
-      layer,
-      scrimSegments,
-      fenceActors.filter(actor=>/\bgate\b/i.test(actor.name||''))
-    );
-    // Use the same component-endpoint reconstruction for all remaining panels.
-    fenceActors.filter(actor=>!fenceActorsWithConnections.has(actor)).forEach(actor=>{
-      if(addActorFenceComponents(layer,actor,manifest)) fenceActorsWithConnections.add(actor);
-    });
-    actors.forEach(actor=>{
-      const kind=unrealFreshKind(actor), [x,,z]=actor.web.position;
-      // Connected fence endpoints are represented by the run geometry above.
-      // Keep singletons (gates / isolated panels) visible as individual walls.
-      if(kind==='fence' && fenceActorsWithConnections.has(actor)) {counts[kind]=(counts[kind]||0)+1; return;}
-      let proxy;
-      if(kind==='tree'){
-        const [w,d,h]=actorFootprintWeb(actor);
-        proxy=makeTreeProxy(treeSpecies(actor),Math.max(4,Math.min(30,h)),Math.max(2,Math.min(12,Math.max(w,d))));
-      } else proxy=unrealFreshProxyShape(kind,unrealKindColor(kind));
-      sizeActorProxy(proxy,actor,kind);
-      proxy.position.set(x,actorBottomOffsetWeb(actor,kind),z);
-      proxy.rotation.y=actor.web.rotationYRadians||0;
-      proxy.userData={unrealId:actor.id,unrealName:actor.name,kind};
-      layer.add(proxy); counts[kind]=(counts[kind]||0)+1;
-    });
-    scene.add(layer);
-    [['SAME STAGE','Same_Stage_4_29_26__REVIEW_'],['BUT STAGE','Different-But_Stage_2023_v1'],['COCONUT COVE','cococove_single'],['LIMITLESS','Limitless_Platform']]
-      .forEach(([label,name])=>{const a=(manifest.actors||[]).find(actor=>actor.name===name);if(a?.web){const [x,,z]=a.web.position;scene.add(unrealPreviewLabel(label,new THREE.Vector3(x,0,z),'#fff1a8'));}});
-    const summary=Object.entries(counts).map(([kind,count])=>`${count} ${kind}`).join(' · ');
-    toast(`FRESH UNREAL MAP — ${summary}. Legacy festival objects are hidden.`);
-  }).catch(error=>{console.error('Fresh Unreal map failed',error);toast('Could not load fresh Unreal map.');});
-}
-function loadHybridUnrealMap(){
-  if(!unrealHybridEnabled) return;
-  // Retain the old map's stages, booths, tents, decks, gazebos, toilets and
-  // environmental art. Its hand-authored fence/barrier runs are the one layer
-  // Unreal now replaces authoritatively.
-  scene.traverse(obj=>{
-    if(obj.userData?.legacySiteGeometry==='scrim' || obj.userData?.legacySiteGeometry==='barrier'){
-      obj.visible=false;
-    }
-  });
-  fetch('unreal-web-preview.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(manifest=>{
-    if(!manifest?.actors?.length) throw new Error('No Unreal actors');
-    const layer=new THREE.Group();
-    layer.name='Hybrid Unreal surveyed geometry';
-    const splineCounts=addAuthoritativeSplineGeometry(layer,manifest);
-    const instanceTrees=addExportedInstances(layer,manifest);
-
-    // Some black scrim was built as standalone mesh actors rather than spline
-    // segments. Reconstruct every such panel from exported component endpoints.
-    const actors=manifest.actors.filter(actor=>actor.visible!==false && actor.web);
-    const fences=actors.filter(actor=>unrealFreshKind(actor)==='fence');
-    const represented=new Set();
-    fences.forEach(actor=>{
-      if(addExportedSplineFence(layer,actor)) represented.add(actor);
-    });
-    const panels=fences.filter(actor=>!represented.has(actor) && /scrim|privacy.?screen/i.test(unrealPreviewText(actor)));
-    panels.forEach(actor=>{
-      if(addActorFenceComponents(layer,actor,manifest)) represented.add(actor);
-    });
-    const panelSegments=panels.flatMap(actor=>collectActorFenceSegments(actor,manifest));
-    const joins=bridgeScrimTopology(layer,panelSegments,fences.filter(actor=>/\bgate\b/i.test(actor.name||'')));
-    fences.filter(actor=>!represented.has(actor)).forEach(actor=>addActorFenceComponents(layer,actor,manifest));
-
-    scene.add(layer);
-    toast(`HYBRID MAP — old-map assets + Unreal survey: ${splineCounts.scrim} black-scrim spline segments, ${joins} joined panel gaps, ${splineCounts.road} road, ${splineCounts.sidewalk} sidewalk, ${splineCounts.wood} path, ${instanceTrees} instanced trees.`);
-  }).catch(error=>{
-    console.error('Hybrid Unreal map failed',error);
-    toast('Could not load the hybrid Unreal map.');
-  });
-}
-function loadUnrealPreview(){
-  if(unrealFreshEnabled || unrealHybridEnabled || (!unrealPreviewEnabled && !unrealAssetPreviewEnabled)) return;
-  fetch('unreal-web-preview.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(manifest=>{
-    const allActors=(manifest&&manifest.actors||[]).filter(actor=>actor.visible!==false && actor.web && (Array.isArray(actor.staticMeshes) && actor.staticMeshes.length || /same_stage|different-but|cococove|cube78/i.test(actor.name||'')));
-    const actors=unrealAssetPreviewEnabled ? allActors.filter(actor=>unrealPreviewKind(actor)) : allActors;
-    if(!actors.length) throw new Error('No exported mesh actors');
-    if(unrealAssetPreviewEnabled){
-      const layer=new THREE.Group(); layer.name='Unreal calibrated asset proxy preview';
-      const counts={};
-      actors.forEach(actor=>{
-        const [x,,z]=actor.web.position, kind=unrealPreviewKind(actor), proxy=unrealProxyShape(kind,unrealPreviewColor(actor));
-        // Unreal Z is intentionally discarded.  The exported X/Y map position
-        // is calibrated, but its elevation is not comparable to the web terrain.
-        proxy.position.set(x,0,z); proxy.rotation.y=actor.web.rotationYRadians||0;
-        // Unreal's actor scale is not exported yet, so deliberately keep a
-        // consistent readable proxy scale instead of inventing dimensions.
-        layer.add(proxy); counts[kind]=(counts[kind]||0)+1;
-      });
-      scene.add(layer);
-      const labels=[
-        ['Same Stage','Same_Stage_4_29_26__REVIEW_','#ffd166'],
-        ['But Stage · Cube78','Cube78','#ffd166'],
-        ['Coconut Cove','cococove_single','#ffd166']
-      ];
-      labels.forEach(([label,name,color])=>{const actor=allActors.find(a=>a.name===name);if(!actor)return;const [x,,z]=actor.web.position;scene.add(unrealPreviewLabel(label,new THREE.Vector3(x,0,z),color));});
-      const summary=Object.entries(counts).map(([kind,count])=>`${count} ${kind}${count===1?'':'s'}`).join(' · ');
-      toast(`UNREAL ASSET PREVIEW — ${summary}. Public layout unchanged.`);
-      return;
-    }
-    const geometry=new THREE.BoxGeometry(0.8,0.8,0.8);
-    const material=new THREE.MeshBasicMaterial({vertexColors:true,transparent:true,opacity:0.68,depthWrite:false});
-    const proxies=new THREE.InstancedMesh(geometry,material,actors.length);
-    const matrix=new THREE.Matrix4(), color=new THREE.Color();
-    actors.forEach((actor,index)=>{
-      const [x,,z]=actor.web.position;
-      const height=0.8;
-      matrix.compose(new THREE.Vector3(x,height/2,z),new THREE.Quaternion().setFromEuler(new THREE.Euler(0,actor.web.rotationYRadians||0,0)),new THREE.Vector3(1.1,height,1.1));
-      proxies.setMatrixAt(index,matrix); proxies.setColorAt(index,unrealPreviewColor(actor));
-    });
-    proxies.instanceMatrix.needsUpdate=true; if(proxies.instanceColor) proxies.instanceColor.needsUpdate=true;
-    proxies.name='Unreal calibrated preview proxies'; scene.add(proxies);
-    const labels=[
-      ['Same Stage','Same_Stage_4_29_26__REVIEW_','#ffd166'],
-      ['But Stage · Cube78','Cube78','#ffd166'],
-      ['Coconut Cove','cococove_single','#ffd166']
-    ];
-    labels.forEach(([label,name,color])=>{
-      const actor=actors.find(a=>a.name===name); if(!actor) return;
-      const [x,,z]=actor.web.position; scene.add(unrealPreviewLabel(label,new THREE.Vector3(x,0,z),color));
-    });
-    toast(`UNREAL PREVIEW — ${actors.length.toLocaleString()} calibrated actor proxies. Public layout unchanged.`);
-  }).catch(error=>{console.error('Unreal preview failed',error);toast('Could not load Unreal preview.');});
-}
-
-function editorObjectLabel(obj){
-  return obj.userData.editorName || obj.name || (obj.isGroup?'Group':obj.type.replace('Mesh',''));
-}
-function editorTopLevel(obj){
-  let top=obj;
-  while(top.parent && top.parent!==scene) top=top.parent;
-  return top.parent===scene ? top : null;
-}
-function editorSelect(obj){
-  editorSelected=obj || null;
-  if(editorControls) editorControls.detach();
-  if(editorSelected && editorControls) editorControls.attach(editorSelected);
-  document.getElementById('editorSelected').textContent=editorSelected ? editorObjectLabel(editorSelected) : 'Nothing selected';
-  document.getElementById('editorDuplicate').disabled=!editorSelected;
-  document.getElementById('editorDelete').disabled=!editorSelected;
-}
-function editorState(obj){return {position:obj.position.toArray(),rotation:obj.rotation.toArray(),scale:obj.scale.toArray(),visible:obj.visible};}
-function editorRestore(obj,state){obj.position.fromArray(state.position);obj.rotation.fromArray(state.rotation);obj.scale.fromArray(state.scale);obj.visible=state.visible;}
-function editorStatesDiffer(a,b){return JSON.stringify(a)!==JSON.stringify(b);}
-function editorPushUndo(entry){editorUndoStack.push(entry);document.getElementById('editorUndo').disabled=false;}
-function editorUndo(){
-  const entry=editorUndoStack.pop(); if(!entry) return;
-  if(entry.type==='transform') editorRestore(entry.obj,entry.before);
-  if(entry.type==='remove'){entry.obj.parent&&entry.obj.parent.remove(entry.obj); if(editorSelected===entry.obj) editorSelect(null);}
-  if(entry.type==='add'){entry.parent.add(entry.obj); editorSelect(entry.obj);}
-  document.getElementById('editorUndo').disabled=!editorUndoStack.length;
-  editorSave();
-}
-function editorSnapshot(){
-  const records=[];
-  editorBaseObjects.forEach((obj,index)=>{
-    // Keep a tombstone for deleted base objects. The original implementation
-    // omitted them, which made the public map quietly recreate them.
-    records.push({index,position:obj.position.toArray(),rotation:obj.rotation.toArray(),scale:obj.scale.toArray(),visible:!!obj.parent && obj.visible});
-  });
-  editorImported.filter(obj=>obj.parent).forEach((obj,index)=>{
-    const record={imported:index,name:obj.userData.editorName,position:obj.position.toArray(),rotation:obj.rotation.toArray(),scale:obj.scale.toArray(),visible:obj.visible};
-    if(Number.isInteger(obj.userData.editorSourceIndex)) record.sourceIndex=obj.userData.editorSourceIndex;
-    records.push(record);
-  });
-  return {version:1,savedAt:new Date().toISOString(),objects:records};
-}
-function loadPublishedImports(layout){
-  if(!layout || !Array.isArray(layout.objects)) return;
-  layout.objects.filter(record=>record.imported!==undefined && publishedImportAssets[record.name]).forEach(record=>{
-    const key=record.name;
-    if(loadedPublishedImports.has(key)) return;
-    loadedPublishedImports.add(key);
-    new THREE.GLTFLoader().load(publishedImportAssets[key],gltf=>{
-      const model=gltf.scene || gltf.scenes[0];
-      model.userData.editorName=key; model.userData.editorImported=true;
-      if(record.position) model.position.fromArray(record.position);
-      if(record.rotation) model.rotation.fromArray(record.rotation);
-      if(record.scale) model.scale.fromArray(record.scale);
-      if(typeof record.visible==='boolean') model.visible=record.visible;
-      model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
-      scene.add(model); editorImported.push(model);
-    },undefined,err=>{loadedPublishedImports.delete(key);console.warn(`Could not load ${key}`,err);});
-  });
-  layout.objects.filter(record=>record.imported!==undefined && Number.isInteger(record.sourceIndex)).forEach(record=>{
-    const key=`copy-${record.imported}-${record.sourceIndex}`;
-    if(loadedPublishedImports.has(key)) return;
-    const source=editorBaseObjects[record.sourceIndex];
-    if(!source) return;
-    loadedPublishedImports.add(key);
-    const copy=source.clone(true);
-    copy.userData.editorName=record.name || `${editorObjectLabel(source)} copy`;
-    copy.userData.editorSourceIndex=record.sourceIndex; copy.userData.editorImported=true;
-    if(record.position) copy.position.fromArray(record.position);
-    if(record.rotation) copy.rotation.fromArray(record.rotation);
-    if(record.scale) copy.scale.fromArray(record.scale);
-    if(typeof record.visible==='boolean') copy.visible=record.visible;
-    scene.add(copy); editorImported.push(copy);
-  });
-}
-function editorApplyLayout(layout){
-  if(!layout || !Array.isArray(layout.objects)) return;
-  const savedBaseIndexes=new Set();
-  layout.objects.forEach(record=>{
-    if(record.imported!==undefined) return;
-    savedBaseIndexes.add(record.index);
-    const obj=editorBaseObjects[record.index];
-    if(!obj) return;
-    if(record.position) obj.position.fromArray(record.position);
-    if(record.rotation) obj.rotation.fromArray(record.rotation);
-    if(record.scale) obj.scale.fromArray(record.scale);
-    if(typeof record.visible==='boolean') obj.visible=record.visible;
-  });
-  // Old exports represented a delete by omitting the base object entirely.
-  // Treat those omissions as hidden so previously published deletes work too.
-  editorBaseObjects.forEach((obj,index)=>{if(!savedBaseIndexes.has(index)) obj.visible=false;});
-  // Layout exports made before the corrected plan placed the whole Limitless
-  // pocket against The Same Stage. Migrate that small, known object range as
-  // it loads; fresh editor saves carry the corrected deck position and skip it.
-  const oldDeck=layout.objects.find(record=>record.index===1303);
-  if(oldDeck && oldDeck.position && Math.abs(oldDeck.position[0]+0.5)<0.01 && Math.abs(oldDeck.position[2]-45.4)<0.01){
-    for(let index=1268;index<=1306;index++){
-      const obj=editorBaseObjects[index];
-      if(obj){obj.position.x+=17;obj.position.z-=9;}
-    }
-  }
-  loadPublishedImports(layout);
-}
-function editorSave(){
-  try{localStorage.setItem(EDITOR_STORAGE,JSON.stringify(editorSnapshot()));toast('Editor layout saved in this browser.');}
-  catch(err){toast('Could not save layout: browser storage is full.');}
-}
-function editorDownload(){
-  const blob=new Blob([JSON.stringify(editorSnapshot(),null,2)],{type:'application/json'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='ssbd-lake-perris-layout.json'; a.click();
-  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
-}
-function editorDuplicate(){
-  if(!editorSelected) return;
-  const copy=editorSelected.clone(true);
-  copy.position.x+=2; copy.position.z+=2; copy.userData.editorName=`${editorObjectLabel(editorSelected)} copy`;
-  const sourceIndex=editorBaseObjects.indexOf(editorSelected);
-  if(sourceIndex>=0) copy.userData.editorSourceIndex=sourceIndex;
-  copy.userData.editorImported=true; scene.add(copy); editorImported.push(copy); editorPushUndo({type:'remove',obj:copy}); editorSelect(copy); editorSave();
-}
-function editorDelete(){
-  if(!editorSelected) return;
-  const removed=editorSelected, parent=removed.parent;
-  editorPushUndo({type:'add',obj:removed,parent});
-  parent.remove(removed);
-  editorSelect(null); editorSave();
-}
-function editorImport(file){
-  if(!file) return;
-  const reader=new FileReader();
-  reader.onload=()=>{
-    const loader=new THREE.GLTFLoader();
-    loader.parse(reader.result,'',gltf=>{
-      const model=gltf.scene || gltf.scenes[0];
-      model.userData.editorName=file.name.replace(/\.glb$/i,''); model.userData.editorImported=true;
-      model.position.set(player.x,0,player.z-5); model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
-      scene.add(model); editorImported.push(model); editorPushUndo({type:'remove',obj:model}); editorSelect(model); editorSave(); toast(`Imported ${file.name}`);
-    },err=>{console.error(err);toast('That GLB could not be loaded.');});
-  };
-  reader.readAsArrayBuffer(file);
-}
-function editorSetMode(mode){
-  editorControls.setMode(mode);
-  document.querySelectorAll('#editorPanel [data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
-}
-function setupEditor(){
-  if(unrealFreshEnabled || unrealHybridEnabled) return;
-  editorBaseObjects=scene.children.slice();
-  fetch('scene-layout.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(layout=>{
-    editorApplyLayout(layout);
-    // Local work must win over the published baseline once the fetch completes.
-    if(editorEnabled) try{editorApplyLayout(JSON.parse(localStorage.getItem(EDITOR_STORAGE)));}catch(err){}
-  }).catch(()=>{});
-  if(!editorEnabled) return;
-  editorPanel.classList.add('show');
-  player.x=-13; player.z=5; player.y=0; player.xPrev=player.x; player.zPrev=player.z;
-  player.yaw=Math.PI; player.pitch=-0.42;
-  editorRaycaster=new THREE.Raycaster(); editorPointer=new THREE.Vector2();
-  editorControls=new THREE.TransformControls(camera,renderer.domElement);
-  editorControls.setSize(0.75); editorControls.addEventListener('dragging-changed',e=>{
-    if(e.value){Object.keys(keys).forEach(k=>delete keys[k]); editorTransformStart=editorSelected?editorState(editorSelected):null;}
-    else if(editorSelected && editorTransformStart){if(editorStatesDiffer(editorTransformStart,editorState(editorSelected))) editorPushUndo({type:'transform',obj:editorSelected,before:editorTransformStart});editorTransformStart=null;editorSave();}
-  });
-  scene.add(editorControls);
-  editorSetMode('translate');
-  renderer.domElement.addEventListener('pointerdown',event=>{
-    if(!editorActive || event.button!==0 || editorControls.dragging) return;
-    const rect=renderer.domElement.getBoundingClientRect();
-    editorPointer.set(((event.clientX-rect.left)/rect.width)*2-1,-((event.clientY-rect.top)/rect.height)*2+1);
-    editorRaycaster.setFromCamera(editorPointer,camera);
-    const hit=editorRaycaster.intersectObjects(scene.children,true).find(h=>h.object!==editorControls && !h.object.isTransformControls);
-    if(hit){const target=editorTopLevel(hit.object); if(target && target!==editorControls) editorSelect(target);}
-  });
-  document.querySelectorAll('#editorPanel button').forEach(b=>b.addEventListener('pointerdown',e=>e.stopPropagation()));
-  document.querySelectorAll('#editorPanel [data-mode]').forEach(b=>b.onclick=e=>{e.preventDefault();editorSetMode(b.dataset.mode);});
-  document.getElementById('editorUndo').onclick=editorUndo;
-  document.getElementById('editorDuplicate').onclick=editorDuplicate;
-  document.getElementById('editorDelete').onclick=editorDelete;
-  document.getElementById('editorSave').onclick=editorSave;
-  document.getElementById('editorExport').onclick=editorDownload;
-  document.getElementById('editorImport').onchange=e=>editorImport(e.target.files[0]);
-  document.getElementById('editorExit').onclick=()=>{editorActive=false;editorPanel.classList.remove('show');editorSelect(null);toast('Editor closed. Reload with ?editor=1 to edit again.');};
-  toast('Editor ready — click an object to edit it.');
-}
-loadFreshUnrealMap();
-loadHybridUnrealMap();
-loadUnrealPreview();
-setupEditor();
 
 animate();
 </script>

@@ -55,8 +55,9 @@
  box-shadow:0 12px 34px rgba(0,0,0,.34);font:12px/1.35 system-ui,sans-serif;pointer-events:auto;}
  #editorPanel.show{display:block} #editorPanel h2{margin:0 0 5px;font-size:15px;letter-spacing:1px}
  #editorPanel p{margin:0 0 9px;color:#b9cce0} #editorPanel .editorRow{display:flex;gap:6px;margin:7px 0}
- #editorPanel button{flex:1;border:1px solid #6285a8;border-radius:6px;background:#1f3b59;color:#fff;padding:7px 6px;font:600 11px/1 system-ui,sans-serif;cursor:pointer}
- #editorPanel button:hover{background:#2f5c87} #editorPanel button.active{background:#d47e2e;border-color:#ffc276}
+ #editorPanel button,#editorPanel .editorImport{flex:1;box-sizing:border-box;border:1px solid #6285a8;border-radius:6px;background:#1f3b59;color:#fff;padding:7px 6px;font:600 11px/1 system-ui,sans-serif;cursor:pointer;text-align:center}
+ #editorPanel button:hover,#editorPanel .editorImport:hover{background:#2f5c87} #editorPanel button.active{background:#d47e2e;border-color:#ffc276}
+ #editorPanel .editorImport input{display:none}
  #editorSelected{min-height:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#ffd18a;margin:8px 0 4px}.editorHint{color:#9db4cc;font-size:10px}
 </style>
 </head>
@@ -65,8 +66,10 @@
  <h2>SCENE EDITOR</h2><p>Click an object, then use the handles.</p><div id="editorSelected">Nothing selected</div>
  <div class="editorRow"><button data-editor-mode="translate">Move</button><button data-editor-mode="rotate">Rotate</button><button data-editor-mode="scale">Scale</button></div>
  <div class="editorRow"><button id="editorFly">Fly viewport</button><button id="editorOverview">Bird's-eye view</button></div>
+ <div class="editorRow"><button id="editorDuplicate" disabled>Duplicate</button><button id="editorDelete" disabled>Delete</button></div>
+ <div class="editorRow"><label class="editorImport">Import GLB<input id="editorImport" type="file" accept=".glb,model/gltf-binary"></label></div>
  <div class="editorRow"><button id="editorSave">Save locally</button><button id="editorExport">Download layout</button></div>
- <div class="editorHint">WASD fly · Q/E up/down · Shift boosts · arrows turn. Mouse selects and moves objects. Bird's-eye is a quick reset.</div>
+ <div class="editorHint">WASD fly · Q/E up/down · Shift boosts · arrows turn. Mouse selects and moves objects. Send imported GLBs with the downloaded layout to publish them.</div>
 </aside>
 <div id="startOverlay">
   <h1>Same Same But Different</h1>
@@ -88,6 +91,7 @@
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script>
 // ================= SETUP =================
 // PLAYER-RELATIVE TRUTH (facing the Same Stage from the lawn):
@@ -6952,7 +6956,7 @@ function updatePartyWorld(t,dt){
 const editorEnabled=new URLSearchParams(location.search).get('editor')==='1';
 const editorPanel=document.getElementById('editorPanel');
 let editorControls=null, editorRaycaster=null, editorSelected=null;
-let editorObjects=[];
+let editorObjects=[], editorAdded=[];
 window.ssbdEditorActive=editorEnabled;
 window.ssbdEditorOverview=false;
 window.ssbdEditorCamera={x:-5,y:32,z:36,yaw:Math.PI,pitch:-0.34};
@@ -6968,11 +6972,41 @@ function editorSelect(obj){
   editorControls.detach();
   if(editorSelected) editorControls.attach(editorSelected);
   document.getElementById('editorSelected').textContent=editorSelected?editorLabel(editorSelected):'Nothing selected';
+  document.getElementById('editorDuplicate').disabled=!editorSelected;
+  document.getElementById('editorDelete').disabled=!editorSelected;
 }
-function editorLayout(){ return {version:1,savedAt:new Date().toISOString(),objects:editorObjects.map((o,index)=>({index,position:o.position.toArray(),rotation:o.rotation.toArray(),scale:o.scale.toArray(),visible:!!o.parent&&o.visible}))}; }
-const EDITOR_STORAGE='ssbd-lake-perris-layout-v2';
+function editorRecord(o){ return {position:o.position.toArray(),rotation:o.rotation.toArray(),scale:o.scale.toArray(),visible:!!o.parent&&o.visible}; }
+function editorLayout(){ return {version:3,savedAt:new Date().toISOString(),objects:[
+  ...editorObjects.map((o,index)=>Object.assign({index},editorRecord(o))),
+  ...editorAdded.filter(o=>o.parent).map(o=>Object.assign({imported:true,name:editorLabel(o),sourceIndex:o.userData.editorSourceIndex,assetName:o.userData.editorAssetName},editorRecord(o)))
+]}; }
+const EDITOR_STORAGE='ssbd-lake-perris-layout-v3';
 function editorSave(){ try{localStorage.setItem(EDITOR_STORAGE,JSON.stringify(editorLayout()));toast('Editor layout saved in this browser.');}catch(e){toast('Could not save this layout locally.');} }
-function editorDownload(){ const blob=new Blob([JSON.stringify(editorLayout(),null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='ssbd-lake-perris-layout.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000); }
+function editorDownload(){ const blob=new Blob([JSON.stringify(editorLayout(),null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='ssbd-lake-perris-layout.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000); if(editorAdded.some(o=>o.userData.editorAssetName)) toast('Download the GLB files too, then send the layout and GLBs to publish them.'); }
+function editorDuplicate(){
+  if(!editorSelected) return;
+  const copy=editorSelected.clone(true), baseIndex=editorObjects.indexOf(editorSelected);
+  copy.position.x+=2; copy.position.z+=2; copy.userData.editorName=`${editorLabel(editorSelected)} copy`;
+  copy.userData.editorSourceIndex=baseIndex>=0?baseIndex:editorSelected.userData.editorSourceIndex;
+  copy.userData.editorAssetName=editorSelected.userData.editorAssetName;
+  scene.add(copy); editorAdded.push(copy); editorSelect(copy); editorSave();
+}
+function editorDelete(){ if(!editorSelected) return; const removed=editorSelected; removed.parent.remove(removed); editorSelect(null); editorSave(); }
+function editorImport(file){
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=()=>new THREE.GLTFLoader().parse(reader.result,'',gltf=>{
+    const model=gltf.scene||gltf.scenes[0]; model.userData.editorName=file.name.replace(/\.glb$/i,''); model.userData.editorAssetName=file.name;
+    model.position.set(window.ssbdEditorCamera.x,0,window.ssbdEditorCamera.z-5); model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
+    scene.add(model); editorAdded.push(model); editorSelect(model); editorSave(); toast(`Imported ${file.name}`);
+  },()=>toast('Could not load that GLB file.'));
+  reader.readAsArrayBuffer(file);
+}
+function editorRestoreLayout(saved){
+  if(!saved||!Array.isArray(saved.objects)) return;
+  saved.objects.filter(s=>s.imported===undefined).forEach(s=>{const o=editorObjects[s.index];if(o){if(s.position)o.position.fromArray(s.position);if(s.rotation)o.rotation.fromArray(s.rotation);if(s.scale)o.scale.fromArray(s.scale);if(typeof s.visible==='boolean')o.visible=s.visible;}});
+  saved.objects.filter(s=>s.imported&&Number.isInteger(s.sourceIndex)).forEach(s=>{const source=editorObjects[s.sourceIndex];if(!source)return;const copy=source.clone(true);copy.userData.editorName=s.name||`${editorLabel(source)} copy`;copy.userData.editorSourceIndex=s.sourceIndex;if(s.position)copy.position.fromArray(s.position);if(s.rotation)copy.rotation.fromArray(s.rotation);if(s.scale)copy.scale.fromArray(s.scale);if(typeof s.visible==='boolean')copy.visible=s.visible;scene.add(copy);editorAdded.push(copy);});
+}
 function setupEditor(){
   if(!editorEnabled) return;
   started=true; overlay.style.display='none'; editorPanel.classList.add('show');
@@ -6989,11 +7023,14 @@ function setupEditor(){
   });
   document.querySelectorAll('[data-editor-mode]').forEach(b=>b.onclick=()=>{ editorControls.setMode(b.dataset.editorMode); document.querySelectorAll('[data-editor-mode]').forEach(x=>x.classList.toggle('active',x===b)); });
   document.querySelector('[data-editor-mode="translate"]').classList.add('active');
-  document.getElementById('editorFly').onclick=()=>{window.ssbdEditorOverview=false;toast('Fly viewport: WASD, Q/E, Shift, and drag to look.');};
+  document.getElementById('editorFly').onclick=()=>{window.ssbdEditorOverview=false;toast('Fly viewport: WASD, Q/E, Shift, and arrow keys to turn.');};
   document.getElementById('editorOverview').onclick=()=>{editorSelect(null);window.ssbdEditorOverview=true;};
+  document.getElementById('editorDuplicate').onclick=editorDuplicate;
+  document.getElementById('editorDelete').onclick=editorDelete;
+  document.getElementById('editorImport').onchange=e=>editorImport(e.target.files[0]);
   document.getElementById('editorSave').onclick=editorSave;
   document.getElementById('editorExport').onclick=editorDownload;
-  try{ const saved=JSON.parse(localStorage.getItem(EDITOR_STORAGE)); if(saved&&Array.isArray(saved.objects)) saved.objects.forEach(s=>{const o=editorObjects[s.index];if(o){if(s.position)o.position.fromArray(s.position);if(s.rotation)o.rotation.fromArray(s.rotation);if(s.scale)o.scale.fromArray(s.scale);if(typeof s.visible==='boolean')o.visible=s.visible;}}); }catch(e){}
+  try{editorRestoreLayout(JSON.parse(localStorage.getItem(EDITOR_STORAGE)));}catch(e){}
   toast('Editor ready — Overview shows the whole site.');
 }
 setupEditor();

@@ -64,8 +64,9 @@
 <aside id="editorPanel" aria-label="Scene editor">
  <h2>SCENE EDITOR</h2><p>Click an object, then use the handles.</p><div id="editorSelected">Nothing selected</div>
  <div class="editorRow"><button data-editor-mode="translate">Move</button><button data-editor-mode="rotate">Rotate</button><button data-editor-mode="scale">Scale</button></div>
- <div class="editorRow"><button id="editorOverview">Bird's-eye view</button><button id="editorSave">Save locally</button><button id="editorExport">Download layout</button></div>
- <div class="editorHint">Bird's-eye view stays on while you select and move objects. Browser saves stay local; download the layout to publish it.</div>
+ <div class="editorRow"><button id="editorFly">Fly viewport</button><button id="editorOverview">Bird's-eye view</button></div>
+ <div class="editorRow"><button id="editorSave">Save locally</button><button id="editorExport">Download layout</button></div>
+ <div class="editorHint">WASD fly · Q/E up/down · Shift boosts · drag to look. Bird's-eye is a quick reset. Browser saves stay local; download the layout to publish it.</div>
 </aside>
 <div id="startOverlay">
   <h1>Same Same But Different</h1>
@@ -5560,7 +5561,11 @@ document.addEventListener('pointerlockchange', ()=>{
 addEventListener('mousedown', ()=>{ if(started && !document.pointerLockElement) dragging = true; });
 addEventListener('mouseup', ()=> dragging = false);
 addEventListener('mousemove', e=>{
-  if(!started || window.ssbdEditorActive) return;
+  if(!started) return;
+  if(window.ssbdEditorActive){
+    if(!window.ssbdTransformDragging && window.ssbdEditorLook) window.ssbdEditorLook(e.movementX,e.movementY);
+    return;
+  }
   const locked = !!document.pointerLockElement;
   if(!locked && !dragging) return;
   player.yaw   -= e.movementX * 0.0022;
@@ -5689,6 +5694,17 @@ function animate(){
   if(keys['KeyS']) fz -= 1;
   if(keys['KeyA']) fx -= 1;
   if(keys['KeyD']) fx += 1;
+  if(window.ssbdEditorActive && window.ssbdEditorCamera){
+    const ec=window.ssbdEditorCamera;
+    const up=(keys['KeyE']?1:0)-(keys['KeyQ']?1:0);
+    if(fx||fz||up){
+      const len=Math.hypot(fx,fz)||1, speed=(keys['ShiftLeft']||keys['ShiftRight']?76:32)*dt;
+      fx/=len; fz/=len;
+      const s=Math.sin(ec.yaw), c=Math.cos(ec.yaw);
+      ec.x+=(-s*fz+c*fx)*speed; ec.z+=(-c*fz-s*fx)*speed; ec.y+=up*speed;
+      window.ssbdEditorOverview=false;
+    }
+  }
   // You can't sprint through water.
   const swimDrag = player.swimming ? 0.42 : 1;
   const run = (keys['ShiftLeft']||keys['ShiftRight'] ? 1.7 : 1) * swimDrag;
@@ -5744,6 +5760,9 @@ function animate(){
   if(window.ssbdEditorActive && window.ssbdEditorOverview){
     camera.position.set(-5, 250, -45);
     camera.lookAt(-5, 0, -45);
+  } else if(window.ssbdEditorActive && window.ssbdEditorCamera){
+    const ec=window.ssbdEditorCamera;
+    camera.position.set(ec.x,ec.y,ec.z);
   } else if(inFlight){
     // ride the basket: gentle drift + sway, eyes just above the basket rim
     const swayX = Math.sin(t*0.4)*1.0, swayZ = Math.cos(t*0.33)*1.0;
@@ -5755,7 +5774,9 @@ function animate(){
     const bob = player.grounded ? Math.sin(t*10*run)*0.05*moving : 0;
     camera.position.set(player.x, 1.7 + player.y + bob, player.z);
   }
-  if(!window.ssbdEditorOverview){
+  if(window.ssbdEditorActive && !window.ssbdEditorOverview && window.ssbdEditorCamera){
+    camera.rotation.order='YXZ'; camera.rotation.y=window.ssbdEditorCamera.yaw; camera.rotation.x=window.ssbdEditorCamera.pitch;
+  } else if(!window.ssbdEditorOverview){
     camera.rotation.order = 'YXZ';
     camera.rotation.y = player.yaw;
     camera.rotation.x = player.pitch;
@@ -6925,7 +6946,13 @@ const editorPanel=document.getElementById('editorPanel');
 let editorControls=null, editorRaycaster=null, editorSelected=null;
 let editorObjects=[];
 window.ssbdEditorActive=editorEnabled;
-window.ssbdEditorOverview=editorEnabled;
+window.ssbdEditorOverview=false;
+window.ssbdEditorCamera={x:-5,y:32,z:36,yaw:Math.PI,pitch:-0.34};
+window.ssbdEditorLook=(dx,dy)=>{
+  const ec=window.ssbdEditorCamera;
+  ec.yaw-=dx*0.0022; ec.pitch=Math.max(-1.48,Math.min(1.48,ec.pitch-dy*0.0022));
+  window.ssbdEditorOverview=false;
+};
 function editorTop(obj){ while(obj.parent && obj.parent!==scene) obj=obj.parent; return obj.parent===scene ? obj : null; }
 function editorLabel(obj){ return obj.userData.editorName || obj.name || (obj.isGroup?'Group':obj.type.replace('Mesh','')); }
 function editorSelect(obj){
@@ -6943,7 +6970,7 @@ function setupEditor(){
   started=true; overlay.style.display='none'; editorPanel.classList.add('show');
   editorObjects=scene.children.filter(o=>o!==skyDome && o!==lake && !o.isLight && !o.isCamera);
   editorControls=new THREE.TransformControls(camera,renderer.domElement); editorControls.setSize(.75); scene.add(editorControls);
-  editorControls.addEventListener('dragging-changed',e=>{ if(!e.value) editorSave(); });
+  editorControls.addEventListener('dragging-changed',e=>{ window.ssbdTransformDragging=e.value; if(!e.value) editorSave(); });
   editorRaycaster=new THREE.Raycaster(); const pointer=new THREE.Vector2();
   renderer.domElement.addEventListener('pointerdown',e=>{
     if(!window.ssbdEditorActive || e.button!==0 || editorControls.dragging) return;
@@ -6954,6 +6981,7 @@ function setupEditor(){
   });
   document.querySelectorAll('[data-editor-mode]').forEach(b=>b.onclick=()=>{ editorControls.setMode(b.dataset.editorMode); document.querySelectorAll('[data-editor-mode]').forEach(x=>x.classList.toggle('active',x===b)); });
   document.querySelector('[data-editor-mode="translate"]').classList.add('active');
+  document.getElementById('editorFly').onclick=()=>{window.ssbdEditorOverview=false;toast('Fly viewport: WASD, Q/E, Shift, and drag to look.');};
   document.getElementById('editorOverview').onclick=()=>{editorSelect(null);window.ssbdEditorOverview=true;};
   document.getElementById('editorSave').onclick=editorSave;
   document.getElementById('editorExport').onclick=editorDownload;

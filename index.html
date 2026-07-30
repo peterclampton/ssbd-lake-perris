@@ -4160,7 +4160,6 @@ for(const [bx,bz,bs] of [
 }
 
 bathroomBank(100, -18, -Math.PI/3); // porta-bank on the Butwood side
-solarRestroomBank(28, 48, 0.72, 3); // Gate 6 / Limitless service edge
 
 // ---------- SSBD LETTERS (on the sand near Gate 2) ----------
 blockText("SSBD", -107, 0.2, -78, 1.6, [0xffd12a,0xe43b36,0x8a3cc9], 0, true);
@@ -7027,6 +7026,35 @@ function editorRestoreLayout(saved){
   saved.objects.filter(s=>s.imported===undefined).forEach(s=>{const o=editorObjects[s.index];if(o){if(s.position)o.position.fromArray(s.position);if(s.rotation)o.rotation.fromArray(s.rotation);if(s.scale)o.scale.fromArray(s.scale);if(typeof s.visible==='boolean')o.visible=s.visible;}});
   saved.objects.filter(s=>s.imported&&Number.isInteger(s.sourceIndex)).forEach(s=>{const source=editorObjects[s.sourceIndex];if(!source)return;const copy=source.clone(true);copy.userData.editorName=s.name||`${editorLabel(source)} copy`;copy.userData.editorSourceIndex=s.sourceIndex;if(s.position)copy.position.fromArray(s.position);if(s.rotation)copy.rotation.fromArray(s.rotation);if(s.scale)copy.scale.fromArray(s.scale);if(typeof s.visible==='boolean')copy.visible=s.visible;scene.add(copy);editorAdded.push(copy);});
 }
+
+// The committed layout is the shared, public source of truth. Editor exports
+// are promoted here when Peter sends them back, so a refresh never discards
+// an approved change or makes it browser-local by accident.
+function applyPublishedLayout(layout){
+  if(!layout||!Array.isArray(layout.objects)) return;
+  const objects=scene.children.filter(o=>o!==skyDome&&o!==lake&&!o.isLight&&!o.isCamera);
+  layout.objects.filter(r=>r.imported===undefined).forEach(r=>{
+    const o=objects[r.index]; if(!o) return;
+    if(r.position) o.position.fromArray(r.position);
+    if(r.rotation) o.rotation.fromArray(r.rotation);
+    if(r.scale) o.scale.fromArray(r.scale);
+    if(typeof r.visible==='boolean') o.visible=r.visible;
+  });
+  layout.objects.filter(r=>r.imported&&Number.isInteger(r.sourceIndex)).forEach(r=>{
+    const source=objects[r.sourceIndex]; if(!source) return;
+    const copy=source.clone(true); copy.userData.editorName=r.name||`${editorLabel(source)} copy`;
+    copy.userData.editorSourceIndex=r.sourceIndex;
+    if(r.position) copy.position.fromArray(r.position);
+    if(r.rotation) copy.rotation.fromArray(r.rotation);
+    if(r.scale) copy.scale.fromArray(r.scale);
+    if(typeof r.visible==='boolean') copy.visible=r.visible;
+    scene.add(copy);
+  });
+}
+async function loadPublishedLayout(){
+  try{const r=await fetch('scene-layout.json',{cache:'no-store'});if(r.ok) applyPublishedLayout(await r.json());}
+  catch(e){console.warn('Could not load published scene layout',e);}
+}
 function setupEditor(){
   if(!editorEnabled) return;
   started=true; overlay.style.display='none'; editorPanel.classList.add('show');
@@ -7053,7 +7081,10 @@ function setupEditor(){
   try{editorRestoreLayout(JSON.parse(localStorage.getItem(EDITOR_STORAGE)));}catch(e){}
   toast('Editor ready — Overview shows the whole site.');
 }
-setupEditor();
+// Keep additions after the layout's original object list so historic editor
+// indexes remain stable when a saved layout is applied.
+solarRestroomBank(28, 48, 0.72, 3); // Gate 6 / Limitless service edge
+loadPublishedLayout().finally(setupEditor);
 
 animate();
 </script>

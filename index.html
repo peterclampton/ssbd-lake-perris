@@ -2575,17 +2575,15 @@ window.sideLeds = [];
 
   // Dedicated black-scrim pocket around Limitless Lounge and the raised deck.
   // The lounge entrance remains open at the lower stage-side corner.
-  // Limitless belongs on stage right — the East Entrance / parking-lot side.
-  // These are the stage-left coordinates mirrored across the Same Stage axis.
-  scrimFenceRun(-48, 59, -39.4, 47.5);
-  scrimFenceRun(-39.4, 47.5, -31.2, 41.1);
-  scrimFenceRun(-31.2, 41.1, -24.7, 42.7);
-  scrimFenceRun(-35.5, 59.3, -25.3, 53.6);
+  scrimFenceRun(22, 59, 13.4, 47.5);
+  scrimFenceRun(13.4, 47.5, 5.2, 41.1);
+  scrimFenceRun(5.2, 41.1, -1.3, 42.7);
+  scrimFenceRun(9.5, 59.3, -0.7, 53.6);
 
   // LIMITLESS VIEWING DECK — RAISED 32'x20' platform hugging the stage's east flank,
   // angled with the stage line. Its floor and guests sit above the 3.35m scrim.
   {
-    const deckX=-31.1, deckZ=53.2, deckRot=1.48;
+    const deckX=5.1, deckZ=53.2, deckRot=1.48;
     const dg = new THREE.Group(); dg.position.set(deckX, 0, deckZ); dg.rotation.y = deckRot; scene.add(dg);
     const dMat = new THREE.MeshStandardMaterial({color:0x2e2e38, roughness:0.8});
     const floor = new THREE.Mesh(new THREE.BoxGeometry(9.6, 0.35, 6), dMat);
@@ -2612,7 +2610,7 @@ window.sideLeds = [];
 
   // LIMITLESS LOUNGE — 40x20 shade lounge just off the deck, same angle, inside VIP
   {
-    const llx=-25.5, llz=45.4, llrot=1.48;
+    const llx=-0.5, llz=45.4, llrot=1.48;
     const lg = new THREE.Group(); lg.position.set(llx, 0, llz); lg.rotation.y = llrot; scene.add(lg);
     const ltMat = new THREE.MeshStandardMaterial({color:0x1e1e28, roughness:0.85});
     const top = new THREE.Mesh(new THREE.BoxGeometry(12, 0.2, 6), ltMat);
@@ -5482,10 +5480,10 @@ const interactables = [
   { x:9.3, z:33.7, r:7,
     label:()=> "flash your Limitless wristband",
     act(){ toast("Limitless access confirmed. The view really is better up here."); } },
-  { x:-25.5, z:45.4, r:6,
+  { x:-0.5, z:45.4, r:6,
     label:()=> "flash your Limitless band",
     act(){ toast("Gold wristbands only — couches, cold drinks, and the stage right there."); } },
-  { x:-31.1, z:53.2, r:5.5,
+  { x:5.1, z:53.2, r:5.5,
     label:()=> "climb the Limitless viewing deck",
     act(){ toast("Up top: the whole pit below you, the DJ at eye level."); } },
   { x:49.8, z:21.9, r:7,
@@ -5613,7 +5611,7 @@ const DOCK = {minX:-69.7, maxX:-66.3, endZ:-158.2};
 function onDock(x,z){ return x>DOCK.minX-0.6 && x<DOCK.maxX+0.6 && z<=-116 && z>=DOCK.endZ; }
 function onIslandDock(x,z){ return x>-37.2 && x<-32.8 && z>-283.6 && z<-270.4; }
 function limitlessDeckH(x,z){
-  const th=1.48, dx=x+31.1, dz=z-53.2;
+  const th=1.48, dx=x-5.1, dz=z-53.2;
   const lx=dx*Math.cos(th)-dz*Math.sin(th);
   const lz=dx*Math.sin(th)+dz*Math.cos(th);
   if(lx>-4.8 && lx<4.8 && Math.abs(lz)<3.0) return 4.18;
@@ -6485,7 +6483,7 @@ function updateGrass(px, pz, t){
 {
   const th = 1.48, dc = Math.cos(th), ds = Math.sin(th);
   function onDeckFootprint(x, z){
-    const dx = x + 31.1, dz = z - 53.2;
+    const dx = x - 5.1, dz = z - 53.2;
     const lx = dx*dc - dz*ds;
     const lz = dx*ds + dz*dc;
     if(lx > -5.3 && lx < 5.3 && Math.abs(lz) < 3.5) return true;   // platform

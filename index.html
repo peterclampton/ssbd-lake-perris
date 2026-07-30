@@ -43,16 +43,30 @@
   #hudBtns{position:absolute;right:26px;bottom:22px;display:flex;gap:10px;
     align-items:center;pointer-events:none;flex-wrap:wrap;justify-content:flex-end;}
   #respawnBtn:hover,#partyBtn:hover,#gfxBtn:hover{background:#fff;}
-  #partyBtn.active{color:#fff;border-color:rgba(255,255,255,.65);
+ #partyBtn.active{color:#fff;border-color:rgba(255,255,255,.65);
     background:linear-gradient(100deg,
       #ff1744,#ff6d00,#ffea00,#76ff03,#00e676,#00e5ff,
       #2979ff,#651fff,#d500f9,#ff1744);
     background-size:500% 100%;animation:partyButton 2.4s linear infinite;
     box-shadow:0 0 18px rgba(228,59,54,.38);}
-  @keyframes partyButton{to{background-position:500% 0}}
+ @keyframes partyButton{to{background-position:500% 0}}
+ #editorPanel{display:none;position:fixed;z-index:30;top:18px;right:24px;width:250px;padding:13px;
+ color:#eef5ff;background:rgba(11,20,34,.91);border:1px solid rgba(255,255,255,.28);border-radius:12px;
+ box-shadow:0 12px 34px rgba(0,0,0,.34);font:12px/1.35 system-ui,sans-serif;pointer-events:auto;}
+ #editorPanel.show{display:block} #editorPanel h2{margin:0 0 5px;font-size:15px;letter-spacing:1px}
+ #editorPanel p{margin:0 0 9px;color:#b9cce0} #editorPanel .editorRow{display:flex;gap:6px;margin:7px 0}
+ #editorPanel button{flex:1;border:1px solid #6285a8;border-radius:6px;background:#1f3b59;color:#fff;padding:7px 6px;font:600 11px/1 system-ui,sans-serif;cursor:pointer}
+ #editorPanel button:hover{background:#2f5c87} #editorPanel button.active{background:#d47e2e;border-color:#ffc276}
+ #editorSelected{min-height:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#ffd18a;margin:8px 0 4px}.editorHint{color:#9db4cc;font-size:10px}
 </style>
 </head>
 <body>
+<aside id="editorPanel" aria-label="Scene editor">
+ <h2>SCENE EDITOR</h2><p>Click an object, then use the handles.</p><div id="editorSelected">Nothing selected</div>
+ <div class="editorRow"><button data-editor-mode="translate">Move</button><button data-editor-mode="rotate">Rotate</button><button data-editor-mode="scale">Scale</button></div>
+ <div class="editorRow"><button id="editorOverview">Overview</button><button id="editorSave">Save locally</button><button id="editorExport">Download layout</button></div>
+ <div class="editorHint">Overview gives you the whole site. Browser saves stay local; download the layout to publish it.</div>
+</aside>
 <div id="startOverlay">
   <h1>Same Same But Different</h1>
   <h2>Lake Perris &middot; Festival Day</h2>
@@ -72,6 +86,7 @@
   <div id="toast"></div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
 <script>
 // ================= SETUP =================
 // PLAYER-RELATIVE TRUTH (facing the Same Stage from the lawn):
@@ -5545,7 +5560,7 @@ document.addEventListener('pointerlockchange', ()=>{
 addEventListener('mousedown', ()=>{ if(started && !document.pointerLockElement) dragging = true; });
 addEventListener('mouseup', ()=> dragging = false);
 addEventListener('mousemove', e=>{
-  if(!started) return;
+  if(!started || window.ssbdEditorActive) return;
   const locked = !!document.pointerLockElement;
   if(!locked && !dragging) return;
   player.yaw   -= e.movementX * 0.0022;
@@ -5677,7 +5692,7 @@ function animate(){
   // You can't sprint through water.
   const swimDrag = player.swimming ? 0.42 : 1;
   const run = (keys['ShiftLeft']||keys['ShiftRight'] ? 1.7 : 1) * swimDrag;
-  if((fx||fz) && !locked){
+  if((fx||fz) && !locked && !window.ssbdEditorActive){
     const len = Math.hypot(fx,fz); fx/=len; fz/=len;
     const s = Math.sin(player.yaw), c = Math.cos(player.yaw);
     const mx = ( -s*fz + c*fx );
@@ -5726,7 +5741,10 @@ function animate(){
   } else {
     player.y = 0; player.vy = 0; player.grounded = true;
   }
-  if(inFlight){
+  if(window.ssbdEditorActive && window.ssbdEditorOverview){
+    camera.position.set(-5, 250, -45);
+    camera.lookAt(-5, 0, -45);
+  } else if(inFlight){
     // ride the basket: gentle drift + sway, eyes just above the basket rim
     const swayX = Math.sin(t*0.4)*1.0, swayZ = Math.cos(t*0.33)*1.0;
     camera.position.set(BALLOON_X + swayX, 12.2 + rideY + Math.sin(t*0.7)*0.6, BALLOON_Z + swayZ);
@@ -5737,9 +5755,11 @@ function animate(){
     const bob = player.grounded ? Math.sin(t*10*run)*0.05*moving : 0;
     camera.position.set(player.x, 1.7 + player.y + bob, player.z);
   }
-  camera.rotation.order = 'YXZ';
-  camera.rotation.y = player.yaw;
-  camera.rotation.x = player.pitch;
+  if(!window.ssbdEditorOverview){
+    camera.rotation.order = 'YXZ';
+    camera.rotation.y = player.yaw;
+    camera.rotation.x = player.pitch;
+  }
 
   nearInteract = null;
   if(!locked){
@@ -6897,6 +6917,50 @@ function updatePartyWorld(t,dt){
   });
   updateSSBDGradient(t);
 }
+
+// ================= OPTIONAL IN-BROWSER SCENE EDITOR =================
+// Kept opt-in so the public map remains a clean explore mode.
+const editorEnabled=new URLSearchParams(location.search).get('editor')==='1';
+const editorPanel=document.getElementById('editorPanel');
+let editorControls=null, editorRaycaster=null, editorSelected=null;
+let editorObjects=[];
+window.ssbdEditorActive=editorEnabled;
+window.ssbdEditorOverview=editorEnabled;
+function editorTop(obj){ while(obj.parent && obj.parent!==scene) obj=obj.parent; return obj.parent===scene ? obj : null; }
+function editorLabel(obj){ return obj.userData.editorName || obj.name || (obj.isGroup?'Group':obj.type.replace('Mesh','')); }
+function editorSelect(obj){
+  editorSelected=obj||null;
+  editorControls.detach();
+  if(editorSelected) editorControls.attach(editorSelected);
+  document.getElementById('editorSelected').textContent=editorSelected?editorLabel(editorSelected):'Nothing selected';
+}
+function editorLayout(){ return {version:1,savedAt:new Date().toISOString(),objects:editorObjects.map((o,index)=>({index,position:o.position.toArray(),rotation:o.rotation.toArray(),scale:o.scale.toArray(),visible:!!o.parent&&o.visible}))}; }
+const EDITOR_STORAGE='ssbd-lake-perris-layout-v2';
+function editorSave(){ try{localStorage.setItem(EDITOR_STORAGE,JSON.stringify(editorLayout()));toast('Editor layout saved in this browser.');}catch(e){toast('Could not save this layout locally.');} }
+function editorDownload(){ const blob=new Blob([JSON.stringify(editorLayout(),null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='ssbd-lake-perris-layout.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000); }
+function setupEditor(){
+  if(!editorEnabled) return;
+  started=true; overlay.style.display='none'; editorPanel.classList.add('show');
+  editorObjects=scene.children.filter(o=>o!==skyDome && o!==lake && !o.isLight && !o.isCamera);
+  editorControls=new THREE.TransformControls(camera,renderer.domElement); editorControls.setSize(.75); scene.add(editorControls);
+  editorControls.addEventListener('dragging-changed',e=>{ if(e.value) window.ssbdEditorOverview=false; else editorSave(); });
+  editorRaycaster=new THREE.Raycaster(); const pointer=new THREE.Vector2();
+  renderer.domElement.addEventListener('pointerdown',e=>{
+    if(!window.ssbdEditorActive || e.button!==0 || editorControls.dragging) return;
+    const r=renderer.domElement.getBoundingClientRect(); pointer.set(((e.clientX-r.left)/r.width)*2-1,-((e.clientY-r.top)/r.height)*2+1);
+    editorRaycaster.setFromCamera(pointer,camera);
+    const hit=editorRaycaster.intersectObjects(editorObjects,true).find(h=>!h.object.isTransformControls);
+    if(hit){ window.ssbdEditorOverview=false; editorSelect(editorTop(hit.object)); }
+  });
+  document.querySelectorAll('[data-editor-mode]').forEach(b=>b.onclick=()=>{ editorControls.setMode(b.dataset.editorMode); window.ssbdEditorOverview=false; document.querySelectorAll('[data-editor-mode]').forEach(x=>x.classList.toggle('active',x===b)); });
+  document.querySelector('[data-editor-mode="translate"]').classList.add('active');
+  document.getElementById('editorOverview').onclick=()=>{editorSelect(null);window.ssbdEditorOverview=true;};
+  document.getElementById('editorSave').onclick=editorSave;
+  document.getElementById('editorExport').onclick=editorDownload;
+  try{ const saved=JSON.parse(localStorage.getItem(EDITOR_STORAGE)); if(saved&&Array.isArray(saved.objects)) saved.objects.forEach(s=>{const o=editorObjects[s.index];if(o){if(s.position)o.position.fromArray(s.position);if(s.rotation)o.rotation.fromArray(s.rotation);if(s.scale)o.scale.fromArray(s.scale);if(typeof s.visible==='boolean')o.visible=s.visible;}}); }catch(e){}
+  toast('Editor ready — Overview shows the whole site.');
+}
+setupEditor();
 
 animate();
 </script>

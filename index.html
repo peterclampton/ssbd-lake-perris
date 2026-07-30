@@ -64,8 +64,8 @@
 <aside id="editorPanel" aria-label="Scene editor">
  <h2>SCENE EDITOR</h2><p>Click an object, then use the handles.</p><div id="editorSelected">Nothing selected</div>
  <div class="editorRow"><button data-editor-mode="translate">Move</button><button data-editor-mode="rotate">Rotate</button><button data-editor-mode="scale">Scale</button></div>
- <div class="editorRow"><button id="editorOverview">Overview</button><button id="editorSave">Save locally</button><button id="editorExport">Download layout</button></div>
- <div class="editorHint">Overview gives you the whole site. Browser saves stay local; download the layout to publish it.</div>
+ <div class="editorRow"><button id="editorOverview">Bird's-eye view</button><button id="editorSave">Save locally</button><button id="editorExport">Download layout</button></div>
+ <div class="editorHint">Bird's-eye view stays on while you select and move objects. Browser saves stay local; download the layout to publish it.</div>
 </aside>
 <div id="startOverlay">
   <h1>Same Same But Different</h1>
@@ -6943,16 +6943,16 @@ function setupEditor(){
   started=true; overlay.style.display='none'; editorPanel.classList.add('show');
   editorObjects=scene.children.filter(o=>o!==skyDome && o!==lake && !o.isLight && !o.isCamera);
   editorControls=new THREE.TransformControls(camera,renderer.domElement); editorControls.setSize(.75); scene.add(editorControls);
-  editorControls.addEventListener('dragging-changed',e=>{ if(e.value) window.ssbdEditorOverview=false; else editorSave(); });
+  editorControls.addEventListener('dragging-changed',e=>{ if(!e.value) editorSave(); });
   editorRaycaster=new THREE.Raycaster(); const pointer=new THREE.Vector2();
   renderer.domElement.addEventListener('pointerdown',e=>{
     if(!window.ssbdEditorActive || e.button!==0 || editorControls.dragging) return;
     const r=renderer.domElement.getBoundingClientRect(); pointer.set(((e.clientX-r.left)/r.width)*2-1,-((e.clientY-r.top)/r.height)*2+1);
     editorRaycaster.setFromCamera(pointer,camera);
     const hit=editorRaycaster.intersectObjects(editorObjects,true).find(h=>!h.object.isTransformControls);
-    if(hit){ window.ssbdEditorOverview=false; editorSelect(editorTop(hit.object)); }
+    if(hit) editorSelect(editorTop(hit.object));
   });
-  document.querySelectorAll('[data-editor-mode]').forEach(b=>b.onclick=()=>{ editorControls.setMode(b.dataset.editorMode); window.ssbdEditorOverview=false; document.querySelectorAll('[data-editor-mode]').forEach(x=>x.classList.toggle('active',x===b)); });
+  document.querySelectorAll('[data-editor-mode]').forEach(b=>b.onclick=()=>{ editorControls.setMode(b.dataset.editorMode); document.querySelectorAll('[data-editor-mode]').forEach(x=>x.classList.toggle('active',x===b)); });
   document.querySelector('[data-editor-mode="translate"]').classList.add('active');
   document.getElementById('editorOverview').onclick=()=>{editorSelect(null);window.ssbdEditorOverview=true;};
   document.getElementById('editorSave').onclick=editorSave;

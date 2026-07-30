@@ -2575,15 +2575,17 @@ window.sideLeds = [];
 
   // Dedicated black-scrim pocket around Limitless Lounge and the raised deck.
   // The lounge entrance remains open at the lower stage-side corner.
-  scrimFenceRun(22, 59, 13.4, 47.5);
-  scrimFenceRun(13.4, 47.5, 5.2, 41.1);
-  scrimFenceRun(5.2, 41.1, -1.3, 42.7);
-  scrimFenceRun(9.5, 59.3, -0.7, 53.6);
+  scrimFenceRun(25, 55, 16, 47);
+  scrimFenceRun(16, 47, 9, 36);
+  scrimFenceRun(9, 36, -7, 34);
+  scrimFenceRun(0, 52, -10, 48);
 
   // LIMITLESS VIEWING DECK — RAISED 32'x20' platform hugging the stage's east flank,
   // angled with the stage line. Its floor and guests sit above the 3.35m scrim.
   {
-    const deckX=-0.5, deckZ=45.4, deckRot=1.48;
+    // Per the current site plan, the deck sits in front of the stage rather
+    // than tucked behind its flank, with the lounge fanning out toward Gate 6.
+    const deckX=-0.5, deckZ=38.5, deckRot=1.48;
     const dg = new THREE.Group(); dg.position.set(deckX, 0, deckZ); dg.rotation.y = deckRot; scene.add(dg);
     const dMat = new THREE.MeshStandardMaterial({color:0x2e2e38, roughness:0.8});
     const floor = new THREE.Mesh(new THREE.BoxGeometry(9.6, 0.35, 6), dMat);
@@ -2610,7 +2612,7 @@ window.sideLeds = [];
 
   // LIMITLESS LOUNGE — 40x20 shade lounge just off the deck, same angle, inside VIP
   {
-    const llx=5.1, llz=53.2, llrot=1.48;
+    const llx=9.5, llz=42.5, llrot=1.48;
     const lg = new THREE.Group(); lg.position.set(llx, 0, llz); lg.rotation.y = llrot; scene.add(lg);
     const ltMat = new THREE.MeshStandardMaterial({color:0x1e1e28, roughness:0.85});
     const top = new THREE.Mesh(new THREE.BoxGeometry(12, 0.2, 6), ltMat);
@@ -3987,6 +3989,25 @@ function bathroomBank(cx, cz, rot, n=5){
   makeLabel("BATHROOMS", cx, 4.4, cz, 0.8);
 }
 
+// Solar-powered restroom trailers: the three blue units shown beside Gate 6
+// on the current plan, distinct from the ordinary porta-bank at Butwood.
+function solarRestroomBank(cx, cz, rot, n=3){
+  const g=new THREE.Group(); g.position.set(cx,0,cz); g.rotation.y=rot; scene.add(g);
+  const shellMat=new THREE.MeshStandardMaterial({color:0x75b9df,roughness:0.72});
+  const panelMat=new THREE.MeshStandardMaterial({color:0x17395a,roughness:0.35,metalness:0.5});
+  for(let i=0;i<n;i++){
+    const x=(i-(n-1)/2)*2.25;
+    const unit=new THREE.Mesh(new THREE.BoxGeometry(1.85,2.65,1.7),shellMat);
+    unit.position.set(x,1.325,0); g.add(unit);
+    const door=new THREE.Mesh(new THREE.PlaneGeometry(1.25,2.15),new THREE.MeshStandardMaterial({color:0x255d83,roughness:0.84}));
+    door.position.set(x,1.18,0.856); g.add(door);
+    const panel=new THREE.Mesh(new THREE.BoxGeometry(1.62,0.08,0.82),panelMat);
+    panel.position.set(x,2.73,-0.15); panel.rotation.x=-0.28; g.add(panel);
+    addCyl(cx+x*Math.cos(rot),cz-x*Math.sin(rot),1.15);
+  }
+  makeLabel("SOLAR RESTROOMS ×3",cx,4.6,cz,0.68);
+}
+
 // ---------- BRICK & MORTAR RESTROOMS (the big bright-blue buildings on the map) ----------
 function restroomBuilding(cx, cz, rot){
   const g = new THREE.Group(); g.position.set(cx, 0, cz); g.rotation.y = rot; scene.add(g);
@@ -4141,6 +4162,7 @@ for(const [bx,bz,bs] of [
 }
 
 bathroomBank(100, -18, -Math.PI/3); // porta-bank on the Butwood side
+solarRestroomBank(28, 48, 0.72, 3); // Gate 6 / Limitless service edge
 
 // ---------- SSBD LETTERS (on the sand near Gate 2) ----------
 blockText("SSBD", -107, 0.2, -78, 1.6, [0xffd12a,0xe43b36,0x8a3cc9], 0, true);
@@ -5460,10 +5482,10 @@ const interactables = [
   { x:9.3, z:33.7, r:7,
     label:()=> "flash your Limitless wristband",
     act(){ toast("Limitless access confirmed. The view really is better up here."); } },
-  { x:5.1, z:53.2, r:6,
+  { x:9.5, z:42.5, r:6,
     label:()=> "flash your Limitless band",
     act(){ toast("Gold wristbands only — couches, cold drinks, and the stage right there."); } },
-  { x:-0.5, z:45.4, r:5.5,
+  { x:-0.5, z:38.5, r:5.5,
     label:()=> "climb the Limitless viewing deck",
     act(){ toast("Up top: the whole pit below you, the DJ at eye level."); } },
   { x:49.8, z:21.9, r:7,
@@ -5591,7 +5613,7 @@ const DOCK = {minX:-69.7, maxX:-66.3, endZ:-158.2};
 function onDock(x,z){ return x>DOCK.minX-0.6 && x<DOCK.maxX+0.6 && z<=-116 && z>=DOCK.endZ; }
 function onIslandDock(x,z){ return x>-37.2 && x<-32.8 && z>-283.6 && z<-270.4; }
 function limitlessDeckH(x,z){
-  const th=1.48, dx=x+0.5, dz=z-45.4;
+  const th=1.48, dx=x+0.5, dz=z-38.5;
   const lx=dx*Math.cos(th)-dz*Math.sin(th);
   const lz=dx*Math.sin(th)+dz*Math.cos(th);
   if(lx>-4.8 && lx<4.8 && Math.abs(lz)<3.0) return 4.18;
@@ -6463,7 +6485,7 @@ function updateGrass(px, pz, t){
 {
   const th = 1.48, dc = Math.cos(th), ds = Math.sin(th);
   function onDeckFootprint(x, z){
-    const dx = x + 0.5, dz = z - 45.4;
+    const dx = x + 0.5, dz = z - 38.5;
     const lx = dx*dc - dz*ds;
     const lz = dx*ds + dz*dc;
     if(lx > -5.3 && lx < 5.3 && Math.abs(lz) < 3.5) return true;   // platform

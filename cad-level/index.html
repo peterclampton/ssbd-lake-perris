@@ -155,11 +155,19 @@ function addPost(g,x,z,h=4,mat=M.truss){return addBox(g,.18,h,.18,x,h/2,z,mat)}
 function peakedTent(x,z,w,d,rot,color=0xf1eadb){
   const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;detail.add(g);
   const mat=color===0xf1eadb?M.canvas:new THREE.MeshStandardMaterial({color,roughness:.86,side:THREE.DoubleSide});
-  const geo=new THREE.BufferGeometry();geo.setAttribute("position",new THREE.Float32BufferAttribute([
-    -w/2,3,-d/2,w/2,3,-d/2,w/2,5,0,-w/2,3,-d/2,w/2,5,0,-w/2,5,0,
-    -w/2,5,0,w/2,5,0,w/2,3,d/2,-w/2,5,0,w/2,3,d/2,-w/2,3,d/2
-  ],3));geo.computeVertexNormals();const roof=new THREE.Mesh(geo,mat);roof.castShadow=true;g.add(roof);
-  for(const px of [-w/2,w/2])for(const pz of [-d/2,d/2])addPost(g,px,pz,3,M.truss);
+  // A real frame tent has a hip canopy, valance, fabric panels and aluminium
+  // legs. The old two-triangle roof was literally a debug primitive.
+  const canopy=new THREE.Mesh(new THREE.ConeGeometry(1,2.15,4),mat);
+  canopy.position.y=4.05;canopy.rotation.y=Math.PI/4;canopy.scale.set(w*.71,1,d*.71);canopy.castShadow=true;g.add(canopy);
+  const valance=new THREE.MeshStandardMaterial({color:color===0xf1eadb?0xd7cfbe:color,roughness:.92,side:THREE.DoubleSide});
+  addBox(g,w+.08,.34,.10,0,3.03,-d/2,valance);addBox(g,w+.08,.34,.10,0,3.03,d/2,valance);
+  addBox(g,.10,.34,d+.08,-w/2,3.03,0,valance);addBox(g,.10,.34,d+.08,w/2,3.03,0,valance);
+  // Three translucent back/side panels make the tent read as occupiable while
+  // the local -Z side remains open toward the public path.
+  const fabric=new THREE.MeshStandardMaterial({color:color===0xf1eadb?0xe6dfd0:color,roughness:.95,side:THREE.DoubleSide,transparent:true,opacity:.76});
+  addBox(g,w*.96,2.7,.045,0,1.52,d/2-.03,fabric);
+  addBox(g,.045,2.7,d*.96,-w/2+.03,1.52,0,fabric);addBox(g,.045,2.7,d*.96,w/2-.03,1.52,0,fabric);
+  for(const px of [-w/2,w/2])for(const pz of [-d/2,d/2])addPost(g,px,pz,3.08,M.truss);
   return g;
 }
 function stretchTentAsset(x,z,w,d,rot,color=0xe9dfc4){

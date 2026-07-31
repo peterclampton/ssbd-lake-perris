@@ -564,6 +564,50 @@ function gazeboAsset(fp){
   const roof=new THREE.Mesh(new THREE.ConeGeometry(Math.max(fp.w,fp.d)*.58,1.45,6),roofMat);
   roof.position.y=3.78;roof.scale.z=Math.max(.55,fp.d/fp.w);roof.castShadow=true;g.add(roof);
 }
+function healersSanctuaryAsset(anchor){
+  // Reference photos supplied 2026-07-31 show this is an existing Lake Perris
+  // picnic pavilion, not a festival tent: a broad green, low-slope roof on six
+  // concrete columns, with picnic tables, an ADA grill pad, mature pine shade,
+  // and a small green chain-link service enclosure behind it.
+  const w=20,d=26,rot=anchor.rotation||0;
+  const g=new THREE.Group();g.name="HEALERS SANCTUARY · EXISTING PARK PAVILION";
+  g.position.set(anchor.point[0],0,anchor.point[1]);g.rotation.y=rot;detail.add(g);
+  const concrete=new THREE.MeshStandardMaterial({color:0xb6b1a5,roughness:.94});
+  const roofMat=new THREE.MeshStandardMaterial({color:0x426944,roughness:.76});
+  const fasciaMat=new THREE.MeshStandardMaterial({color:0x294a32,roughness:.83});
+  const wood=new THREE.MeshStandardMaterial({color:0x765a38,roughness:.93});
+  const fenceMat=new THREE.MeshStandardMaterial({color:0x315c4f,roughness:.8,transparent:true,opacity:.72});
+  addBox(g,w,.22,d,0,.11,0,concrete);
+  // The roof is a real rectangular park canopy. The narrow back edge is lower
+  // toward the fenced service side, matching the photographed shelter.
+  const roof=new THREE.Mesh(new THREE.BoxGeometry(w+1.6,.48,d+1.8),roofMat);
+  roof.position.set(0,6.35,0);roof.rotation.x=.105;roof.castShadow=true;g.add(roof);
+  addBox(g,w+1.7,.6,.25,0,6.05,d/2+.78,fasciaMat);
+  for(const x of [-w*.4,0,w*.4])for(const z of [-d*.32,d*.32]){
+    addBox(g,1.05,5.75,1.05,x,2.88,z,concrete);
+    addBox(g,1.34,.18,1.34,x,.12,z,concrete);
+  }
+  // Two fixed picnic tables, with benches and legs, stay within the concrete slab.
+  for(const [x,z] of [[-4,-1.8],[4,2.2]]){
+    addBox(g,5.0,.17,1.28,x,.94,z,wood);
+    for(const dz of [-1.15,1.15])addBox(g,5.0,.14,.5,x,.58,z+dz,wood);
+    for(const dx of [-1.85,1.85]){addBox(g,.16,.82,.16,x+dx,.43,z,wood);addBox(g,.16,.5,.16,x+dx,.29,z-1.15,wood);addBox(g,.16,.5,.16,x+dx,.29,z+1.15,wood)}
+  }
+  // Square accessibility pad and park grill on the beach-facing side.
+  addBox(g,5.4,.04,5.4,-5.2,.245,-d*.31,new THREE.MeshStandardMaterial({color:0xc8c4b8,roughness:.96}));
+  const grill=new THREE.Mesh(new THREE.BoxGeometry(1.05,.36,.72),M.dark);grill.position.set(-5.2,1.08,-d*.31);g.add(grill);
+  const grillPost=new THREE.Mesh(new THREE.CylinderGeometry(.11,.11,1.45,8),M.dark);grillPost.position.set(-5.2,.76,-d*.31);g.add(grillPost);
+  // Green chain-link service enclosure at the rear. Rails and lightly opaque
+  // mesh make it legible in-game without hiding the pavilion interior.
+  function fencePanel(x,z,pw,pd){
+    addBox(g,pw,.07,.08,x,1.28,z,pw>pd?fenceMat:M.dark);
+    addBox(g,.08,.07,pd,x,1.28,z,pw>pd?M.dark:fenceMat);
+    if(pw>pd){addBox(g,pw,1.28,.035,x,.67,z,fenceMat);for(const px of [x-pw/2,x+pw/2])addPost(g,px,z,1.45,fenceMat)}
+    else {addBox(g,.035,1.28,pd,x,.67,z,fenceMat);for(const pz of [z-pd/2,z+pd/2])addPost(g,x,pz,1.45,fenceMat)}
+  }
+  const rear=d*.53;fencePanel(0,rear,w*.78,.01);fencePanel(-w*.39,rear-d*.12,.01,d*.24);fencePanel(w*.39,rear-d*.12,.01,d*.24);
+  makeLabel("HEALERS SANCTUARY",anchor.point[0],anchor.point[1]);
+}
 function parkBuildingAsset(fp,kind){
   if(kind==="gazebo"){gazeboAsset(fp);return}
   const g=new THREE.Group();g.position.set(fp.x,0,fp.z);g.rotation.y=fp.rot;detail.add(g);
@@ -1044,6 +1088,11 @@ function buildDetailedAssets(data){
     barAsset(fp.point[0],fp.point[1],fp.rotation,fp.width,fp.depth);
     makeLabel("BAR 4",fp.point[0],fp.point[1]);
   }
+  // The GAZEBO callout at Bar 5 is the existing lakefront pavilion shown in
+  // the supplied site photos.  Preserve that plan location, but give it its
+  // actual Healers Sanctuary identity and physical construction.
+  const healerGazebo=anchor("GAZEBO");
+  if(healerGazebo)healersSanctuaryAsset(healerGazebo);
   const entrances=data.anchors.filter(a=>a.text==="ENTRANCE"),usedGateBlocks=new Set();
   for(let n=0;n<entrances.length;n++){
     const a=entrances[n];

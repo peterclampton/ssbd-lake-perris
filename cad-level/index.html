@@ -60,11 +60,15 @@ const WATER_LEVEL=.085;
 // The lake lies southeast of the festival core in this mirrored CAD/world
 // coordinate space. These constants drive the water, shore and terrain cutout
 // together so the surface cannot float through a hillside.
-const LAKE_X=750,LAKE_Z=720;
+// The PDF shows Lake Perris as the dominant south/east horizon, not a small
+// decorative pond behind Coconut Cove.  This enlarged basin keeps the same
+// surveyed Coconut Cove tangent while carrying the lake through the bottom of
+// the playable world.
+const LAKE_X=901.3,LAKE_Z=873.9;
 // The waterline is tangent to the lake-facing corner of the CAD's Coconut
 // Cove 130' stretch tent ([214.2843,174.8828]). Do not leave an invented
 // strip of beach between that tent and Lake Perris.
-const LAKE_RADIUS=764.293;
+const LAKE_RADIUS=980;
 const terrainGeo=new THREE.PlaneGeometry(2300,2300,160,160);
 const terrainPos=terrainGeo.attributes.position;
 for(let i=0;i<terrainPos.count;i++){
@@ -90,17 +94,27 @@ const sky=new THREE.Mesh(skyGeo,new THREE.ShaderMaterial({side:THREE.BackSide,de
 scene.add(sky);
 const cloudMat=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.32,depthWrite:false});
 for(let i=0;i<34;i++){const c=new THREE.Mesh(new THREE.SphereGeometry(12+(i%4)*7,12,8),cloudMat);const a=i*2.399;c.position.set(Math.cos(a)*(410+i%6*75),80+(i%5)*13,Math.sin(a)*(410+i%6*75));c.scale.z=.32;scene.add(c)}
-// Native Lake Perris vegetation gives the festival edge depth and scale. Use
-// shared geometry/materials so this is a proper live world, not a costly forest
-// of cloned CAD placeholders.
+// Native Lake Perris vegetation follows the aerial-plan bands: road/parking
+// edge, west campground, and the north/east shore.  Do not use a decorative
+// radial scatter around the festival core; that invents trees where the PDF
+// shows open lawn, stages, and beach.
 const treeTrunkGeo=new THREE.CylinderGeometry(.22,.34,3.8,6),treeCrownGeo=new THREE.ConeGeometry(2.2,6.4,8);
 const treeTrunkMat=new THREE.MeshStandardMaterial({color:0x62462d,roughness:1}),treeCrownMat=new THREE.MeshStandardMaterial({color:0x395b32,roughness:.95});
 const trees=new THREE.Group();trees.name="LAKE PERRIS TREES";scene.add(trees);
-for(let i=0;i<190;i++){
-  const a=i*2.3999632297,r=245+(i%17)*16+((i*19)%23),x=Math.cos(a)*r,z=Math.sin(a)*r;
-  if(x>610&&z>560)continue;
-  const h=.72+(i%7)*.075,g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=a*.37;g.scale.setScalar(h);
+const treeBands=[
+  [[-255,-130],[-215,-116],[-176,-104],[-136,-91],[-96,-78],[-58,-66]], // west road / campground edge
+  [[-118,112],[-89,132],[-58,151],[-24,166],[10,177],[44,184]],          // west/south festival edge
+  [[-82,-146],[-42,-151],[-1,-148],[39,-141],[79,-128],[118,-112]],     // production / north road edge
+  [[238,-104],[270,-87],[298,-64],[321,-34],[339,-1]],                    // east park edge
+  [[274,38],[292,64],[310,92],[326,121],[338,151]],                       // east shore tree band
+  [[84,202],[111,211],[139,216],[166,217]]                                // beach approach, kept west of Coco Cove
+];
+let treeIndex=0;
+for(const band of treeBands)for(const [bx,bz] of band)for(let j=0;j<4;j++){
+  const a=treeIndex*2.3999632297,jitterX=Math.cos(a)*3.6,jitterZ=Math.sin(a)*3.6;
+  const h=.74+(treeIndex%7)*.07,g=new THREE.Group();g.position.set(bx+jitterX,0,bz+jitterZ);g.rotation.y=a*.37;g.scale.setScalar(h);
   const trunk=new THREE.Mesh(treeTrunkGeo,treeTrunkMat),crown=new THREE.Mesh(treeCrownGeo,treeCrownMat);trunk.position.y=1.9;crown.position.y=6.1;trunk.castShadow=crown.castShadow=true;trees.add(g);g.add(trunk,crown);
+  treeIndex++;
 }
 const lake=new THREE.Mesh(new THREE.CircleGeometry(LAKE_RADIUS,160),new THREE.MeshPhysicalMaterial({color:0x1d7898,roughness:.13,metalness:.08,transparent:true,opacity:.94,clearcoat:.35}));
 lake.rotation.x=-Math.PI/2; lake.position.set(LAKE_X,WATER_LEVEL,LAKE_Z); lake.receiveShadow=true;scene.add(lake);
@@ -848,8 +862,12 @@ function buildDetailedAssets(data){
   // printed dimensions override only the decorative overhang in the symbol.
   const coconut=namedFootprint("COCONUT COVE / STRETCH TENT / 130'","Stretch Tents");
   if(coconut){stretchTentAsset(coconut.x,coconut.z,coconut.w,coconut.d,coconut.rot);useTent(coconut)}
+  const innerAnchor=anchor("INNERBASS / STRETCH TENT / 130'");
   const inner=namedFootprint("INNERBASS / STRETCH TENT / 130'","Stretch Tents");
-  if(inner){stretchTentAsset(inner.x,inner.z,inner.w,inner.d,inner.rot,0xd9c8ea);useTent(inner)}
+  // The octagonal CAD outline has equal sides, so its minimum-bounds solver
+  // can choose any edge and rotate the tent 90 degrees.  Its labelled CAD
+  // anchor supplies the intended orientation.
+  if(inner){stretchTentAsset(inner.x,inner.z,inner.w,inner.d,innerAnchor?innerAnchor.rotation:inner.rot,0xd9c8ea);useTent(inner)}
   const merch=namedFootprint("FESTIVAL / MERCH / 10x40","Tents");
   if(merch){peakedTent(merch.x,merch.z,40*.3048,10*.3048,merch.rot,0xe9dce8);useTent(merch)}
   const chapel=namedFootprint("CHAPEL / / / / / / / / / / / / / / / / / / / / / / / / / / / / 20x30","Tents");
@@ -1082,14 +1100,18 @@ function buildDetailedAssets(data){
     }
     makeLabel("EAST MERCHANTS · 16 VENDORS",eastMerchants.point[0],eastMerchants.point[1]);
   }
-  // The eight literal Vendors-layer pads on the beach are a separate vendor
-  // row. Their footprints (not a loose text annotation) are the placement and
-  // orientation authority, so beach vendors cannot be mistaken for East
-  // Merchants again. The isolated bar pad elsewhere is intentionally excluded.
-  let beachVendorIndex=0;
-  for(const fp of cadPads("Vendors")){
-    if(fp.z<220)continue;
-    vendorTentAsset(fp.x,fp.z,fp.rot,beachVendorIndex++,fp.w,fp.d);
+  // The eight literal Vendors-layer pads define the beach-row spacing and
+  // rotation.  The plan/aerial puts that row on the Coconut Cove beach, not
+  // alongside the East Entrance food vendors.  Move the whole CAD row as one
+  // rigid unit to the mapped Coconut Cove beach pocket; individual tents keep
+  // their surveyed size, spacing, and orientation.
+  const beachPads=cadPads("Vendors").filter(fp=>fp.z>=220);
+  const beachRowCenter=beachPads.reduce((s,fp)=>[s[0]+fp.x,s[1]+fp.z],[0,0]);
+  if(beachPads.length){
+    beachRowCenter[0]/=beachPads.length;beachRowCenter[1]/=beachPads.length;
+    const beachRowTarget=[170,205],shiftX=beachRowTarget[0]-beachRowCenter[0],shiftZ=beachRowTarget[1]-beachRowCenter[1];
+    beachPads.forEach((fp,index)=>vendorTentAsset(fp.x+shiftX,fp.z+shiftZ,fp.rot,index,fp.w,fp.d));
+    makeLabel("BEACH VENDORS",beachRowTarget[0],beachRowTarget[1]);
   }
   const productionAnchor=anchor("PRODUCTION");let dumpsterIndex=0;
   // Every remaining tent uses its closed DXF outline. The six matching 13m x

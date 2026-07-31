@@ -1195,22 +1195,20 @@ function buildDetailedAssets(data){
     if(placed.some(p=>Math.hypot(p[0]-fp.x,p[1]-fp.z)<2))continue;
     placed.push([fp.x,fp.z]);foodVendorAsset(fp,foodIndex++);
   }
-  // East Merchants are the CAD's explicit `MERCHANT / 16 VENDORS` callout at
-  // the East Entrance.  `VENDORS` at [60,-20] is the separate food-area
-  // annotation; using it was the source of the beach/east-merchant swap.
-  // Build the sixteen tents in two inward-facing rows around the actual
-  // merchant aisle, not the food-vendor cluster.
-  const eastMerchants=exactAnchor("16 VENDORS",[100,51])||exactAnchor("MERCHANT",[100,51]);
-  if(eastMerchants){
-    const aisleRot=eastMerchants.rotation,ux=Math.sin(aisleRot),uz=Math.cos(aisleRot),nx=-uz,nz=ux;
-    for(let row=0;row<2;row++)for(let col=0;col<8;col++){
-      const along=(col-3.5)*3.85,side=row?1:-1;
-      const x=eastMerchants.point[0]+along*ux+side*2.55*nx;
-      const z=eastMerchants.point[1]+along*uz+side*2.55*nz;
-      vendorTentAsset(x,z,Math.atan2(-side*nx,-side*nz),row*8+col);
-    }
-    makeLabel("EAST MERCHANTS · 16 VENDORS",eastMerchants.point[0],eastMerchants.point[1]);
+  // The 7/31 plan does *not* have a 2×8 rectangle centred on the text label.
+  // It has four staggered four-vendor pods along the east-merchant aisle.
+  // These centers were traced from those literal V1–V16 symbols in the 7/31
+  // plan, rather than treating the MERCHANT annotation as a tent center.
+  const eastMerchantPods=[
+    [96.0,22.8],[101.3,23.8],[106.6,24.8],[111.9,25.8],
+    [116.4,27.7],[120.1,31.1],[123.8,34.5],[127.5,37.9],
+    [128.7,43.1],[129.5,47.8],[130.2,52.5],[130.9,57.2],
+    [117.4,45.3],[120.9,48.7],[124.4,52.1],[127.9,55.5]
+  ];
+  for(let i=0;i<eastMerchantPods.length;i++){
+    const [x,z]=eastMerchantPods[i];vendorTentAsset(x,z,.38264,i);
   }
+  makeLabel("EAST MERCHANTS · 16 VENDORS",114.5,39.5);
   // The eight literal Vendors-layer pads are the BEACH VENDORS beside the ADA
   // ramp/approach.  Their CAD coordinates are already authoritative.  Do not
   // translate this row toward Coconut Cove or the East Entrance: that is the

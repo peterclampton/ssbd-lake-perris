@@ -64,6 +64,7 @@ const palette={
   "Stages":0x272833,"Tents":0xf1eadb,"Stretch Tents":0xe9dfc4,"Food":0xf0a34a,"Vendors":0xdb4f93,
   "Porta Potties _ Bathroom Trucks":0x3f8ecb,"Parking":0x4a4a50,"Park Infrastructure":0xb7b1a2,
   "Fire Exits":0xe04c44,"Emergency Exits":0xe04c44,"Traffic":0xe8d059,"Sponsor Activations":0x6a61c7,"Preparty":0x42a89e
+  ,"Camp Lanes":0xe7d067,"Trash":0x48555d,"Event-Worklight":0xe8d059,"Power-Parts-Supply":0xe7e1d6
 };
 const roots=new Map();
 function rootFor(layer){
@@ -94,7 +95,7 @@ function makeLabel(text,x,z){
   // impossible at ground level.
   s.scale.set(Math.min(7.2,w/24),1.08,1);s.position.set(x,3.65,z);s.renderOrder=20;rootFor("Labels").add(s);
 }
-function isUsefulLabel(t){return /STAGE|LIMITLESS|VIP|GATE|BAR|FOOD|VENDOR|RESTROOM|BATHROOM|SOLAR|ENTRANCE|PARKING|LOUNGE|TENT|ADA|PRODUCTION|HOSPITAL|CAMP|COCONUT|INNERBASS|BUTWOOD|CREATION|REVIVAL/i.test(t)}
+function isUsefulLabel(t){return /STAGE|LIMITLESS|VIP|GATE|BAR|FOOD|VENDOR|RESTROOM|BATHROOM|SOLAR|ENTRANCE|PARKING|LOUNGE|TENT|ADA|PRODUCTION|HOSPITAL|CAMP|COCONUT|INNERBASS|BUTWOOD|CREATION|REVIVAL|GARDEN|PORTAL|ARTIST|FLOWER|GALLERY|DINER|STORE|COFFEE|GRIFFITH|MUSEUM|FASHION|PHONE/i.test(t)}
 
 // Detailed assets reuse the proportions, colors, truss language, shade
 // structures and signage from the original SSBD level. Their anchors stay CAD.
@@ -307,6 +308,44 @@ function entranceAsset(x,z,rot,name,width){
   for(let i=0;i<lights;i++){const l=new THREE.Mesh(new THREE.SphereGeometry(.2,8,6),new THREE.MeshStandardMaterial({color:0x302b35,emissive:i%2?0x29d3c6:0xffd166,emissiveIntensity:2}));l.position.set((i-(lights-1)/2)*clear/lights,6.13,.42);g.add(l)}
   makeLabel(name,x,z);
 }
+function flowerArchFromBoundary(data,anchor){
+  if(!anchor)return null;
+  // The PDF puts the FLOWER ARCH text outside the opening. Recover the actual
+  // portal from the two nearest loose endpoints of its SCRIM boundary.
+  const ends=[];
+  for(const path of data.paths){
+    if(!/SCRIM.*FENCE/.test(path.layer)||path.closed||path.points.length<2)continue;
+    for(const p of [path.points[0],path.points[path.points.length-1]]){
+      const dist=Math.hypot(p[0]-anchor.point[0],p[1]-anchor.point[1]);
+      if(dist<12)ends.push({p,dist});
+    }
+  }
+  let pair=null;
+  for(let i=0;i<ends.length;i++)for(let j=i+1;j<ends.length;j++){
+    const gap=Math.hypot(ends[i].p[0]-ends[j].p[0],ends[i].p[1]-ends[j].p[1]);
+    if(gap<2||gap>8)continue;
+    const score=ends[i].dist+ends[j].dist;
+    if(!pair||score<pair.score)pair={a:ends[i].p,b:ends[j].p,gap,score};
+  }
+  if(!pair)return null;
+  const x=(pair.a[0]+pair.b[0])/2,z=(pair.a[1]+pair.b[1])/2;
+  const rot=Math.atan2(pair.b[0]-pair.a[0],pair.b[1]-pair.a[1]);
+  const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;g.name="VIP FLOWER ARCH · CAD GAP";detail.add(g);
+  const vine=new THREE.MeshStandardMaterial({color:0x3d7740,roughness:.92});
+  const bloom=[0xf2a7c8,0xffd166,0xe9edf2].map(color=>new THREE.MeshStandardMaterial({color,roughness:.8}));
+  const h=3.45;
+  addBox(g,.22,h,.22,-pair.gap/2,h/2,0,vine);addBox(g,.22,h,.22,pair.gap/2,h/2,0,vine);
+  const curve=new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-pair.gap/2,h,0),new THREE.Vector3(0,h+1.35,0),new THREE.Vector3(pair.gap/2,h,0)
+  ]);
+  const crown=new THREE.Mesh(new THREE.TubeGeometry(curve,18,.14,8,false),vine);crown.castShadow=true;g.add(crown);
+  for(let i=0;i<15;i++){
+    const t=i/14,p=curve.getPoint(t),b=new THREE.Mesh(new THREE.SphereGeometry(.13+(i%3)*.035,7,6),bloom[i%3]);
+    b.position.copy(p);b.position.z=(i%2?-.12:.12);g.add(b);
+  }
+  makeLabel("VIP FLOWER ARCH",x,z);
+  return {x,z,width:pair.gap,rotation:rot};
+}
 function accessGateAsset(fp){
   const g=new THREE.Group();g.position.set(fp.point[0],0,fp.point[1]);g.rotation.y=fp.rotation;detail.add(g);
   const clear=Math.max(2.1,fp.width),post=.16,h=3.25;
@@ -330,6 +369,41 @@ function stairAsset(fp){
   for(const x of [-fp.width*.46,fp.width*.46]){
     addBox(g,.07,1.05,.07,x,.62,-fp.depth*.42,M.gold);
     addBox(g,.07,1.72,.07,x,1.03,fp.depth*.42,M.gold);
+  }
+}
+function lightTowerAsset(fp,name){
+  const g=new THREE.Group();g.position.set(fp.point[0],0,fp.point[1]);g.rotation.y=fp.rotation;g.name=name+" · CAD";detail.add(g);
+  addBox(g,fp.width,.18,fp.depth,0,.09,0,M.dark);
+  const mastH=/6kW/i.test(name)?9:7.5;
+  addBox(g,.16,mastH,.16,0,mastH/2,0,M.truss);
+  const head=new THREE.Group();head.position.y=mastH;g.add(head);
+  const lampMat=new THREE.MeshStandardMaterial({color:0x2a2b31,emissive:0xffe4a1,emissiveIntensity:2.4});
+  for(const x of [-.48,0,.48])addBox(head,.38,.28,.18,x,.12,0,lampMat);
+  // Stabilizers terminate inside the literal equipment footprint.
+  for(const x of [-fp.width*.42,fp.width*.42])for(const z of [-fp.depth*.42,fp.depth*.42]){
+    const leg=addBox(g,.08,.08,Math.hypot(x,z),x/2,.15,z/2,M.truss);leg.rotation.y=Math.atan2(x,z);
+  }
+}
+function ambulanceAsset(fp){
+  const g=new THREE.Group();g.position.set(fp.point[0],0,fp.point[1]);g.rotation.y=fp.rotation;g.name="AMBULANCE · CAD";detail.add(g);
+  const white=new THREE.MeshStandardMaterial({color:0xf3f2ed,roughness:.76});
+  const red=new THREE.MeshStandardMaterial({color:0xd93b3b,roughness:.65,emissive:0x4b0909,emissiveIntensity:.18});
+  addBox(g,fp.width*.72,2.55,fp.depth*.94,fp.width*.12,1.45,0,white);
+  addBox(g,fp.width*.28,1.72,fp.depth*.9,-fp.width*.36,1.08,0,white);
+  addBox(g,fp.width*.78,.16,.08,fp.width*.08,1.63,-fp.depth*.48,red);
+  for(const x of [-fp.width*.3,fp.width*.31])for(const z of [-fp.depth*.45,fp.depth*.45]){
+    const wheel=new THREE.Mesh(new THREE.CylinderGeometry(.36,.36,.18,12),M.dark);
+    wheel.position.set(x,.42,z);wheel.rotation.x=Math.PI/2;g.add(wheel);
+  }
+}
+function trashAsset(fp){
+  const g=new THREE.Group();g.position.set(fp.point[0],0,fp.point[1]);g.rotation.y=fp.rotation;g.name="WASTE STATION · CAD";detail.add(g);
+  const bin=new THREE.MeshStandardMaterial({color:0x3e5357,roughness:.88});
+  const count=fp.width>3?3:Math.max(1,Math.round(fp.width/1.2));
+  for(let i=0;i<count;i++){
+    const w=fp.width*.82/count,x=(i-(count-1)/2)*fp.width*.82/count;
+    addBox(g,w,1.18,fp.depth*.72,x,.59,0,bin);
+    addBox(g,w+.04,.09,fp.depth*.76,x,1.22,0,i%2?M.blue:M.gold);
   }
 }
 function restroomAsset(x,z,rot,count=3){
@@ -655,6 +729,9 @@ function buildDetailedAssets(data){
       entranceAsset(fp.point[0],fp.point[1],fp.rotation,n===0?"EAST ENTRANCE":"WEST ENTRANCE",fp.width);
     }
   }
+  // Boundary-derived rather than text-derived: the two SCRIM endpoints define
+  // the exact flower-arch opening, while the PDF label only identifies it.
+  flowerArchFromBoundary(data,anchor("FLOWER ARCH"));
   // Every other Emergency Exits block is a physical portal in the DXF. Render
   // its literal oriented width and location, but do not duplicate the two
   // entrance blocks promoted to full arches above.
@@ -677,6 +754,13 @@ function buildDetailedAssets(data){
   for(const item of data.inserts){
     const fp=item.bounds;
     if(item.layer==="Stages"&&/^All Access Stair/.test(item.name)&&fp)stairAsset(fp);
+  }
+  // Newly recovered physical-support layers from the DXF exporter.
+  for(const item of data.inserts){
+    const fp=item.bounds;if(!fp||Math.abs(fp.point[0])>500||Math.abs(fp.point[1])>500)continue;
+    if(item.layer==="Event-Worklight"&&/Light Tower/i.test(item.name))lightTowerAsset(fp,item.name);
+    else if(item.layer==="Power-Parts-Supply"&&/Ambulance/i.test(item.name))ambulanceAsset(fp);
+    else if(item.layer==="Trash")trashAsset(fp);
   }
   // PDF sheet: ADA Viewing is explicitly 12' x 8'. The DXF provides separate
   // ADA and VIEWING text entities at the platform. Use their midpoint rather
@@ -826,7 +910,7 @@ function buildLayerPanel(){
   const box=document.querySelector("#layers");
   // Parking is authoritative ground geometry, not raw massing, so it stays
   // visible. Designed duplicates of structures remain hidden beneath assets.
-  const hiddenByDefault=new Set(["But Area","CRASH BARRICADE","Food","Group Camping","None","Park Infrastructure","Porta Potties _ Bathroom Trucks","Preparty","Sponsor Activations","Stage-Main","Stages","Stretch Tents","Tents","Vendors"]);
+  const hiddenByDefault=new Set(["But Area","CRASH BARRICADE","Food","Group Camping","None","Park Infrastructure","Porta Potties _ Bathroom Trucks","Preparty","Sponsor Activations","Stage-Main","Stages","Stretch Tents","Tents","Trash","Vendors"]);
   [...roots.keys()].sort().forEach(layer=>{const label=document.createElement("label"),input=document.createElement("input");input.type="checkbox";input.checked=!hiddenByDefault.has(layer);
     roots.get(layer).visible=input.checked;
     input.onchange=()=>roots.get(layer).visible=input.checked;label.append(input,document.createTextNode(layer));box.append(label)});

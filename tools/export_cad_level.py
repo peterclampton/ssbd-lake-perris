@@ -50,6 +50,13 @@ GEOMETRY_LAYERS = {
     "But Area",
     "None",
     "CRASH BARRICADE",
+    # Physical support/experience layers omitted by the first exporter pass.
+    # Their inserts carry exact oriented bounds just like stages and tents.
+    "Art Installations_2",
+    "Event-Worklight",
+    "Power-Parts-Supply",
+    "Trash",
+    "Camp Lanes",
 }
 
 

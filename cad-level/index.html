@@ -139,10 +139,11 @@ const sky=new THREE.Mesh(skyGeo,new THREE.ShaderMaterial({side:THREE.BackSide,de
 scene.add(sky);
 const cloudMat=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.32,depthWrite:false});
 for(let i=0;i<34;i++){const c=new THREE.Mesh(new THREE.SphereGeometry(12+(i%4)*7,12,8),cloudMat);const a=i*2.399;c.position.set(Math.cos(a)*(410+i%6*75),80+(i%5)*13,Math.sin(a)*(410+i%6*75));c.scale.z=.32;scene.add(c)}
-// Native Lake Perris vegetation follows the aerial-plan bands: road/parking
-// edge, west campground, and the north/east shore.  Do not use a decorative
-// radial scatter around the festival core; that invents trees where the PDF
-// shows open lawn, stages, and beach.
+// Native Lake Perris vegetation is sampled from the supplied Google satellite
+// TIFF, not sketched into the world.  These are high-confidence dark-canopy
+// component centroids transformed through the TIFF's DXF IMAGE placement into
+// scene coordinates.  Keeping only real aerial canopy centers prevents trees
+// drifting into open lawn, ADA pavement, tents, sand, or lake water.
 const treeTrunkGeo=new THREE.CylinderGeometry(.28,.48,5.8,8);
 const treeCrownGeo=new THREE.DodecahedronGeometry(1,1);
 const treeTrunkMat=new THREE.MeshStandardMaterial({color:0x60442c,roughness:1});
@@ -152,18 +153,17 @@ const treeCrownMats=[
   new THREE.MeshStandardMaterial({color:0x2d4934,roughness:.95})
 ];
 const trees=new THREE.Group();trees.name="LAKE PERRIS TREES";scene.add(trees);
-const treeBands=[
-  [[-255,-130],[-215,-116],[-176,-104],[-136,-91],[-96,-78],[-58,-66]], // west road / campground edge
-  [[-118,112],[-89,132],[-58,151],[-24,166],[10,177],[44,184]],          // west/south festival edge
-  [[-82,-146],[-42,-151],[-1,-148],[39,-141],[79,-128],[118,-112]],     // production / north road edge
-  [[238,-104],[270,-87],[298,-64],[321,-34],[339,-1]],                    // east park edge
-  [[274,38],[292,64],[310,92],[326,121],[338,151]],                       // east shore tree band
-  [[84,202],[111,211],[139,216],[166,217]]                                // beach approach, kept west of Coco Cove
+const tiffCanopyCenters=[
+  [-118.7,165.7],[39.0,-114.0],[38.7,-126.9],[70.0,-157.6],[84.0,-55.1],
+  [92.5,-177.0],[110.6,-96.4],[159.4,-109.2],[160.4,-91.7],[183.3,-169.4],
+  [185.1,-106.6],[237.3,-111.4],[261.3,-164.1],[282.7,-124.0],[299.3,-155.3],
+  [310.1,-192.6],[311.2,-129.2],[330.7,-39.3],[333.5,-184.0],[356.3,-143.4],
+  [375.8,-149.8],[376.8,-134.4]
 ];
 let treeIndex=0;
-for(const band of treeBands)for(const [bx,bz] of band)for(let j=0;j<4;j++){
-  const a=treeIndex*2.3999632297,jitterX=Math.cos(a)*3.6,jitterZ=Math.sin(a)*3.6;
-  const h=.82+(treeIndex%7)*.08,g=new THREE.Group();g.position.set(bx+jitterX,0,bz+jitterZ);g.rotation.y=a*.37;g.scale.setScalar(h);
+for(const [bx,bz] of tiffCanopyCenters){
+  const a=treeIndex*2.3999632297;
+  const h=.82+(treeIndex%7)*.08,g=new THREE.Group();g.position.set(bx,0,bz);g.rotation.y=a*.37;g.scale.setScalar(h);
   const trunk=new THREE.Mesh(treeTrunkGeo,treeTrunkMat);trunk.position.y=2.9;trunk.castShadow=true;trees.add(g);g.add(trunk);
   // The supplied Lake Perris reference is a broadleaf shade-tree park—not a
   // conifer forest.  Overlapping irregular foliage masses give each mature

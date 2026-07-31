@@ -91,7 +91,7 @@ function makeLabel(text,x,z){
   const t=new THREE.CanvasTexture(cv);t.encoding=THREE.sRGBEncoding;const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthTest:false}));
   s.scale.set(Math.min(26,w/8),3.8,1);s.position.set(x,5,z);s.renderOrder=20;rootFor("Labels").add(s);
 }
-function isUsefulLabel(t){return /STAGE|LIMITLESS|VIP|GATE|BAR|FOOD|VENDOR|RESTROOM|SOLAR|ENTRANCE|PARKING|LOUNGE|TENT|ADA|PRODUCTION|HOSPITAL|CAMP|COCONUT|INNERBASS|BUTWOOD|CREATION|REVIVAL/i.test(t)}
+function isUsefulLabel(t){return /STAGE|LIMITLESS|VIP|GATE|BAR|FOOD|VENDOR|RESTROOM|BATHROOM|SOLAR|ENTRANCE|PARKING|LOUNGE|TENT|ADA|PRODUCTION|HOSPITAL|CAMP|COCONUT|INNERBASS|BUTWOOD|CREATION|REVIVAL/i.test(t)}
 
 // Detailed assets reuse the proportions, colors, truss language, shade
 // structures and signage from the original SSBD level. Their anchors stay CAD.
@@ -147,12 +147,37 @@ function stallAsset(x,z,rot,food){
   addBox(g,5.2,2.5,3.3,0,1.25,0,new THREE.MeshStandardMaterial({color:col,roughness:.8}));
   addBox(g,5.6,.22,3.7,0,2.68,0,M.canvas);addBox(g,3.4,.9,.18,0,1.6,-1.69,M.dark);
 }
+function entranceAsset(x,z,rot,name){
+  const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;detail.add(g);
+  for(const px of [-5.5,5.5]){addBox(g,1.1,8,1.1,px,4,0,M.truss);addBox(g,1.45,.42,1.45,px,8.25,0,M.gold)}
+  addBox(g,12.1,.75,.75,0,7.6,0,M.truss);addBox(g,9.5,1.25,.34,0,6.9,-.4,M.pink);
+  for(let i=-2;i<=2;i++){const l=new THREE.Mesh(new THREE.SphereGeometry(.24,8,6),new THREE.MeshStandardMaterial({color:0x302b35,emissive:i%2?0x29d3c6:0xffd166,emissiveIntensity:2}));l.position.set(i*1.8,7.55,.5);g.add(l)}
+  makeLabel(name,x,9.8,z);
+}
+function restroomAsset(x,z,rot,count=3){
+  const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;detail.add(g);
+  for(let i=0;i<count;i++){const u=new THREE.Group();u.position.x=(i-(count-1)/2)*2.35;g.add(u);addBox(u,2,2.7,2,0,1.35,0,M.blue);addBox(u,2.2,.16,2.2,0,2.78,0,M.dark);addBox(u,.85,1.95,.08,0,1.08,-1.02,new THREE.MeshStandardMaterial({color:0x286a99,roughness:.85}))}
+}
+function fohAsset(x,z,rot){
+  const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;detail.add(g);
+  addBox(g,6,.22,6,0,.12,0,M.dark);for(const px of [-2.7,2.7])for(const pz of [-2.7,2.7])addPost(g,px,pz,3.1);
+  const roof=new THREE.Mesh(new THREE.ConeGeometry(4.5,1.6,4),M.canvas);roof.position.y=3.8;roof.rotation.y=Math.PI/4;g.add(roof);
+  addBox(g,3.8,1.2,1.6,0,.65,0,M.dark);
+}
+function adaDeck(x,z,rot){
+  const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;detail.add(g);
+  addBox(g,5,.25,3.5,0,.18,0,M.dark);for(const [px,pz,w,d] of [[0,-1.7,5,.08],[-2.45,0,.08,3.4],[2.45,0,.08,3.4]])addBox(g,w,1,d,px,.65,pz,M.gold);
+}
 function buildDetailedAssets(data){
   festivalStage(42,51,-.08,25,14,false);festivalStage(-38,147,.18,20,11,true);
   limitlessAssets();peakedTent(20.16,76.58,15,9,-.33);peakedTent(.95,112.73,12,12,.1,0xd8c7ef);
   barAsset(36.83,92.54,-.25,9);barAsset(57.15,30.88,-.1,11);barAsset(1.77,37.24,-1.48,7);
+  entranceAsset(134.2,-64.54,.55,"EAST ENTRANCE");entranceAsset(-49.79,227.81,-.7,"WEST ENTRANCE");
+  fohAsset(63,63,.05);adaDeck(55.7,68.4,.05);
   const placed=[];for(const a of data.anchors){const food=/^FOOD(?: TRUCK)?$/i.test(a.text),vendor=/^VENDORS?$/i.test(a.text);if(!food&&!vendor)continue;
     if(placed.some(p=>Math.hypot(p[0]-a.point[0],p[1]-a.point[1])<10))continue;placed.push(a.point);stallAsset(a.point[0],a.point[1],a.rotation,food)}
+  const baths=[];for(const a of data.anchors){if(!/RESTROOM|BATHROOM/i.test(a.text))continue;if(Math.abs(a.point[0])>400||Math.abs(a.point[1])>400)continue;
+    if(baths.some(p=>Math.hypot(p[0]-a.point[0],p[1]-a.point[1])<12))continue;baths.push(a.point);restroomAsset(a.point[0],a.point[1],a.rotation,3)}
 }
 
 fetch("site-plan.json",{cache:"no-store"}).then(r=>r.json()).then(data=>{

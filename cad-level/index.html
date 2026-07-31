@@ -125,6 +125,69 @@ function festivalStage(x,z,rot,w=24,d=13,butwood=false){
   for(let i=-2;i<=2;i++){const lamp=new THREE.Mesh(new THREE.SphereGeometry(.38,10,8),new THREE.MeshStandardMaterial({color:0x26262e,emissive:i%2?0x20c8d8:0xd9358f,emissiveIntensity:2}));lamp.position.set(i*w/6,7.8,d/2+.2);g.add(lamp)}
   return g;
 }
+function rod(g,x1,y1,x2,y2,z,thick,mat){
+  const dx=x2-x1,dy=y2-y1,len=Math.hypot(dx,dy),m=addBox(g,len,thick,thick,(x1+x2)/2,(y1+y2)/2,z,mat);
+  m.rotation.z=Math.atan2(dy,dx);return m;
+}
+// Same Stage is deliberately its own model. The reference is a broad open
+// scaffold wall, not the generic roofed festivalStage() box used in pass one.
+function sameStageAsset(){
+  // The PDF puts Limitless on stage-right. After the approved east/west mirror,
+  // the stage centre is west of the deck at the CAD-derived (-13, 51) anchor.
+  const g=new THREE.Group();g.name="THE SAME STAGE · CAD";g.position.set(-13,0,51);g.rotation.y=0;detail.add(g);
+  const orange=new THREE.MeshStandardMaterial({color:0xd58a27,roughness:.58,metalness:.34});
+  const ivory=new THREE.MeshStandardMaterial({color:0xe8e4dc,roughness:.82});
+  const black=new THREE.MeshStandardMaterial({color:0x101116,roughness:.7,metalness:.18});
+  const screen=new THREE.MeshStandardMaterial({color:0x17131f,emissive:0x25103f,emissiveIntensity:.55,roughness:.5});
+
+  // 144' show deck from the design file, with shallow audience-facing depth.
+  addBox(g,44,1.15,10,0,.58,0,black);
+  addBox(g,20,6.5,.45,0,4.45,3.65,screen);
+
+  // Curved scaffold wall: 17 bays, higher end towers and the same shallow bow
+  // visible in Peter's reference image.
+  const wallZ=x=>5.7-.008*x*x, wallH=x=>12.8+Math.abs(x)*.12;
+  for(let i=0;i<=16;i++){
+    const x=-26+i*3.25,z=wallZ(x),h=wallH(x);
+    addBox(g,.16,h,.16,x,h/2,z,orange);
+    for(let y=3.1;y<h;y+=3.1)addBox(g,3.25,.13,.13,x,y,z,orange);
+    if(i<16&&i%2===0)rod(g,x,3.1,x+3.25,6.2,z-.05,.12,orange);
+    if(i<16&&i%2===1)rod(g,x,6.2,x+3.25,3.1,z-.05,.12,orange);
+  }
+
+  // Patterned side towers: pale checker blocks with the black zigzag strokes
+  // that define the real facade.
+  for(const side of [-1,1]){
+    const tx=side*23.5;
+    for(let c=0;c<4;c++)for(let r=0;r<7;r++){
+      const panel=addBox(g,1.75,1.65,.28,tx+side*(c-1.5)*1.78,2.1+r*1.68,wallZ(tx)-.35,
+        (c+r)%3===0?black:ivory);
+      panel.rotation.y=-side*.08;
+    }
+    const zx=side*19.8;
+    for(let k=0;k<6;k++){
+      const y1=2.2+k*1.9,y2=y1+1.55;
+      rod(g,zx+side*(k%2?0:2.3),y1,zx+side*(k%2?2.3:0),y2,wallZ(zx)-.7,.48,black);
+    }
+    // line array on the outside edge
+    for(let j=0;j<8;j++)addBox(g,1.45,.56,1.05,side*27,13.2-j*.63,1.5+j*.08,black);
+  }
+
+  // Dense moving-light field across the scaffold and deck edge.
+  const lampMatA=new THREE.MeshStandardMaterial({color:0x24252c,emissive:0x56d7ee,emissiveIntensity:1.8});
+  const lampMatB=new THREE.MeshStandardMaterial({color:0x24252c,emissive:0xd9358f,emissiveIntensity:1.8});
+  for(let i=0;i<32;i++){
+    const x=-24+(i%16)*3.2,y=3.0+Math.floor(i/16)*4.3+(i%3)*1.15;
+    const lamp=new THREE.Mesh(new THREE.SphereGeometry(.24,8,6),i%2?lampMatA:lampMatB);
+    lamp.position.set(x,y,wallZ(x)-.55);g.add(lamp);
+  }
+  for(let i=-5;i<=5;i++){
+    const lamp=new THREE.Mesh(new THREE.CylinderGeometry(.22,.28,.48,8),i%2?lampMatA:lampMatB);
+    lamp.position.set(i*3.5,1.5,-3.8);lamp.rotation.x=-.9;g.add(lamp);
+  }
+  makeLabel("THE SAME STAGE",-13,18.5,51);
+  return g;
+}
 function limitlessAssets(){
   const rot=-1.48;
   const deck=new THREE.Group();deck.position.set(14.5,0,42);deck.rotation.y=rot;detail.add(deck);
@@ -169,7 +232,10 @@ function adaDeck(x,z,rot){
   addBox(g,5,.25,3.5,0,.18,0,M.dark);for(const [px,pz,w,d] of [[0,-1.7,5,.08],[-2.45,0,.08,3.4],[2.45,0,.08,3.4]])addBox(g,w,1,d,px,.65,pz,M.gold);
 }
 function buildDetailedAssets(data){
-  festivalStage(42,51,-.08,25,14,false);festivalStage(-38,147,.18,20,11,true);
+  sameStageAsset();
+  // CAD calls But a 40x20 stage: 12.192m x 6.096m, not the oversized 20x11m
+  // placeholder from the first visual pass.
+  festivalStage(-38.17,147.1,.18,12.192,6.096,true);
   limitlessAssets();peakedTent(20.16,76.58,15,9,-.33);peakedTent(.95,112.73,12,12,.1,0xd8c7ef);
   barAsset(36.83,92.54,-.25,9);barAsset(57.15,30.88,-.1,11);barAsset(1.77,37.24,-1.48,7);
   entranceAsset(134.2,-64.54,.55,"EAST ENTRANCE");entranceAsset(-49.79,227.81,-.7,"WEST ENTRANCE");

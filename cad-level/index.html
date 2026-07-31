@@ -6,7 +6,7 @@
 <title>SSBD Lake Perris — CAD Master Level</title>
 <style>
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#9ecfff;font:13px/1.4 "Segoe UI",system-ui,sans-serif;color:#152238}
-canvas{display:block}
+canvas{display:block;touch-action:none}
 #hud{position:fixed;inset:0;pointer-events:none;z-index:10}
 #title{position:absolute;left:22px;top:20px;text-transform:uppercase;letter-spacing:2px;text-shadow:0 1px #fff}
 #title b{font-size:17px;letter-spacing:3px}
@@ -20,6 +20,22 @@ canvas{display:block}
 #panel button:hover{background:#eef4fb}
 #status{font-size:11px;color:#53657b;margin-top:8px}
 #crosshair{position:absolute;left:50%;top:50%;width:5px;height:5px;border-radius:50%;background:white;box-shadow:0 0 4px #000;transform:translate(-50%,-50%)}
+#panelToggle{display:none;float:right;margin:-4px 0 0 8px!important}
+#touchHint{display:none}
+@media (max-width:700px), (pointer:coarse){
+  #title{left:12px;top:12px;letter-spacing:1.2px;max-width:calc(100vw - 72px)}
+  #title b{font-size:13px;letter-spacing:1.7px}#title small{font-size:10px}
+  #panel{right:10px;top:10px;width:min(278px,calc(100vw - 20px));max-height:calc(100dvh - 20px);box-sizing:border-box;overflow:auto;padding:10px}
+  #panelToggle{display:block;padding:5px 8px!important;margin-top:-5px!important}
+  #panel.collapsed{width:auto;max-height:none;padding:7px 9px}
+  #panel.collapsed h2{margin:0;font-size:0}.collapsed h2::before{content:"MAP";font-size:11px}.collapsed #layers,.collapsed #panelActions,.collapsed #status{display:none}
+  #layers{max-height:45dvh;overflow:auto;padding-right:3px}
+  #layers label{font-size:12px;margin:7px 0}
+  #panel button{padding:8px 9px;margin-top:7px}
+  #help{display:none}
+  #touchHint{display:block;position:absolute;left:50%;bottom:14px;transform:translateX(-50%);background:#101820bb;color:#fff;border-radius:14px;padding:6px 10px;font-size:11px;white-space:nowrap;text-shadow:0 1px #000}
+  #crosshair{display:none}
+}
 </style>
 </head>
 <body>
@@ -27,10 +43,11 @@ canvas{display:block}
   <div id="title"><b>SSBD // Lake Perris</b><small>CAD MASTER LEVEL · DXF AUTHORITY</small></div>
   <div id="crosshair"></div>
   <div id="help"><kbd>WASD</kbd> fly · <kbd>Q/E</kbd> down/up · <kbd>arrows</kbd> look · <kbd>Shift</kbd> fast</div>
+  <div id="touchHint">One finger: look · two fingers: move · pinch: zoom</div>
   <div id="panel">
-    <h2>CAD Layers</h2>
+    <h2>CAD Layers <button id="panelToggle" aria-expanded="true">Hide</button></h2>
     <div id="layers"></div>
-    <button id="overview">Festival aerial</button><button id="site">Site aerial</button><button id="spawn">Festival view</button>
+    <div id="panelActions"><button id="overview">Festival aerial</button><button id="site">Site aerial</button><button id="spawn">Festival view</button></div>
     <div id="status">Loading authoritative plan…</div>
   </div>
 </div>
@@ -48,7 +65,8 @@ scene.background=new THREE.Color(0x91c6ee);
 scene.fog=new THREE.FogExp2(0xb9cde0,.00105);
 const camera=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,.2,4000);
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:"high-performance"});
-renderer.setSize(innerWidth,innerHeight); renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+const coarsePointer=matchMedia("(pointer:coarse)").matches;
+renderer.setSize(innerWidth,innerHeight); renderer.setPixelRatio(Math.min(devicePixelRatio,coarsePointer?1.35:2));
 renderer.outputEncoding=THREE.sRGBEncoding; renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=.82; renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 document.body.prepend(renderer.domElement);
@@ -1635,10 +1653,21 @@ function festivalView(){camera.position.set(-48,18,54);yaw=-1.22;pitch=-.14}
 function overview(){camera.position.set(30,430,35);yaw=0;pitch=-Math.PI/2+.001}
 function siteOverview(){window.open('site-aerial.html','_blank','noopener')}
 document.querySelector("#overview").onclick=overview;document.querySelector("#site").onclick=siteOverview;document.querySelector("#spawn").onclick=festivalView;
+const panel=document.querySelector("#panel"),panelToggle=document.querySelector("#panelToggle");
+panelToggle.onclick=()=>{const collapsed=panel.classList.toggle("collapsed");panelToggle.textContent=collapsed?"Menu":"Hide";panelToggle.setAttribute("aria-expanded",String(!collapsed))};
 addEventListener("keydown",e=>{keys[e.code]=true;if(e.code.startsWith("Arrow"))e.preventDefault()});
 addEventListener("keyup",e=>keys[e.code]=false);
-addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,coarsePointer?1.35:2))});
 const clock=new THREE.Clock(),dir=new THREE.Vector3(),right=new THREE.Vector3();
+// Touch navigation deliberately mirrors the desktop flight controls without
+// requiring a keyboard: one finger looks; two fingers translate; pinch moves
+// forward/back. Panel interaction stays normal because listeners live only on
+// the renderer canvas.
+const touches=new Map();let lastGesture=null;
+function touchGesture(){const p=[...touches.values()];if(!p.length)return null;if(p.length===1)return {x:p[0].x,y:p[0].y,n:1};const x=(p[0].x+p[1].x)/2,y=(p[0].y+p[1].y)/2,d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);return {x,y,d,n:2}}
+renderer.domElement.addEventListener("pointerdown",e=>{if(e.pointerType!=="touch")return;touches.set(e.pointerId,{x:e.clientX,y:e.clientY});lastGesture=touchGesture();renderer.domElement.setPointerCapture(e.pointerId);e.preventDefault()},{passive:false});
+renderer.domElement.addEventListener("pointermove",e=>{if(!touches.has(e.pointerId))return;touches.set(e.pointerId,{x:e.clientX,y:e.clientY});const g=touchGesture();if(!g||!lastGesture){lastGesture=g;return}if(g.n===1&&lastGesture.n===1){yaw-=(g.x-lastGesture.x)*.006;pitch-=(g.y-lastGesture.y)*.0055}else if(g.n===2&&lastGesture.n===2){camera.getWorldDirection(dir);right.crossVectors(dir,camera.up).normalize();camera.position.addScaledVector(right,-(g.x-lastGesture.x)*.055);camera.position.addScaledVector(dir,-(g.y-lastGesture.y)*.055);camera.position.addScaledVector(dir,(g.d-lastGesture.d)*.11)}lastGesture=g;e.preventDefault()},{passive:false});
+function endTouch(e){touches.delete(e.pointerId);lastGesture=touchGesture()}renderer.domElement.addEventListener("pointerup",endTouch);renderer.domElement.addEventListener("pointercancel",endTouch);
 function tick(){
   requestAnimationFrame(tick);const dt=Math.min(clock.getDelta(),.04),turn=1.25*dt;
   if(keys.ArrowLeft)yaw+=turn;if(keys.ArrowRight)yaw-=turn;if(keys.ArrowUp)pitch+=turn;if(keys.ArrowDown)pitch-=turn;

@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SSBD Lake Perris — CAD Master Level</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#9ecfff;font:13px/1.4 "Segoe UI",system-ui,sans-serif;color:#152238}
+canvas{display:block}
+#hud{position:fixed;inset:0;pointer-events:none}
+#title{position:absolute;left:22px;top:20px;text-transform:uppercase;letter-spacing:2px;text-shadow:0 1px #fff}
+#title b{font-size:17px;letter-spacing:3px}
+#title small{display:block;color:#3d5578;letter-spacing:1px}
+#help{position:absolute;left:22px;bottom:20px;background:#ffffffc9;border:1px solid #18304f44;border-radius:9px;padding:8px 11px;backdrop-filter:blur(5px)}
+#help kbd{font:600 11px monospace;background:#e8edf3;border:1px solid #a7b2c0;border-radius:4px;padding:1px 5px}
+#panel{pointer-events:auto;position:absolute;right:20px;top:20px;width:260px;background:#f7f9fce8;border:1px solid #18304f44;border-radius:11px;padding:12px;box-shadow:0 8px 30px #18304f25;backdrop-filter:blur(8px)}
+#panel h2{font-size:12px;letter-spacing:1.5px;text-transform:uppercase;margin:0 0 9px}
+#panel label{display:flex;gap:8px;align-items:center;margin:5px 0}
+#panel button{border:1px solid #8c9aad;background:white;border-radius:6px;padding:6px 9px;cursor:pointer;margin:6px 4px 0 0}
+#panel button:hover{background:#eef4fb}
+#status{font-size:11px;color:#53657b;margin-top:8px}
+#crosshair{position:absolute;left:50%;top:50%;width:5px;height:5px;border-radius:50%;background:white;box-shadow:0 0 4px #000;transform:translate(-50%,-50%)}
+</style>
+</head>
+<body>
+<div id="hud">
+  <div id="title"><b>SSBD // Lake Perris</b><small>CAD MASTER LEVEL · DXF AUTHORITY</small></div>
+  <div id="crosshair"></div>
+  <div id="help"><kbd>WASD</kbd> fly · <kbd>Q/E</kbd> down/up · <kbd>arrows</kbd> look · <kbd>Shift</kbd> fast</div>
+  <div id="panel">
+    <h2>CAD Layers</h2>
+    <div id="layers"></div>
+    <button id="overview">Bird's-eye</button><button id="spawn">Festival view</button>
+    <div id="status">Loading authoritative plan…</div>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+"use strict";
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x9ecfff);
+scene.fog=new THREE.FogExp2(0xcbdcea,.0017);
+const camera=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,.2,4000);
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:"high-performance"});
+renderer.setSize(innerWidth,innerHeight); renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.outputEncoding=THREE.sRGBEncoding; renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.05; renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+document.body.prepend(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xc6def8,0x6c7149,1.25));
+const sun=new THREE.DirectionalLight(0xfff0d2,2.4); sun.position.set(180,300,140); sun.castShadow=true; scene.add(sun);
+sun.shadow.mapSize.set(2048,2048); Object.assign(sun.shadow.camera,{left:-260,right:260,top:260,bottom:-260,near:1,far:900});
+
+const grass=new THREE.Mesh(new THREE.CircleGeometry(450,96),new THREE.MeshStandardMaterial({color:0x669b50,roughness:.96}));
+grass.rotation.x=-Math.PI/2; grass.receiveShadow=true; scene.add(grass);
+const earth=new THREE.Mesh(new THREE.CircleGeometry(1500,96),new THREE.MeshStandardMaterial({color:0xab9667,roughness:1}));
+earth.rotation.x=-Math.PI/2; earth.position.y=-.08; scene.add(earth);
+const lake=new THREE.Mesh(new THREE.PlaneGeometry(1500,900),new THREE.MeshPhysicalMaterial({color:0x277b9d,roughness:.16,metalness:.05,transparent:true,opacity:.91}));
+lake.rotation.x=-Math.PI/2; lake.position.set(80,.04,-520); scene.add(lake);
+
+const palette={
+  "SCRIM 6' FENCE":0x17191d,"SCRIM 8' FENCE":0x111318,"Fence Line":0x24272b,"Bike Rack":0x25a842,
+  "Stages":0x272833,"Tents":0xf1eadb,"Stretch Tents":0xe9dfc4,"Food":0xf0a34a,"Vendors":0xdb4f93,
+  "Porta Potties _ Bathroom Trucks":0x3f8ecb,"Parking":0x4a4a50,"Park Infrastructure":0xb7b1a2,
+  "Fire Exits":0xe04c44,"Emergency Exits":0xe04c44,"Traffic":0xe8d059,"Sponsor Activations":0x6a61c7,"Preparty":0x42a89e
+};
+const roots=new Map();
+function rootFor(layer){
+  if(!roots.has(layer)){const g=new THREE.Group();g.name=layer;roots.set(layer,g);scene.add(g)}
+  return roots.get(layer);
+}
+function material(layer){return new THREE.MeshStandardMaterial({color:palette[layer]||0x6e7886,roughness:.78,metalness:layer.includes("Fence")?.32:0})}
+function segment(a,b,height,width,mat,parent){
+  const dx=b[0]-a[0],dz=b[1]-a[1],len=Math.hypot(dx,dz); if(len<.03)return;
+  const mesh=new THREE.Mesh(new THREE.BoxGeometry(width,height,len),mat);
+  mesh.position.set((a[0]+b[0])/2,height/2,(a[1]+b[1])/2);mesh.rotation.y=Math.atan2(dx,dz);
+  mesh.castShadow=mesh.receiveShadow=true;parent.add(mesh);
+}
+function shapeMesh(path,layer,parent){
+  const pts=path.points;if(pts.length<3)return false;
+  const shape=new THREE.Shape();shape.moveTo(pts[0][0],-pts[0][1]);for(let i=1;i<pts.length;i++)shape.lineTo(pts[i][0],-pts[i][1]);
+  const heights={"Stages":2.2,"Tents":.22,"Stretch Tents":.18,"Food":2.4,"Vendors":2.25,"Porta Potties _ Bathroom Trucks":2.6,"Parking":.04,"Park Infrastructure":.4,"Sponsor Activations":1.2,"Preparty":.25};
+  const geo=new THREE.ExtrudeGeometry(shape,{depth:heights[layer]||.12,bevelEnabled:false});
+  geo.rotateX(-Math.PI/2);
+  const mesh=new THREE.Mesh(geo,material(layer));mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);return true;
+}
+function makeLabel(text,x,z){
+  const cv=document.createElement("canvas"),c=cv.getContext("2d");c.font="700 28px Segoe UI";const w=Math.ceil(c.measureText(text).width)+28;
+  cv.width=w*2;cv.height=78;c.scale(2,2);c.fillStyle="#162538dc";c.fillRect(0,0,w,39);c.fillStyle="white";c.textAlign="center";c.textBaseline="middle";c.font="700 14px Segoe UI";c.fillText(text,w/2,20);
+  const t=new THREE.CanvasTexture(cv);t.encoding=THREE.sRGBEncoding;const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthTest:false}));
+  s.scale.set(Math.min(26,w/8),3.8,1);s.position.set(x,5,z);s.renderOrder=20;rootFor("Labels").add(s);
+}
+function isUsefulLabel(t){return /STAGE|LIMITLESS|VIP|GATE|BAR|FOOD|VENDOR|RESTROOM|SOLAR|ENTRANCE|PARKING|LOUNGE|TENT|ADA|PRODUCTION|HOSPITAL|CAMP|COCONUT|INNERBASS|BUTWOOD|CREATION|REVIVAL/i.test(t)}
+
+fetch("site-plan.json",{cache:"no-store"}).then(r=>r.json()).then(data=>{
+  for(const path of data.paths){
+    const layer=path.layer,parent=rootFor(layer),fence=/FENCE|Bike Rack/.test(layer);
+    if(path.closed&&!fence&&shapeMesh(path,layer,parent))continue;
+    const h=layer==="SCRIM 8' FENCE"?2.45:layer==="Bike Rack"?1.05:fence?1.85:.18;
+    const w=layer==="Bike Rack"?.08:fence?.11:.16,mat=material(layer);
+    for(let i=1;i<path.points.length;i++)segment(path.points[i-1],path.points[i],h,w,mat,parent);
+  }
+  const seen=[];for(const a of data.anchors){if(!isUsefulLabel(a.text))continue;if(seen.some(p=>Math.hypot(p[0]-a.point[0],p[1]-a.point[1])<2))continue;seen.push(a.point);makeLabel(a.text,a.point[0],a.point[1])}
+  buildLayerPanel();
+  document.querySelector("#status").textContent=`${data.stats.entities} DXF entities · ${data.stats.paths} paths · ${data.stats.anchors} labels`;
+  festivalView();
+}).catch(e=>document.querySelector("#status").textContent="CAD load failed: "+e.message);
+
+function buildLayerPanel(){
+  const box=document.querySelector("#layers");
+  [...roots.keys()].sort().forEach(layer=>{const label=document.createElement("label"),input=document.createElement("input");input.type="checkbox";input.checked=true;
+    input.onchange=()=>roots.get(layer).visible=input.checked;label.append(input,document.createTextNode(layer));box.append(label)});
+}
+
+let yaw=0,pitch=-.32;const keys={};
+function festivalView(){camera.position.set(-5,70,-15);yaw=0;pitch=-1.03}
+function overview(){camera.position.set(0,330,20);yaw=0;pitch=-Math.PI/2+.001}
+document.querySelector("#overview").onclick=overview;document.querySelector("#spawn").onclick=festivalView;
+addEventListener("keydown",e=>{keys[e.code]=true;if(e.code.startsWith("Arrow"))e.preventDefault()});
+addEventListener("keyup",e=>keys[e.code]=false);
+addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+const clock=new THREE.Clock(),dir=new THREE.Vector3(),right=new THREE.Vector3();
+function tick(){
+  requestAnimationFrame(tick);const dt=Math.min(clock.getDelta(),.04),turn=1.25*dt;
+  if(keys.ArrowLeft)yaw+=turn;if(keys.ArrowRight)yaw-=turn;if(keys.ArrowUp)pitch+=turn;if(keys.ArrowDown)pitch-=turn;
+  pitch=THREE.MathUtils.clamp(pitch,-1.56,1.25);camera.rotation.order="YXZ";camera.rotation.set(pitch,yaw,0);
+  camera.getWorldDirection(dir);right.crossVectors(dir,camera.up).normalize();const speed=(keys.ShiftLeft||keys.ShiftRight?95:30)*dt;
+  if(keys.KeyW)camera.position.addScaledVector(dir,speed);if(keys.KeyS)camera.position.addScaledVector(dir,-speed);
+  if(keys.KeyA)camera.position.addScaledVector(right,-speed);if(keys.KeyD)camera.position.addScaledVector(right,speed);
+  if(keys.KeyE)camera.position.y+=speed;if(keys.KeyQ)camera.position.y-=speed;
+  renderer.render(scene,camera);
+}
+tick();
+</script>
+</body>
+</html>

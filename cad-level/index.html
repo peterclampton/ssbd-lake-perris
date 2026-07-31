@@ -1655,6 +1655,10 @@ function siteOverview(){window.open('site-aerial.html','_blank','noopener')}
 document.querySelector("#overview").onclick=overview;document.querySelector("#site").onclick=siteOverview;document.querySelector("#spawn").onclick=festivalView;
 const panel=document.querySelector("#panel"),panelToggle=document.querySelector("#panelToggle");
 panelToggle.onclick=()=>{const collapsed=panel.classList.toggle("collapsed");panelToggle.textContent=collapsed?"Menu":"Hide";panelToggle.setAttribute("aria-expanded",String(!collapsed))};
+// A phone should open on the world, not on a 20-item CAD checklist. The layer
+// inspector stays available behind Menu for audit work, but compact map mode
+// is the default on every coarse-pointer device.
+if(coarsePointer){panel.classList.add("collapsed");panelToggle.textContent="Menu";panelToggle.setAttribute("aria-expanded","false")}
 addEventListener("keydown",e=>{keys[e.code]=true;if(e.code.startsWith("Arrow"))e.preventDefault()});
 addEventListener("keyup",e=>keys[e.code]=false);
 addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,coarsePointer?1.35:2))});

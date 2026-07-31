@@ -528,6 +528,28 @@ function vendorTentAsset(x,z,rot,index,w=3.05,d=3.05){
   seller.add(sellerBody,sellerHead);seller.position.set(Math.min(.74,w*.25),.36,.22);g.add(seller);
   return g;
 }
+function vendorPodAsset(points,indexOffset,publicTarget,name){
+  // A merchant pod is four 10' x 20' tents.  The 10' public opening faces
+  // the guest field/ADA route; the 20' body runs back to a protected scrim
+  // line.  Treat the plan's four-tent pods as a unit, rather than a decorative
+  // string of unrelated little tents.
+  const center=points.reduce((s,p)=>[s[0]+p[0],s[1]+p[1]],[0,0]).map(v=>v/points.length);
+  const dx=publicTarget[0]-center[0],dz=publicTarget[1]-center[1];
+  // vendorTentAsset's service counter is on local -Z.  Aim that side directly
+  // toward public circulation; +Z is consequently the fenced BOH side.
+  const rot=Math.atan2(-dx,-dz);
+  points.forEach(([x,z],i)=>vendorTentAsset(x,z,rot,indexOffset+i,3.048,6.096));
+  const local=points.map(([x,z])=>{
+    const rx=x-center[0],rz=z-center[1];
+    return {x:rx*Math.cos(rot)-rz*Math.sin(rot),z:rx*Math.sin(rot)+rz*Math.cos(rot)};
+  });
+  const minX=Math.min(...local.map(p=>p.x)),maxX=Math.max(...local.map(p=>p.x));
+  const rearZ=Math.max(...local.map(p=>p.z))+3.55;
+  const toWorld=(x,z)=>[center[0]+x*Math.cos(rot)+z*Math.sin(rot),center[1]-x*Math.sin(rot)+z*Math.cos(rot)];
+  const rearA=toWorld(minX-1.55,rearZ),rearB=toWorld(maxX+1.55,rearZ);
+  physicalFenceSegment(rearA,rearB,2.45,.13,new THREE.MeshStandardMaterial({color:0x181b20,roughness:.96}),detail,"SCRIM 8' FENCE");
+  makeLabel(name,center[0],center[1]);
+}
 function serviceAsset(x,z,rot,w,d,color=0xe7e1d6){
   const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;detail.add(g);
   const wall=new THREE.MeshStandardMaterial({color,roughness:.88});
@@ -1284,31 +1306,32 @@ function buildDetailedAssets(data){
     if(placed.some(p=>Math.hypot(p[0]-fp.x,p[1]-fp.z)<2))continue;
     placed.push([fp.x,fp.z]);foodVendorAsset(fp,foodIndex++);
   }
-  // The 7/31 plan does *not* have a 2×8 rectangle centred on the text label.
-  // It has four staggered four-vendor pods along the east-merchant aisle.
-  // These centers were traced from those literal V1–V16 symbols in the 7/31
-  // plan, rather than treating the MERCHANT annotation as a tent center.
+  // East Merchant Vendors V9–V24: four *separate* four-tent pods.  In the
+  // approved plan every 10' opening faces into the central field, while the
+  // 20' tent bodies back onto scrim.  The older implementation got the center
+  // points right but spun every booth the same way and lost that BOH boundary.
   const eastMerchantPods=[
-    [96.0,22.8],[101.3,23.8],[106.6,24.8],[111.9,25.8],
-    [116.4,27.7],[120.1,31.1],[123.8,34.5],[127.5,37.9],
-    [128.7,43.1],[129.5,47.8],[130.2,52.5],[130.9,57.2],
-    [117.4,45.3],[120.9,48.7],[124.4,52.1],[127.9,55.5]
+    [[96.0,22.8],[101.3,23.8],[106.6,24.8],[111.9,25.8]],
+    [[116.4,27.7],[120.1,31.1],[123.8,34.5],[127.5,37.9]],
+    [[128.7,43.1],[129.5,47.8],[130.2,52.5],[130.9,57.2]],
+    [[117.4,45.3],[120.9,48.7],[124.4,52.1],[127.9,55.5]]
   ];
-  for(let i=0;i<eastMerchantPods.length;i++){
-    const [x,z]=eastMerchantPods[i];vendorTentAsset(x,z,.38264,i);
-  }
-  makeLabel("EAST MERCHANTS · 16 VENDORS",114.5,39.5);
-  // The eight literal Vendors-layer pads are the BEACH VENDORS beside the ADA
-  // ramp/approach.  Their CAD coordinates are already authoritative.  Do not
-  // translate this row toward Coconut Cove or the East Entrance: that is the
-  // exact confusion this pass is correcting.
-  const beachPads=cadPads("Vendors").filter(fp=>fp.z>=220);
-  if(beachPads.length){
-    beachPads.forEach((fp,index)=>vendorTentAsset(fp.x,fp.z,fp.rot,index,fp.w,fp.d));
-    const beachRowCenter=beachPads.reduce((s,fp)=>[s[0]+fp.x,s[1]+fp.z],[0,0]);
-    beachRowCenter[0]/=beachPads.length;beachRowCenter[1]/=beachPads.length;
-    makeLabel("BEACH VENDORS · ADA RAMP",beachRowCenter[0],beachRowCenter[1]);
-  }
+  const eastField=[108,41];
+  eastMerchantPods.forEach((pod,i)=>vendorPodAsset(pod,i*4,eastField,`EAST MERCHANTS · POD ${i+1}`));
+  makeLabel("EAST MERCHANTS · 16 VENDORS",108,41);
+  // Beach Vendors V25–V40 are a different 16-vendor installation beside
+  // Coconut Cove.  Four pods face inward to the 8' ADA ramp, with a dedicated
+  // scrim fence behind each pod. They are not the unrelated closed pads at the
+  // far edge of the DXF export.
+  const beachVendorPods=[
+    [[146.0,101.5],[149.2,103.0],[152.4,104.5],[155.6,106.0]],
+    [[166.2,113.2],[169.4,114.7],[172.6,116.2],[175.8,117.7]],
+    [[151.0,123.7],[154.2,125.2],[157.4,126.7],[160.6,128.2]],
+    [[171.2,135.4],[174.4,136.9],[177.6,138.4],[180.8,139.9]]
+  ];
+  const adaRamp=[161.0554,107.139];
+  beachVendorPods.forEach((pod,i)=>vendorPodAsset(pod,16+i*4,adaRamp,`BEACH VENDORS · POD ${i+1}`));
+  makeLabel("BEACH VENDORS · ADA RAMP",161.0554,118.5);
   const productionAnchor=anchor("PRODUCTION");let dumpsterIndex=0;
   // Every remaining tent uses its closed DXF outline. The six matching 13m x
   // 12.5m rectangles directly behind Production Lot 9 are the dumpster bank

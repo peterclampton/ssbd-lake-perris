@@ -194,12 +194,16 @@ function sameStageAsset(){
 function limitlessAssets(){
   const rot=-1.48;
   const deck=new THREE.Group();deck.position.set(14.5,0,42);deck.rotation.y=rot;detail.add(deck);
-  addBox(deck,9.75,.36,6,0,4,0,M.dark);for(const [x,z] of [[-4,-2.4],[4,-2.4],[-4,2.4],[4,2.4],[0,0]])addPost(deck,x,z,3.9);
-  for(const [x,z,w,d] of [[0,-2.95,9.7,.12],[-4.78,0,.12,6],[0,2.95,9.7,.12]])addBox(deck,w,.9,d,x,4.8,z,M.gold);
+  const deckW=32*.3048,deckD=20*.3048;
+  addBox(deck,deckW,.36,deckD,0,4,0,M.dark);
+  for(const [x,z] of [[-deckW*.41,-deckD*.4],[deckW*.41,-deckD*.4],[-deckW*.41,deckD*.4],[deckW*.41,deckD*.4],[0,0]])addPost(deck,x,z,3.9);
+  for(const [x,z,w,d] of [[0,-deckD/2,deckW,.12],[-deckW/2,0,.12,deckD],[0,deckD/2,deckW,.12]])addBox(deck,w,.9,d,x,4.8,z,M.gold);
   const lounge=new THREE.Group();lounge.position.set(2.9347,0,43.0595);lounge.rotation.y=rot;detail.add(lounge);
-  addBox(lounge,12,.22,6,0,3.55,0,M.dark);for(const x of [-5.4,0,5.4])for(const z of [-2.7,2.7])addPost(lounge,x,z,3.5);
-  addBox(lounge,8.8,.1,4,0,.06,0,new THREE.MeshStandardMaterial({color:0x322545,roughness:1}));
-  addBox(lounge,3.8,1.1,.9,0,.55,2.1,M.gold);
+  const loungeW=40*.3048,loungeD=20*.3048;
+  addBox(lounge,loungeW,.22,loungeD,0,3.55,0,M.dark);
+  for(const x of [-loungeW*.45,0,loungeW*.45])for(const z of [-loungeD*.45,loungeD*.45])addPost(lounge,x,z,3.5);
+  addBox(lounge,loungeW*.73,.1,loungeD*.66,0,.06,0,new THREE.MeshStandardMaterial({color:0x322545,roughness:1}));
+  addBox(lounge,loungeW*.32,1.1,.9,0,.55,loungeD*.35,M.gold);
   const solar=new THREE.Group();solar.position.set(-7.2303,0,45.9181);solar.rotation.y=rot;detail.add(solar);
   for(let i=-1;i<=1;i++){const u=new THREE.Group();u.position.x=i*3.3;solar.add(u);addBox(u,2.55,2.9,2.35,0,1.45,0,M.blue);const pv=addBox(u,2.65,.09,2.15,0,3.12,0,new THREE.MeshStandardMaterial({color:0x17243b,roughness:.25,metalness:.5}));pv.rotation.x=-.15}
 }
@@ -236,16 +240,21 @@ function adaDeck(x,z,rot,w,d){
   addBox(g,w,.25,d,0,.18,0,M.dark);
   for(const [px,pz,rw,rd] of [[0,-d/2,w,.08],[-w/2,0,.08,d],[w/2,0,.08,d]])addBox(g,rw,1,rd,px,.65,pz,M.gold);
 }
+function pathFootprint(path){
+  const pts=path.points.slice(0,-1);if(pts.length<3)return null;
+  const cx=pts.reduce((s,p)=>s+p[0],0)/pts.length,cz=pts.reduce((s,p)=>s+p[1],0)/pts.length;
+  let edge=[1,0],longest=0;
+  for(let i=0;i<pts.length;i++){const q=pts[(i+1)%pts.length],dx=q[0]-pts[i][0],dz=q[1]-pts[i][1],len=Math.hypot(dx,dz);if(len>longest){longest=len;edge=[dx/len,dz/len]}}
+  const side=[-edge[1],edge[0]],us=pts.map(p=>p[0]*edge[0]+p[1]*edge[1]),vs=pts.map(p=>p[0]*side[0]+p[1]*side[1]);
+  return {x:cx,z:cz,w:Math.max(...us)-Math.min(...us),d:Math.max(...vs)-Math.min(...vs),rot:Math.atan2(-edge[1],edge[0])};
+}
 function exactFootprint(data,anchor,layer){
   let best=null,bestDist=Infinity;
   for(const path of data.paths){
     if(path.layer!==layer||!path.closed||path.points.length<4)continue;
-    const pts=path.points.slice(0,-1),cx=pts.reduce((s,p)=>s+p[0],0)/pts.length,cz=pts.reduce((s,p)=>s+p[1],0)/pts.length;
-    const dist=Math.hypot(cx-anchor.point[0],cz-anchor.point[1]);if(dist>=bestDist)continue;
-    let edge=[1,0],longest=0;
-    for(let i=0;i<pts.length;i++){const q=pts[(i+1)%pts.length],dx=q[0]-pts[i][0],dz=q[1]-pts[i][1],len=Math.hypot(dx,dz);if(len>longest){longest=len;edge=[dx/len,dz/len]}}
-    const side=[-edge[1],edge[0]],us=pts.map(p=>p[0]*edge[0]+p[1]*edge[1]),vs=pts.map(p=>p[0]*side[0]+p[1]*side[1]);
-    bestDist=dist;best={x:cx,z:cz,w:Math.max(...us)-Math.min(...us),d:Math.max(...vs)-Math.min(...vs),rot:Math.atan2(-edge[1],edge[0])};
+    const fp=pathFootprint(path);if(!fp)continue;
+    const dist=Math.hypot(fp.x-anchor.point[0],fp.z-anchor.point[1]);if(dist>=bestDist)continue;
+    bestDist=dist;best=fp;
   }
   return bestDist<12?best:null;
 }
@@ -265,6 +274,14 @@ function buildDetailedAssets(data){
   const placed=[];for(const a of data.anchors){const food=/^FOOD(?: TRUCK)?$/i.test(a.text),vendor=/^VENDORS?$/i.test(a.text);if(!food&&!vendor)continue;
     const fp=exactFootprint(data,a,food?"Food":"Vendors");if(!fp||placed.some(p=>Math.hypot(p[0]-fp.x,p[1]-fp.z)<2))continue;
     placed.push([fp.x,fp.z]);stallAsset(fp.x,fp.z,fp.rot,fp.w,fp.d,food)}
+  // Every remaining tent uses its closed DXF outline. Skip the two named tents
+  // above so they are not drawn twice.
+  for(const path of data.paths){
+    if(!path.closed||!(path.layer==="Tents"||path.layer==="Stretch Tents"))continue;
+    const fp=pathFootprint(path);if(!fp||fp.w<1.5||fp.d<1.5||fp.w>45||fp.d>45)continue;
+    if(Math.hypot(fp.x-20.1567,fp.z-76.5835)<8||Math.hypot(fp.x-.9549,fp.z-112.7312)<8)continue;
+    peakedTent(fp.x,fp.z,fp.w,fp.d,fp.rot,path.layer==="Stretch Tents"?0xe9dfc4:0xf1eadb);
+  }
 }
 
 fetch("site-plan.json",{cache:"no-store"}).then(r=>r.json()).then(data=>{

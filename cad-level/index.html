@@ -1150,15 +1150,11 @@ function buildDetailedAssets(data){
     barAsset(fp.point[0],fp.point[1],fp.rotation,fp.width,fp.depth);
     makeLabel("BAR 4",fp.point[0],fp.point[1]);
   }
-  // Healers is not at the old Bar 5 GAZEBO callout. Peter marked its current
-  // 7/31-plan target in the aerial screenshot: the open park pad south-east
-  // of that old anchor, at [122,65] in the registered CAD world. Preserve the
-  // pavilion's surveyed rotation, but do not keep rendering it at Bar 5.
-  const healerGazebo=anchor("GAZEBO");
-  if(healerGazebo){
-    const healerTarget={...healerGazebo,point:[122,65]};
-    healersSanctuaryAsset(healerTarget);
-  }
+  // The current 7/31 Vectorworks DXF explicitly labels the sanctuary.  This
+  // label is its authoritative placement and orientation; do not substitute
+  // the old GAZEBO callout or a screenshot-derived coordinate.
+  const healerSanctuary=anchor("HEALERS / SANCTUARY");
+  if(healerSanctuary)healersSanctuaryAsset(healerSanctuary);
   const entrances=data.anchors.filter(a=>a.text==="ENTRANCE"),usedGateBlocks=new Set();
   for(let n=0;n<entrances.length;n++){
     const a=entrances[n];

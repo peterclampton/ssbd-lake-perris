@@ -95,7 +95,7 @@ function makeLabel(text,x,z){
   // impossible at ground level.
   s.scale.set(Math.min(7.2,w/24),1.08,1);s.position.set(x,3.65,z);s.renderOrder=20;rootFor("Labels").add(s);
 }
-function isUsefulLabel(t){return /STAGE|LIMITLESS|VIP|GATE|BAR|FOOD|VENDOR|RESTROOM|BATHROOM|SOLAR|ENTRANCE|PARKING|LOUNGE|TENT|ADA|PRODUCTION|HOSPITAL|CAMP|COCONUT|INNERBASS|BUTWOOD|CREATION|REVIVAL|GARDEN|PORTAL|ARTIST|FLOWER|GALLERY|DINER|STORE|COFFEE|GRIFFITH|MUSEUM|FASHION|PHONE/i.test(t)}
+function isUsefulLabel(t){return /STAGE|LIMITLESS|VIP|GATE|BAR|FOOD|VENDOR|RESTROOM|BATHROOM|SOLAR|ENTRANCE|PARKING|LOUNGE|TENT|ADA|PRODUCTION|HOSPITAL|CAMP|COCONUT|INNERBASS|BUTWOOD|CREATION|REVIVAL|GARDEN|PORTAL|ARTIST|FLOWER|GALLERY|DINER|STORE|COFFEE|GRIFFITH|MUSEUM|FASHION|PHONE|BALLOON|ISLAND|FERRY|PONTOON/i.test(t)}
 
 // Detailed assets reuse the proportions, colors, truss language, shade
 // structures and signage from the original SSBD level. Their anchors stay CAD.
@@ -464,6 +464,21 @@ function eightInchStepAsset(fp){
   addBox(g,fp.width,8*.0254,fp.depth,0,4*.0254,0,M.dark);
   addBox(g,fp.width,.07,.08,0,8*.0254+.04,-fp.depth/2,M.gold);
 }
+function hotAirBalloonAsset(fp){
+  // The closed Traffic circle is the authoritative no-walk boundary.
+  const g=new THREE.Group();g.position.set(fp.x,0,fp.z);g.name="HOT AIR BALLOON · CAD ZONE";detail.add(g);
+  const ring=new THREE.Mesh(new THREE.RingGeometry(Math.min(fp.w,fp.d)*.47,Math.min(fp.w,fp.d)*.49,64),
+    new THREE.MeshStandardMaterial({color:0xe8d059,roughness:.85,side:THREE.DoubleSide}));
+  ring.rotation.x=-Math.PI/2;ring.position.y=.03;g.add(ring);
+  const r=Math.min(fp.w,fp.d)*.12;
+  const balloon=new THREE.Mesh(new THREE.SphereGeometry(r,24,18),new THREE.MeshStandardMaterial({color:0xd9358f,roughness:.72}));
+  balloon.scale.y=1.28;balloon.position.y=r*3.1;balloon.castShadow=true;g.add(balloon);
+  addBox(g,r*.66,r*.52,r*.66,0,r*1.28,0,M.wood);
+  for(const x of [-r*.25,r*.25])for(const z of [-r*.25,r*.25]){
+    const rope=new THREE.Mesh(new THREE.CylinderGeometry(.025,.025,r*1.55,5),M.gold);
+    rope.position.set(x,r*2.05,z);g.add(rope);
+  }
+}
 function activationAsset(fp,color=0xd9358f){
   const g=new THREE.Group();g.position.set(fp.x,0,fp.z);g.rotation.y=fp.rot;detail.add(g);
   const mat=new THREE.MeshStandardMaterial({color,roughness:.72});
@@ -794,6 +809,14 @@ function buildDetailedAssets(data){
   }else if(coveFohLabel)pdfSizedAsset(coveFohLabel,10,10,fohAsset,"COCONUT COVE FOH");
   const limitlessStep=data.inserts.find(i=>i.layer==="COLORMAPGOOD"&&i.name==="Symbol-1 (2D)"&&i.bounds)?.bounds;
   if(limitlessStep)eightInchStepAsset(limitlessStep);
+  const balloonAnchor=anchor("HOT AIR BALLOON");
+  const balloonZone=balloonAnchor?exactFootprint(data,balloonAnchor,"Traffic",55):null;
+  if(balloonZone)hotAirBalloonAsset(balloonZone);
+  const balloonRides=anchor("BALLOON RIDES / 10x10");
+  if(balloonRides){
+    peakedTent(balloonRides.point[0],balloonRides.point[1],10*.3048,10*.3048,balloonRides.rotation);
+    makeLabel("BALLOON RIDES",balloonRides.point[0],balloonRides.point[1]);
+  }
 
   // PDF-verified support footprints. These are dimension annotations placed
   // inside their rectangles in the CAD, so the annotation insertion supplies

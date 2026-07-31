@@ -1011,9 +1011,11 @@ fetch("site-plan.json",{cache:"no-store"}).then(r=>r.json()).then(data=>{
 
 function buildLayerPanel(){
   const box=document.querySelector("#layers");
-  // Every exported layer is on at load.  A CAD layer is an authoring category,
-  // not permission to silently erase festival content from the playable world.
-  const hiddenByDefault=new Set();
+  // CAD geometry remains available in the panel for audit, but rendering every
+  // raw outline at once turns the finished world into a stack of debug slabs.
+  // Designed counterparts in Detailed assets remain on; these source layers are
+  // opt-in overlays when verifying a footprint or rotation.
+  const hiddenByDefault=new Set(["But Area","CRASH BARRICADE","Food","Group Camping","None","Park Infrastructure","Porta Potties _ Bathroom Trucks","Preparty","Sponsor Activations","Stage-Main","Stages","Stretch Tents","Tents","Trash","Vendors"]);
   [...roots.keys()].sort().forEach(layer=>{const label=document.createElement("label"),input=document.createElement("input");input.type="checkbox";input.checked=!hiddenByDefault.has(layer);
     roots.get(layer).visible=input.checked;
     input.onchange=()=>roots.get(layer).visible=input.checked;label.append(input,document.createTextNode(layer));box.append(label)});

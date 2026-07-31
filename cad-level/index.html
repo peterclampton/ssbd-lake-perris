@@ -1306,32 +1306,44 @@ function buildDetailedAssets(data){
     if(placed.some(p=>Math.hypot(p[0]-fp.x,p[1]-fp.z)<2))continue;
     placed.push([fp.x,fp.z]);foodVendorAsset(fp,foodIndex++);
   }
-  // East Merchant Vendors V9–V24: four *separate* four-tent pods.  In the
-  // approved plan every 10' opening faces into the central field, while the
-  // 20' tent bodies back onto scrim.  The older implementation got the center
-  // points right but spun every booth the same way and lost that BOH boundary.
+  // Vendor locations are not inferred from callout text or a hand-drawn row.
+  // The 7/31 DXF gives every booth its own V-number label.  Using those
+  // anchors keeps V9–V24 at East Merchants and V25–V40 beside Coconut Cove,
+  // even when the plan changes around them.
+  const vendorAnchor=name=>{
+    const a=data.anchors.find(a=>a.text===name);
+    return a?[a.point[0],a.point[1]]:null;
+  };
+  const podFromLabels=names=>names.map(vendorAnchor).filter(Boolean);
+  // East Merchant V9–V24: four 10'×20' pods.  Their guest faces turn into the
+  // open field; +Z remains the protected, scrim-backed BOH side.  The four
+  // targets trace the field edge rather than incorrectly aiming all 16 tents
+  // at one point in the middle of the vendor zone.
   const eastMerchantPods=[
-    [[96.0,22.8],[101.3,23.8],[106.6,24.8],[111.9,25.8]],
-    [[116.4,27.7],[120.1,31.1],[123.8,34.5],[127.5,37.9]],
-    [[128.7,43.1],[129.5,47.8],[130.2,52.5],[130.9,57.2]],
-    [[117.4,45.3],[120.9,48.7],[124.4,52.1],[127.9,55.5]]
+    podFromLabels(["V9","V10","V11","V12"]),
+    podFromLabels(["V13","V14","V15","V16"]),
+    podFromLabels(["V17","V18","V19","V20"]),
+    podFromLabels(["V21","V22","V23","V24"])
   ];
-  const eastField=[108,41];
-  eastMerchantPods.forEach((pod,i)=>vendorPodAsset(pod,i*4,eastField,`EAST MERCHANTS · POD ${i+1}`));
-  makeLabel("EAST MERCHANTS · 16 VENDORS",108,41);
-  // Beach Vendors V25–V40 are a different 16-vendor installation beside
-  // Coconut Cove.  Four pods face inward to the 8' ADA ramp, with a dedicated
-  // scrim fence behind each pod. They are not the unrelated closed pads at the
-  // far edge of the DXF export.
+  const eastFieldFaces=[[76,43],[88,43],[96,43],[96,52]];
+  eastMerchantPods.forEach((pod,i)=>{
+    if(pod.length===4)vendorPodAsset(pod,i*4,eastFieldFaces[i],`EAST MERCHANTS · POD ${i+1}`);
+  });
+  makeLabel("EAST MERCHANTS · 16 VENDORS",104,43);
+  // Coconut Cove / beach V25–V40: the same four-tent 10'×20' pod logic, but
+  // each public face turns toward its nearest ADA-ramp segment.  This keeps
+  // the rear scrim consistently behind the tents instead of across the aisle.
   const beachVendorPods=[
-    [[146.0,101.5],[149.2,103.0],[152.4,104.5],[155.6,106.0]],
-    [[166.2,113.2],[169.4,114.7],[172.6,116.2],[175.8,117.7]],
-    [[151.0,123.7],[154.2,125.2],[157.4,126.7],[160.6,128.2]],
-    [[171.2,135.4],[174.4,136.9],[177.6,138.4],[180.8,139.9]]
+    podFromLabels(["V25","V26","V27","V28"]),
+    podFromLabels(["V29","V30","V31","V32"]),
+    podFromLabels(["V33","V34","V35","V36"]),
+    podFromLabels(["V37","V38","V39","V40"])
   ];
-  const adaRamp=[161.0554,107.139];
-  beachVendorPods.forEach((pod,i)=>vendorPodAsset(pod,16+i*4,adaRamp,`BEACH VENDORS · POD ${i+1}`));
-  makeLabel("BEACH VENDORS · ADA RAMP",161.0554,118.5);
+  const beachAdaFaces=[[161.0554,107.139],[161.0554,119.4],[161.0554,107.139],[171.5,107.139]];
+  beachVendorPods.forEach((pod,i)=>{
+    if(pod.length===4)vendorPodAsset(pod,16+i*4,beachAdaFaces[i],`COCONUT COVE VENDORS · POD ${i+1}`);
+  });
+  makeLabel("COCONUT COVE VENDORS · ADA RAMP",161.0554,118.5);
   const productionAnchor=anchor("PRODUCTION");let dumpsterIndex=0;
   // Every remaining tent uses its closed DXF outline. The six matching 13m x
   // 12.5m rectangles directly behind Production Lot 9 are the dumpster bank

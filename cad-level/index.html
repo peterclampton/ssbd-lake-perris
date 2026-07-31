@@ -259,6 +259,22 @@ function serviceAsset(x,z,rot,w,d,color=0xe7e1d6){
   addBox(g,Math.min(1.05,w*.32),2,.08,0,1.08,-d/2-.045,M.blue);
   return g;
 }
+function gazeboAsset(fp){
+  const g=new THREE.Group();g.position.set(fp.x,0,fp.z);g.rotation.y=fp.rot;detail.add(g);
+  const roofMat=new THREE.MeshStandardMaterial({color:0xeee9dc,roughness:.82});
+  const rx=fp.w*.42,rz=fp.d*.42;
+  for(const x of [-rx,rx])for(const z of [-rz,rz])addPost(g,x,z,3.05,M.wood);
+  const roof=new THREE.Mesh(new THREE.ConeGeometry(Math.max(fp.w,fp.d)*.58,1.45,6),roofMat);
+  roof.position.y=3.78;roof.scale.z=Math.max(.55,fp.d/fp.w);roof.castShadow=true;g.add(roof);
+}
+function parkBuildingAsset(fp,kind){
+  if(kind==="gazebo"){gazeboAsset(fp);return}
+  const g=new THREE.Group();g.position.set(fp.x,0,fp.z);g.rotation.y=fp.rot;detail.add(g);
+  const wall=new THREE.MeshStandardMaterial({color:kind==="restroom"?0xb7d2d2:0xd4c8ae,roughness:.9});
+  addBox(g,fp.w,2.85,fp.d,0,1.43,0,wall);addBox(g,fp.w+.2,.2,fp.d+.2,0,2.98,0,M.dark);
+  const doors=Math.max(1,Math.min(4,Math.round(fp.w/3)));
+  for(let i=0;i<doors;i++)addBox(g,Math.min(1,fp.w*.65/doors),2.05,.08,(i-(doors-1)/2)*fp.w*.72/doors,1.08,-fp.d/2-.045,kind==="restroom"?M.blue:M.wood);
+}
 function entranceAsset(x,z,rot,name,width){
   const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;detail.add(g);
   const clear=Math.max(3,width),post=.55;
@@ -520,9 +536,23 @@ function buildDetailedAssets(data){
     platformAsset(fp);
   }
   for(const path of data.paths){
-    if(!path.closed||!(path.layer==="Sponsor Activations"||path.layer==="Preparty"||path.layer==="Park Infrastructure"))continue;
+    if(!path.closed||!(path.layer==="Sponsor Activations"||path.layer==="Preparty"))continue;
     const fp=pathFootprint(path);if(!fp||fp.w<1||fp.d<1||fp.w>40||fp.d>40||Math.abs(fp.x)>500||Math.abs(fp.z)>500)continue;
-    activationAsset(fp,path.layer==="Park Infrastructure"?0xc7ad77:path.layer==="Preparty"?0x7655b5:0xd9358f);
+    activationAsset(fp,path.layer==="Preparty"?0x7655b5:0xd9358f);
+  }
+  // Park buildings are real, dimensioned CAD polygons—not activation tents.
+  // The PDF labels identify which existing structures are restrooms/HQ; the
+  // unlabeled pavilion footprints are the mapped park gazebos.
+  const parkFps=data.paths.filter(path=>path.layer==="Park Infrastructure"&&path.closed)
+    .map(pathFootprint).filter(fp=>fp&&fp.w>=2&&fp.d>=2&&fp.w<=45&&fp.d<=45&&Math.abs(fp.x)<=500&&Math.abs(fp.z)<=500)
+    .sort((a,b)=>b.w*b.d-a.w*a.d);
+  const placedPark=[];
+  for(const fp of parkFps){
+    if(placedPark.some(p=>Math.hypot(p.x-fp.x,p.z-fp.z)<3))continue;
+    placedPark.push(fp);
+    const nearby=data.anchors.filter(a=>Math.hypot(a.point[0]-fp.x,a.point[1]-fp.z)<20).map(a=>a.text).join(" ");
+    const kind=/BATHROOM|RESTROOM/i.test(nearby)?"restroom":/HQ|COMMISSARY|MEDIA RV|BONEYARD/i.test(nearby)?"service":"gazebo";
+    parkBuildingAsset(fp,kind);
   }
 }
 

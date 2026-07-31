@@ -323,12 +323,35 @@ function platformAsset(fp){
   for(const [x,z,w,d] of [[0,-fp.d/2,fp.w,.08],[-fp.w/2,0,.08,fp.d],[fp.w/2,0,.08,fp.d]])addBox(g,w,.85,d,x,.66,z,M.gold);
 }
 function pathFootprint(path){
-  const pts=path.points.slice(0,-1);if(pts.length<3)return null;
-  const cx=pts.reduce((s,p)=>s+p[0],0)/pts.length,cz=pts.reduce((s,p)=>s+p[1],0)/pts.length;
-  let edge=[1,0],longest=0;
-  for(let i=0;i<pts.length;i++){const q=pts[(i+1)%pts.length],dx=q[0]-pts[i][0],dz=q[1]-pts[i][1],len=Math.hypot(dx,dz);if(len>longest){longest=len;edge=[dx/len,dz/len]}}
-  const side=[-edge[1],edge[0]],us=pts.map(p=>p[0]*edge[0]+p[1]*edge[1]),vs=pts.map(p=>p[0]*side[0]+p[1]*side[1]);
-  return {x:cx,z:cz,w:Math.max(...us)-Math.min(...us),d:Math.max(...vs)-Math.min(...vs),rot:Math.atan2(-edge[1],edge[0])};
+  const raw=path.points.slice();
+  if(raw.length>1&&Math.hypot(raw[0][0]-raw[raw.length-1][0],raw[0][1]-raw[raw.length-1][1])<.001)raw.pop();
+  if(raw.length<3)return null;
+  // Monotonic-chain convex hull. Decorative notches and repeated CAD vertices
+  // must not distort the physical footprint.
+  const sorted=raw.slice().sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
+  const cross=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]);
+  const lower=[];for(const p of sorted){while(lower.length>1&&cross(lower[lower.length-2],lower[lower.length-1],p)<=0)lower.pop();lower.push(p)}
+  const upper=[];for(let i=sorted.length-1;i>=0;i--){const p=sorted[i];while(upper.length>1&&cross(upper[upper.length-2],upper[upper.length-1],p)<=0)upper.pop();upper.push(p)}
+  const pts=lower.slice(0,-1).concat(upper.slice(0,-1));if(pts.length<3)return null;
+  // Rotating-calipers equivalent: every minimum-area rectangle has one side
+  // parallel to a convex-hull edge, so test each edge basis exactly.
+  let best=null;
+  for(let i=0;i<pts.length;i++){
+    const q=pts[(i+1)%pts.length],dx=q[0]-pts[i][0],dz=q[1]-pts[i][1],len=Math.hypot(dx,dz);if(len<.0001)continue;
+    const ux=dx/len,uz=dz/len,vx=-uz,vz=ux;
+    const us=pts.map(p=>p[0]*ux+p[1]*uz),vs=pts.map(p=>p[0]*vx+p[1]*vz);
+    const u0=Math.min(...us),u1=Math.max(...us),v0=Math.min(...vs),v1=Math.max(...vs),area=(u1-u0)*(v1-v0);
+    if(best&&area>=best.area)continue;
+    // Center is the middle of the oriented projection intervals, transformed
+    // back into world coordinates. Averaging polygon vertices is wrong for
+    // irregular or unevenly tessellated CAD outlines.
+    const cu=(u0+u1)/2,cv=(v0+v1)/2;
+    best={area,x:cu*ux+cv*vx,z:cu*uz+cv*vz,w:u1-u0,d:v1-v0,rot:Math.atan2(-uz,ux)};
+  }
+  if(!best)return null;
+  // Keep width as the longer physical axis for deterministic asset orientation.
+  if(best.d>best.w){const w=best.w;best.w=best.d;best.d=w;best.rot-=Math.PI/2}
+  return best;
 }
 function exactFootprint(data,anchor,layer,maxDist=12){
   let best=null,bestDist=Infinity;

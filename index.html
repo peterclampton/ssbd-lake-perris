@@ -818,7 +818,16 @@ function renderWaterReflection(){
 }
 
 // PARKING LOT — beyond the east entrance (player's right; world -x)
+// The parking lot is built before the collider helpers exist further down, so
+// anything it wants to register is queued here and flushed the moment they do.
+const deferredColliders = [];
 const PARKING = {x:-181,z:-34,rot:2.50};
+// Lot-local -> world. The lot is rotated, so anything placed in it must go
+// through here rather than being eyeballed in world coordinates.
+function parkLocal(lx, lz){
+  const c = Math.cos(PARKING.rot), sn = Math.sin(PARKING.rot);
+  return [PARKING.x + lx*c + lz*sn, PARKING.z - lx*sn + lz*c];
+}
 {
   const pg = new THREE.Group();
   pg.position.set(PARKING.x,0,PARKING.z); pg.rotation.y=PARKING.rot; scene.add(pg);
@@ -834,6 +843,60 @@ const PARKING = {x:-181,z:-34,rot:2.50};
     }
   }
   makeLabel("ADA PARKING",PARKING.x,4.2,PARKING.z,0.85);
+
+  // SOLAR RESTROOMS x3 — these stand in the parking lot, not out by the lounge.
+  {
+    const shell = new THREE.MeshStandardMaterial({color:0x3f8ecb, roughness:0.74});
+    const roof  = new THREE.MeshStandardMaterial({color:0x24557d, roughness:0.8});
+    const panel = new THREE.MeshStandardMaterial({color:0x1a2740, roughness:0.28, metalness:0.55});
+    for(let i=0;i<3;i++){
+      const lx = -38 + i*3.4, lz = 17.5;
+      const u = new THREE.Group(); u.position.set(lx, 0, lz); pg.add(u);
+      const b = new THREE.Mesh(new THREE.BoxGeometry(2.6, 2.9, 2.4), shell);
+      b.position.y = 1.45; u.add(b);
+      const r = new THREE.Mesh(new THREE.BoxGeometry(2.9, 0.18, 2.7), roof);
+      r.position.y = 3.0; u.add(r);
+      // Roof-mounted PV is what makes them solar units rather than plain portos.
+      const pv = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.08, 2.2), panel);
+      pv.position.y = 3.18; pv.rotation.x = -0.16; u.add(pv);
+      const d = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 2.1),
+        new THREE.MeshStandardMaterial({color:0x2c6d9e, roughness:0.85}));
+      d.position.set(0, 1.1, -1.21); u.add(d);
+      const [wx, wz] = parkLocal(lx, lz);
+      deferredColliders.push({x:wx, z:wz, r:1.9});
+    }
+    const [slx, slz] = parkLocal(-34.6, 17.5);
+    makeLabel("SOLAR RESTROOMS", slx, 4.6, slz, 0.6);
+  }
+
+  // CONCRETE TERRACE + GAZEBOS — where the lot runs out at its far end.
+  {
+    const conc = new THREE.MeshStandardMaterial({color:0xbdb8aa, roughness:0.96});
+    const pad = new THREE.Mesh(new THREE.PlaneGeometry(34, 30), conc);
+    pad.rotation.x = -Math.PI/2; pad.position.set(70, 0.035, 0); pg.add(pad);
+    // Joint lines, so it reads as poured slab rather than grey paint.
+    const joint = new THREE.MeshStandardMaterial({color:0xa9a496, roughness:0.98});
+    for(let i=-2;i<=2;i++){
+      const j = new THREE.Mesh(new THREE.PlaneGeometry(0.14, 30), joint);
+      j.rotation.x = -Math.PI/2; j.position.set(70 + i*6.6, 0.042, 0); pg.add(j);
+    }
+    const postM = new THREE.MeshStandardMaterial({color:0x8a7355, roughness:0.9});
+    const roofM = new THREE.MeshStandardMaterial({color:0xf2f0e8, roughness:0.72});
+    for(const [gx, gz, rr] of [[62,-9,3.5],[73,3,3.9],[79,-8,3.2]]){
+      const g = new THREE.Group(); g.position.set(gx, 0, gz); pg.add(g);
+      for(let k=0;k<6;k++){
+        const a = k/6*Math.PI*2;
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.13,0.13,2.7,8), postM);
+        post.position.set(Math.cos(a)*rr*0.86, 1.35, Math.sin(a)*rr*0.86); g.add(post);
+      }
+      const cap = new THREE.Mesh(new THREE.ConeGeometry(rr, 1.5, 6), roofM);
+      cap.position.y = 3.5; cap.rotation.y = Math.PI/6; g.add(cap);
+      const [wx, wz] = parkLocal(gx, gz);
+      deferredColliders.push({x:wx, z:wz, r:rr*0.9});
+    }
+    const [tx, tz] = parkLocal(70, 0);
+    makeLabel("PARK GAZEBOS", tx, 6.2, tz, 0.8);
+  }
 }
 
 // Mountains surrounding Lake Perris.
@@ -901,6 +964,12 @@ const PARKING = {x:-181,z:-34,rot:2.50};
 // ================= HELPERS =================
 const colliders = [];
 const boxColliders = [];
+// Flush whatever the parking lot queued before these existed.
+for(const d of deferredColliders){
+  if(d.r !== undefined) colliders.push({x:d.x, z:d.z, r:d.r});
+  else boxColliders.push({minX:d.x-d.w/2, maxX:d.x+d.w/2, minZ:d.z-d.d/2, maxZ:d.z+d.d/2});
+}
+deferredColliders.length = 0;
 function addCyl(x,z,r){ colliders.push({x,z,r}); }
 function addBox(cx,cz,w,d){ boxColliders.push({minX:cx-w/2,maxX:cx+w/2,minZ:cz-d/2,maxZ:cz+d/2}); }
 const LAKE_Z = -119, WORLD_R = 340;
@@ -2076,12 +2145,24 @@ function merchWares(name, idx){
     ac.position.set(-1.8,3.98,0); rv.add(ac);
     addBox(x,z,9,4);
   }
-  const greenRoomRVs=[
-    [78,82,0x7992a3],[80,90,0x6f876b],[82,98,0xb07c62],
-    [84,106,0x6d8198],[86,114,0x8f7860]
-  ];
-  greenRoomRVs.forEach(([x,z,accent])=>productionRV(x,z,accent,-0.1));
-  makeLabel("GREEN ROOM RVS",84,5.8,98,0.68);
+  // ARTIST / GREEN ROOM RVS — parked nose-in across the bays at the far end of
+  // the lot, per the site plan. They were previously sitting out at (78..86,
+  // 82..114) on open ground and squared to the world rather than to the lot,
+  // which is rotated 2.50 rad. The RV body runs along its own local +x, so
+  // rot = PARKING.rot - PI/2 turns it to face across the row, plus a little
+  // angle to read as angled parking.
+  {
+    const accents = [0x7992a3, 0x6f876b, 0xb07c62, 0x6d8198, 0x8f7860];
+    const rot = PARKING.rot - Math.PI/2 + 0.26;
+    accents.forEach((accent, i)=>{
+      const lx = 42 - i*8.4, lz = -11.5;
+      const [wx, wz] = parkLocal(lx, lz);
+      productionRV(wx, wz, accent, rot);
+      addBox(wx, wz, 9, 4);
+    });
+    const [lbx, lbz] = parkLocal(25, -11.5);
+    makeLabel("GREEN ROOM RVS", lbx, 5.8, lbz, 0.68);
+  }
 
   // Concessions boneyard at the northwest production edge. The enclosure is
   // black scrim because the map's purple perimeter denotes scrim throughout.
@@ -2573,17 +2654,35 @@ window.sideLeds = [];
     makeLabel("VIP RESTROOM TRAILER",tx,5.1,tz,0.58);
   }
 
+  // LIMITLESS COMPLEX ANCHOR.
+  // The deck used to sit at (-0.5, 45.4), which put it inside the Same Stage's
+  // scaffold footprint at (-13, 51) — it read as bolted onto the stage. Per the
+  // site plan it stands clear, just off stage right, with the lounge outboard of
+  // it. Stage right is +x here: facing the audience down -z, the performer's
+  // right hand points to +x.
+  //
+  // Everything downstream reads these, including the collider clearance pass —
+  // the deck footprint is used in three places and must not be re-typed.
+  const LIMITLESS = {
+    deckX: 14.5, deckZ: 42.0, rot: 1.48,
+    get lx(){ return Math.cos(this.rot); }, get lz(){ return -Math.sin(this.rot); }
+  };
+  // Lounge sits outboard of the deck, on the side away from the stage.
+  LIMITLESS.loungeX = LIMITLESS.deckX + 11.6*Math.sin(LIMITLESS.rot);
+  LIMITLESS.loungeZ = LIMITLESS.deckZ + 11.6*Math.cos(LIMITLESS.rot);
+  window.LIMITLESS = LIMITLESS;   // the collider clearance pass runs far below
+
   // Dedicated black-scrim pocket around Limitless Lounge and the raised deck.
   // The lounge entrance remains open at the lower stage-side corner.
-  scrimFenceRun(22, 59, 13.4, 47.5);
-  scrimFenceRun(13.4, 47.5, 5.2, 41.1);
-  scrimFenceRun(5.2, 41.1, -1.3, 42.7);
-  scrimFenceRun(9.5, 59.3, -0.7, 53.6);
+  scrimFenceRun(35, 55, 30.5, 47.0);
+  scrimFenceRun(30.5, 47.0, 22.0, 36.5);
+  scrimFenceRun(22.0, 36.5, 12.0, 36.0);
+  scrimFenceRun(24.5, 56.5, 11.5, 51.5);
 
   // LIMITLESS VIEWING DECK — RAISED 32'x20' platform hugging the stage's east flank,
   // angled with the stage line. Its floor and guests sit above the 3.35m scrim.
   {
-    const deckX=-0.5, deckZ=45.4, deckRot=1.48;
+    const deckX=LIMITLESS.deckX, deckZ=LIMITLESS.deckZ, deckRot=LIMITLESS.rot;
     const dg = new THREE.Group(); dg.position.set(deckX, 0, deckZ); dg.rotation.y = deckRot; scene.add(dg);
     const dMat = new THREE.MeshStandardMaterial({color:0x2e2e38, roughness:0.8});
     const floor = new THREE.Mesh(new THREE.BoxGeometry(9.6, 0.35, 6), dMat);
@@ -2610,7 +2709,7 @@ window.sideLeds = [];
 
   // LIMITLESS LOUNGE — 40x20 shade lounge just off the deck, same angle, inside VIP
   {
-    const llx=13, llz=42, llrot=1.48;
+    const llx=LIMITLESS.loungeX, llz=LIMITLESS.loungeZ, llrot=LIMITLESS.rot;
     const lg = new THREE.Group(); lg.position.set(llx, 0, llz); lg.rotation.y = llrot; scene.add(lg);
     const ltMat = new THREE.MeshStandardMaterial({color:0x1e1e28, roughness:0.85});
     const top = new THREE.Mesh(new THREE.BoxGeometry(12, 0.2, 6), ltMat);
@@ -3985,25 +4084,6 @@ function bathroomBank(cx, cz, rot, n=5){
     addCyl(cx + lx*Math.cos(rot), cz - lx*Math.sin(rot), 1.05);
   }
   makeLabel("BATHROOMS", cx, 4.4, cz, 0.8);
-}
-
-// Solar-powered restroom trailers: the three blue units shown beside Gate 6
-// on the current plan, distinct from the ordinary porta-bank at Butwood.
-function solarRestroomBank(cx, cz, rot, n=3){
-  const g=new THREE.Group(); g.position.set(cx,0,cz); g.rotation.y=rot; scene.add(g);
-  const shellMat=new THREE.MeshStandardMaterial({color:0x75b9df,roughness:0.72});
-  const panelMat=new THREE.MeshStandardMaterial({color:0x17395a,roughness:0.35,metalness:0.5});
-  for(let i=0;i<n;i++){
-    const x=(i-(n-1)/2)*2.25;
-    const unit=new THREE.Mesh(new THREE.BoxGeometry(1.85,2.65,1.7),shellMat);
-    unit.position.set(x,1.325,0); g.add(unit);
-    const door=new THREE.Mesh(new THREE.PlaneGeometry(1.25,2.15),new THREE.MeshStandardMaterial({color:0x255d83,roughness:0.84}));
-    door.position.set(x,1.18,0.856); g.add(door);
-    const panel=new THREE.Mesh(new THREE.BoxGeometry(1.62,0.08,0.82),panelMat);
-    panel.position.set(x,2.73,-0.15); panel.rotation.x=-0.28; g.add(panel);
-    addCyl(cx+x*Math.cos(rot),cz-x*Math.sin(rot),1.15);
-  }
-  makeLabel("SOLAR RESTROOMS ×3",cx,4.6,cz,0.68);
 }
 
 // ---------- BRICK & MORTAR RESTROOMS (the big bright-blue buildings on the map) ----------
@@ -5479,7 +5559,7 @@ const interactables = [
   { x:9.3, z:33.7, r:7,
     label:()=> "flash your Limitless wristband",
     act(){ toast("Limitless access confirmed. The view really is better up here."); } },
-  { x:13, z:42, r:6,
+  { x:5.1, z:53.2, r:6,
     label:()=> "flash your Limitless band",
     act(){ toast("Gold wristbands only — couches, cold drinks, and the stage right there."); } },
   { x:-0.5, z:45.4, r:5.5,
@@ -6480,9 +6560,10 @@ function updateGrass(px, pz, t){
 // Done here, after the grass mask has already been baked, so the mask still
 // knows the fence is physically there and doesn't grow turf through it.
 {
-  const th = 1.48, dc = Math.cos(th), ds = Math.sin(th);
+  const L = window.LIMITLESS;
+  const th = L.rot, dc = Math.cos(th), ds = Math.sin(th);
   function onDeckFootprint(x, z){
-    const dx = x + 0.5, dz = z - 45.4;
+    const dx = x - L.deckX, dz = z - L.deckZ;
     const lx = dx*dc - dz*ds;
     const lz = dx*ds + dz*dc;
     if(lx > -5.3 && lx < 5.3 && Math.abs(lz) < 3.5) return true;   // platform
@@ -6999,7 +7080,9 @@ function editorLayout(){ return {version:3,savedAt:new Date().toISOString(),obje
   ...editorObjects.map((o,index)=>Object.assign({index},editorRecord(o))),
   ...editorAdded.filter(o=>o.parent).map(o=>Object.assign({imported:true,name:editorLabel(o),sourceIndex:o.userData.editorSourceIndex,assetName:o.userData.editorAssetName},editorRecord(o)))
 ]}; }
-const EDITOR_STORAGE='ssbd-lake-perris-layout-v3';
+// New source build: do not apply a saved layout whose object indexes belong to
+// the old scene. New editor changes now save against this map revision.
+const EDITOR_STORAGE='ssbd-lake-perris-layout-v4';
 function editorSave(){ try{localStorage.setItem(EDITOR_STORAGE,JSON.stringify(editorLayout()));toast('Editor layout saved in this browser.');}catch(e){toast('Could not save this layout locally.');} }
 function editorDownload(){ const blob=new Blob([JSON.stringify(editorLayout(),null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='ssbd-lake-perris-layout.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000); if(editorAdded.some(o=>o.userData.editorAssetName)) toast('Download the GLB files too, then send the layout and GLBs to publish them.'); }
 function editorDuplicate(){
@@ -7083,7 +7166,6 @@ function setupEditor(){
 }
 // Keep additions after the layout's original object list so historic editor
 // indexes remain stable when a saved layout is applied.
-solarRestroomBank(28, 48, 0.72, 3); // Gate 6 / Limitless service edge
 loadPublishedLayout().finally(setupEditor);
 
 animate();

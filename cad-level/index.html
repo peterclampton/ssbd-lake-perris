@@ -54,6 +54,10 @@ sun.shadow.mapSize.set(2048,2048); Object.assign(sun.shadow.camera,{left:-260,ri
 // irregular Lake Perris basin with low surrounding foothills, shoreline and a
 // horizon-grade sky.  The surveyed festival pads remain flat and authoritative.
 const WATER_LEVEL=-.22;
+// The lake lies southeast of the festival core in this mirrored CAD/world
+// coordinate space. These constants drive the water, shore and terrain cutout
+// together so the surface cannot float through a hillside.
+const LAKE_X=750,LAKE_Z=720,LAKE_RADIUS=760;
 const terrainGeo=new THREE.PlaneGeometry(2300,2300,160,160);
 const terrainPos=terrainGeo.attributes.position;
 for(let i=0;i<terrainPos.count;i++){
@@ -61,15 +65,19 @@ for(let i=0;i<terrainPos.count;i++){
   const basin=Math.max(0,(r-270)/650);
   const ridge=basin*basin*(18+10*Math.sin(x*.008)+7*Math.cos(z*.011)+5*Math.sin((x+z)*.015));
   const detail=basin*(2.8*Math.sin(x*.035)*Math.cos(z*.028)+1.3*Math.sin((x-z)*.07));
-  terrainPos.setZ(i,Math.max(WATER_LEVEL-.05,ridge+detail-.2));
+  const landY=Math.max(WATER_LEVEL-.05,ridge+detail-.2);
+  const lakeDistance=Math.hypot(x-LAKE_X,z-LAKE_Z);
+  // Excavate a shallow lakebed wherever the real water footprint lies.  This
+  // fixes the old condition where a flat water disc crossed raised terrain.
+  terrainPos.setZ(i,lakeDistance<LAKE_RADIUS+9?Math.min(landY,WATER_LEVEL-.075):landY);
 }
 terrainGeo.computeVertexNormals();
 const terrain=new THREE.Mesh(terrainGeo,new THREE.MeshStandardMaterial({color:0x9c875d,roughness:1}));
 terrain.rotation.x=-Math.PI/2;terrain.receiveShadow=true;scene.add(terrain);
 const grass=new THREE.Mesh(new THREE.CircleGeometry(330,128),new THREE.MeshStandardMaterial({color:0x587f42,roughness:.98}));
 grass.rotation.x=-Math.PI/2;grass.position.y=.035;grass.receiveShadow=true;scene.add(grass);
-const shore=new THREE.Mesh(new THREE.RingGeometry(330,420,128),new THREE.MeshStandardMaterial({color:0xcdbb83,roughness:1,side:THREE.DoubleSide}));
-shore.rotation.x=-Math.PI/2;shore.position.y=WATER_LEVEL+.015;scene.add(shore);
+const shore=new THREE.Mesh(new THREE.RingGeometry(LAKE_RADIUS,LAKE_RADIUS+28,160),new THREE.MeshStandardMaterial({color:0xcdbb83,roughness:1,side:THREE.DoubleSide}));
+shore.rotation.x=-Math.PI/2;shore.position.set(LAKE_X,WATER_LEVEL+.012,LAKE_Z);shore.receiveShadow=true;scene.add(shore);
 const skyGeo=new THREE.SphereGeometry(1900,48,24);
 const sky=new THREE.Mesh(skyGeo,new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,uniforms:{top:{value:new THREE.Color(0x2872b2)},bottom:{value:new THREE.Color(0xd9e9ee)}},vertexShader:'varying vec3 vP; void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',fragmentShader:'uniform vec3 top;uniform vec3 bottom;varying vec3 vP;void main(){float h=clamp(normalize(vP).y*.5+.5,0.,1.);gl_FragColor=vec4(mix(bottom,top,smoothstep(.04,.92,h)),1.);}'}));
 scene.add(sky);
@@ -87,10 +95,8 @@ for(let i=0;i<190;i++){
   const h=.72+(i%7)*.075,g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=a*.37;g.scale.setScalar(h);
   const trunk=new THREE.Mesh(treeTrunkGeo,treeTrunkMat),crown=new THREE.Mesh(treeCrownGeo,treeCrownMat);trunk.position.y=1.9;crown.position.y=6.1;trunk.castShadow=crown.castShadow=true;trees.add(g);g.add(trunk,crown);
 }
-// The PDF places Lake Perris southeast of the festival core. In this CAD/world
-// mirrored CAD/world transform that is +X/+Z.
-const lake=new THREE.Mesh(new THREE.CircleGeometry(760,128),new THREE.MeshPhysicalMaterial({color:0x1d7898,roughness:.13,metalness:.08,transparent:true,opacity:.94,clearcoat:.35}));
-lake.rotation.x=-Math.PI/2; lake.position.set(750,WATER_LEVEL,720); scene.add(lake);
+const lake=new THREE.Mesh(new THREE.CircleGeometry(LAKE_RADIUS,160),new THREE.MeshPhysicalMaterial({color:0x1d7898,roughness:.13,metalness:.08,transparent:true,opacity:.94,clearcoat:.35}));
+lake.rotation.x=-Math.PI/2; lake.position.set(LAKE_X,WATER_LEVEL,LAKE_Z); lake.receiveShadow=true;scene.add(lake);
 
 const palette={
   "SCRIM 6' FENCE":0x17191d,"SCRIM 8' FENCE":0x111318,"Fence Line":0xbf342b,"Bike Rack":0x25a842,
@@ -118,6 +124,21 @@ function segment(a,b,height,width,mat,parent){
   const mesh=new THREE.Mesh(new THREE.BoxGeometry(width,height,len),mat);
   mesh.position.set((a[0]+b[0])/2,height/2,(a[1]+b[1])/2);mesh.rotation.y=Math.atan2(dx,dz);
   mesh.castShadow=mesh.receiveShadow=true;parent.add(mesh);
+}
+function physicalFenceSegment(a,b,height,width,mat,parent,layer){
+  // Keep the surveyed polyline itself authoritative, but turn it into a fence
+  // a person can actually read at ground level: spaced posts, two rails and a
+  // continuous scrim/mesh panel.  The previous single skinny box was a CAD
+  // stroke wearing a fence costume.
+  const dx=b[0]-a[0],dz=b[1]-a[1],len=Math.hypot(dx,dz);if(len<.03)return;
+  const g=new THREE.Group();g.position.set((a[0]+b[0])/2,0,(a[1]+b[1])/2);g.rotation.y=Math.atan2(dx,dz);parent.add(g);
+  const postMat=layer==="Fence Line"?new THREE.MeshStandardMaterial({color:0x8e2924,roughness:.7,metalness:.25}):M.truss;
+  const meshMat=new THREE.MeshStandardMaterial({color:layer==="Fence Line"?0xb53b32:0x181b20,roughness:.96,transparent:true,opacity:layer==="Fence Line"?.78:.88,side:THREE.DoubleSide});
+  const panel=new THREE.Mesh(new THREE.PlaneGeometry(Math.max(.01,len-width),Math.max(.1,height-.30)),meshMat);
+  panel.position.y=height*.51;panel.rotation.y=Math.PI/2;panel.castShadow=true;g.add(panel);
+  addBox(g,.11,.11,len,0,height-.13,0,postMat);addBox(g,.09,.09,len,0,.24,0,postMat);
+  const posts=Math.max(1,Math.ceil(len/2.45));
+  for(let i=0;i<=posts;i++)addBox(g,.18,height+.14,.18,0,(height+.14)/2,-len/2+i*len/posts,postMat);
 }
 function shapeMesh(path,layer,parent){
   const pts=path.points;if(pts.length<3)return false;
@@ -989,14 +1010,19 @@ function buildDetailedAssets(data){
     placed.push([fp.x,fp.z]);stallAsset(fp.x,fp.z,fp.rot,fp.w,fp.d,false);vendorIndex++;
   }
   const productionAnchor=anchor("PRODUCTION");let dumpsterIndex=0;
-  // Every remaining tent uses its closed DXF outline. The six white rectangles
-  // directly behind Production Lot 9 are a dumpster bank in the PDF, not tents.
+  // Every remaining tent uses its closed DXF outline. The six matching 13m x
+  // 12.5m rectangles directly behind Production Lot 9 are the dumpster bank
+  // in the PDF, not tents. Select that matched six-pad run by its footprint;
+  // the old broad proximity test silently converted nearby support tents too.
   // Skip the two named tents
   // above so they are not drawn twice.
   for(const path of data.paths){
     if(!path.closed||!(path.layer==="Tents"||path.layer==="Stretch Tents"))continue;
     const fp=pathFootprint(path);if(!fp||fp.w<1.5||fp.d<1.5||fp.w>45||fp.d>45)continue;
-    if(path.layer==="Tents"&&productionAnchor&&Math.hypot(fp.x-productionAnchor.point[0],fp.z-productionAnchor.point[1])<58){
+    const productionDumpsterPad=path.layer==="Tents"&&productionAnchor
+      &&Math.hypot(fp.x-productionAnchor.point[0],fp.z-productionAnchor.point[1])<72
+      &&fp.w>12&&fp.w<14&&fp.d>11.5&&fp.d<13.5;
+    if(productionDumpsterPad){
       dumpsterAsset(fp,dumpsterIndex++);continue;
     }
     if(tentUsed(fp,8)||Math.hypot(fp.x-.9549,fp.z-112.7312)<8)continue;
@@ -1059,6 +1085,57 @@ function buildDetailedAssets(data){
   }
 }
 
+function creationStationAsset(){
+  // The production reference places Creation Station on the 90' x 80' workshop
+  // lawn at (5,-32).  It is intentionally not inferred from the nearby generic
+  // tent pads: this is a named destination with its own measured envelope.
+  const cx=5,cz=-32,w=90*.3048,d=80*.3048;
+  const g=new THREE.Group();g.name="CREATION STATION · 90x80 WORKSHOP";g.position.set(cx,0,cz);detail.add(g);
+  const sand=new THREE.MeshStandardMaterial({color:0xcbb57e,roughness:1});
+  const saffron=new THREE.MeshStandardMaterial({color:0xd39a32,roughness:.82,side:THREE.DoubleSide});
+  const coral=new THREE.MeshStandardMaterial({color:0xdb5b74,roughness:.78});
+  const teal=new THREE.MeshStandardMaterial({color:0x329a92,roughness:.78});
+  // Low finished deck establishes the full PDF envelope without pretending it
+  // is a building. The workshop remains open to the lawn on every side.
+  addBox(g,w,.14,d,0,.07,0,sand);
+  // Eight-pole tensile pavilion, high enough to read as a destination from
+  // across the lawn and deliberately open rather than a generic white cube.
+  const canopy=new THREE.Mesh(new THREE.ConeGeometry(1,4.4,8),saffron);
+  canopy.position.y=5.75;canopy.rotation.y=Math.PI/8;canopy.scale.set(w*.43,1,d*.43);canopy.castShadow=true;g.add(canopy);
+  const rim=new THREE.Mesh(new THREE.TorusGeometry(Math.min(w,d)*.39,.16,7,32),coral);
+  rim.rotation.x=Math.PI/2;rim.position.y=3.62;rim.scale.x=w/d;g.add(rim);
+  for(let i=0;i<8;i++){
+    const a=i*Math.PI/4,px=Math.cos(a)*w*.39,pz=Math.sin(a)*d*.39;
+    addPost(g,px,pz,3.7,M.truss);
+    const flag=addBox(g,.42,1.45,.06,px,4.45,pz, i%2?coral:teal);flag.rotation.y=-a;
+  }
+  addPost(g,0,0,7.7,M.truss);
+  // Three workshop islands: supplies, screens, benches, and stools make this
+  // legible as a place to create instead of a decorative canopy.
+  for(let i=0;i<3;i++){
+    const a=.38+i*Math.PI*2/3,x=Math.cos(a)*w*.19,z=Math.sin(a)*d*.19;
+    addBox(g,4.1,.78,1.55,x,.39,z,M.wood);
+    addBox(g,3.45,.14,.44,x,.86,z-.55,i===1?teal:coral);
+    for(const off of [-1.32,0,1.32]){
+      const jar=new THREE.Mesh(new THREE.CylinderGeometry(.13,.17,.34,10),i===0?M.gold:(i===1?teal:coral));jar.position.set(x+off,.98,z-.12);g.add(jar);
+    }
+  }
+  // Easels around the public edge, each with a distinct coloured canvas.
+  const paints=[0xe95586,0x49aaa0,0xf0b544,0x8773c4,0xe4e1d6,0xc96248];
+  for(let i=0;i<6;i++){
+    const a=.24+i*Math.PI/3,x=Math.cos(a)*w*.33,z=Math.sin(a)*d*.33;
+    const e=new THREE.Group();e.position.set(x,0,z);e.rotation.y=-a;g.add(e);
+    for(const lx of [-.42,.42]){const leg=addBox(e,.07,1.95,.07,lx,.98,0,M.wood);leg.rotation.z=lx*.22;}
+    const rear=addBox(e,.07,1.75,.07,0,.88,-.34,M.wood);rear.rotation.x=.38;
+    addBox(e,1.08,.78,.06,0,1.45,.05,new THREE.MeshStandardMaterial({color:paints[i],roughness:.88}));
+    addBox(e,1.24,.08,.16,0,1.06,.07,M.wood);
+  }
+  // Small entrance marker on the south side of the actual workshop bounds.
+  for(const x of [-2.5,2.5])addPost(g,x,-d*.48,3.0,M.gold);
+  addBox(g,5.5,.22,.16,0,2.88,-d*.48,M.gold);
+  makeLabel("CREATION STATION",cx,cz);
+}
+
 // Signature destinations from the production level.  These are deliberately
 // designed places—not anonymous CAD extrusions—and use the production map's
 // surveyed coordinates while the CAD remains responsible for all event pads.
@@ -1082,9 +1159,7 @@ function restoreLegacyDestinations(data){
   const grandpa=data.anchors.find(a=>a.text==="GRANDPA’S");
   if(grandma)house(grandma.point[0],grandma.point[1],"GRANDMA'S HOUSE");
   if(grandpa)house(grandpa.point[0],grandpa.point[1],"GRANDPA'S GARAGE",true);
-  // Creation Station and the former artisan street were fabricated legacy
-  // placements. Do not render them until their 2026 plan boundaries are
-  // recovered; an absent asset is preferable to a confidently wrong one.
+  creationStationAsset();
 }
 
 fetch("site-plan.json",{cache:"no-store"}).then(r=>r.json()).then(data=>{
@@ -1095,11 +1170,8 @@ fetch("site-plan.json",{cache:"no-store"}).then(r=>r.json()).then(data=>{
     const h=layer==="SCRIM 8' FENCE"?2.45:layer==="Bike Rack"?1.05:fence?1.85:.18;
     const w=layer==="Bike Rack"?.08:fence?.11:.16,mat=material(layer);
     for(let i=1;i<path.points.length;i++){
-      segment(path.points[i-1],path.points[i],h,w,mat,parent);
-      // The red PDF perimeter is a physical waterfront boundary, not a thin
-      // CAD stroke. Retain its exact segments and make its posts readable at
-      // player height.
-      if(layer==="Fence Line")addBox(parent,.22,h+.38,.22,path.points[i-1][0],(h+.38)/2,path.points[i-1][1],mat);
+      if(fence)physicalFenceSegment(path.points[i-1],path.points[i],h,w,mat,parent,layer);
+      else segment(path.points[i-1],path.points[i],h,w,mat,parent);
     }
   }
   const seen=[];for(const a of data.anchors){if(!isUsefulLabel(a.text))continue;if(seen.some(p=>Math.hypot(p[0]-a.point[0],p[1]-a.point[1])<2))continue;seen.push(a.point);makeLabel(a.text,a.point[0],a.point[1])}

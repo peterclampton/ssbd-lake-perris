@@ -143,8 +143,14 @@ for(let i=0;i<34;i++){const c=new THREE.Mesh(new THREE.SphereGeometry(12+(i%4)*7
 // edge, west campground, and the north/east shore.  Do not use a decorative
 // radial scatter around the festival core; that invents trees where the PDF
 // shows open lawn, stages, and beach.
-const treeTrunkGeo=new THREE.CylinderGeometry(.22,.34,3.8,6),treeCrownGeo=new THREE.ConeGeometry(2.2,6.4,8);
-const treeTrunkMat=new THREE.MeshStandardMaterial({color:0x62462d,roughness:1}),treeCrownMat=new THREE.MeshStandardMaterial({color:0x395b32,roughness:.95});
+const treeTrunkGeo=new THREE.CylinderGeometry(.22,.34,3.8,6);
+const treeCrownGeos=[new THREE.ConeGeometry(2.45,4.9,8),new THREE.ConeGeometry(1.92,4.4,8),new THREE.ConeGeometry(1.34,3.7,8)];
+const treeTrunkMat=new THREE.MeshStandardMaterial({color:0x62462d,roughness:1});
+const treeCrownMats=[
+  new THREE.MeshStandardMaterial({color:0x345238,roughness:.95}),
+  new THREE.MeshStandardMaterial({color:0x42683d,roughness:.95}),
+  new THREE.MeshStandardMaterial({color:0x2d4934,roughness:.95})
+];
 const trees=new THREE.Group();trees.name="LAKE PERRIS TREES";scene.add(trees);
 const treeBands=[
   [[-255,-130],[-215,-116],[-176,-104],[-136,-91],[-96,-78],[-58,-66]], // west road / campground edge
@@ -158,7 +164,14 @@ let treeIndex=0;
 for(const band of treeBands)for(const [bx,bz] of band)for(let j=0;j<4;j++){
   const a=treeIndex*2.3999632297,jitterX=Math.cos(a)*3.6,jitterZ=Math.sin(a)*3.6;
   const h=.74+(treeIndex%7)*.07,g=new THREE.Group();g.position.set(bx+jitterX,0,bz+jitterZ);g.rotation.y=a*.37;g.scale.setScalar(h);
-  const trunk=new THREE.Mesh(treeTrunkGeo,treeTrunkMat),crown=new THREE.Mesh(treeCrownGeo,treeCrownMat);trunk.position.y=1.9;crown.position.y=6.1;trunk.castShadow=crown.castShadow=true;trees.add(g);g.add(trunk,crown);
+  const trunk=new THREE.Mesh(treeTrunkGeo,treeTrunkMat);trunk.position.y=1.9;trunk.castShadow=true;trees.add(g);g.add(trunk);
+  // Layered crowns read as mature park pines from the ground and aerial view;
+  // the old single cone made the entire shoreline look like a placeholder.
+  for(let tier=0;tier<3;tier++){
+    const crown=new THREE.Mesh(treeCrownGeos[tier],treeCrownMats[(treeIndex+tier)%treeCrownMats.length]);
+    crown.position.set((tier===1?-.16:tier===2?.12:0),5.0+tier*1.72,(tier===1?.1:tier===2?-.08:0));
+    crown.rotation.y=a*(.21+tier*.08);crown.castShadow=crown.receiveShadow=true;g.add(crown);
+  }
   treeIndex++;
 }
 // The satellite layer already carries the real tree map. Hide the previous

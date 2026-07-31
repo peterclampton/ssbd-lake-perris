@@ -1536,8 +1536,13 @@ function buildDetailedAssets(data){
   const parkFps=data.paths.filter(path=>path.layer==="Park Infrastructure"&&path.closed)
     .map(pathFootprint).filter(fp=>fp&&fp.w>=2&&fp.d>=2&&fp.w<=45&&fp.d<=45&&Math.abs(fp.x)<=500&&Math.abs(fp.z)<=500)
     .sort((a,b)=>b.w*b.d-a.w*a.d);
+  // Healers Sanctuary is authored above as one photo-derived pavilion.  The
+  // surrounding CAD infrastructure outlines are components of that existing
+  // shelter/service area, not additional gazebos to stack on its roof.
+  const healerAnchor=anchor("HEALERS / SANCTUARY");
   const placedPark=[];
   for(const fp of parkFps){
+    if(healerAnchor&&Math.hypot(fp.x-healerAnchor.point[0],fp.z-healerAnchor.point[1])<24)continue;
     if(placedPark.some(p=>Math.hypot(p.x-fp.x,p.z-fp.z)<3))continue;
     placedPark.push(fp);
     const nearby=data.anchors.filter(a=>Math.hypot(a.point[0]-fp.x,a.point[1]-fp.z)<20).map(a=>a.text).join(" ");

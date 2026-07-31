@@ -1150,11 +1150,15 @@ function buildDetailedAssets(data){
     barAsset(fp.point[0],fp.point[1],fp.rotation,fp.width,fp.depth);
     makeLabel("BAR 4",fp.point[0],fp.point[1]);
   }
-  // The GAZEBO callout at Bar 5 is the existing lakefront pavilion shown in
-  // the supplied site photos.  Preserve that plan location, but give it its
-  // actual Healers Sanctuary identity and physical construction.
+  // Healers is not at the old Bar 5 GAZEBO callout. Peter marked its current
+  // 7/31-plan target in the aerial screenshot: the open park pad south-east
+  // of that old anchor, at [122,65] in the registered CAD world. Preserve the
+  // pavilion's surveyed rotation, but do not keep rendering it at Bar 5.
   const healerGazebo=anchor("GAZEBO");
-  if(healerGazebo)healersSanctuaryAsset(healerGazebo);
+  if(healerGazebo){
+    const healerTarget={...healerGazebo,point:[122,65]};
+    healersSanctuaryAsset(healerTarget);
+  }
   const entrances=data.anchors.filter(a=>a.text==="ENTRANCE"),usedGateBlocks=new Set();
   for(let n=0;n<entrances.length;n++){
     const a=entrances[n];

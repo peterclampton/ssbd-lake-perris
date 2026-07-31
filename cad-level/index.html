@@ -44,10 +44,10 @@ const camera=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,.2,4000);
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:"high-performance"});
 renderer.setSize(innerWidth,innerHeight); renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.outputEncoding=THREE.sRGBEncoding; renderer.toneMapping=THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure=1.05; renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.toneMappingExposure=.82; renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 document.body.prepend(renderer.domElement);
-scene.add(new THREE.HemisphereLight(0xc6def8,0x6c7149,1.25));
-const sun=new THREE.DirectionalLight(0xfff0d2,2.4); sun.position.set(180,300,140); sun.castShadow=true; scene.add(sun);
+scene.add(new THREE.HemisphereLight(0xbfd9f1,0x596238,.82));
+const sun=new THREE.DirectionalLight(0xffedcb,1.55); sun.position.set(180,300,140); sun.castShadow=true; scene.add(sun);
 sun.shadow.mapSize.set(2048,2048); Object.assign(sun.shadow.camera,{left:-260,right:260,top:260,bottom:-260,near:1,far:900});
 
 // This is an actual world, not a CAD sheet sitting on two discs: a broad,
@@ -74,6 +74,18 @@ const sky=new THREE.Mesh(skyGeo,new THREE.ShaderMaterial({side:THREE.BackSide,de
 scene.add(sky);
 const cloudMat=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.32,depthWrite:false});
 for(let i=0;i<34;i++){const c=new THREE.Mesh(new THREE.SphereGeometry(12+(i%4)*7,12,8),cloudMat);const a=i*2.399;c.position.set(Math.cos(a)*(410+i%6*75),80+(i%5)*13,Math.sin(a)*(410+i%6*75));c.scale.z=.32;scene.add(c)}
+// Native Lake Perris vegetation gives the festival edge depth and scale. Use
+// shared geometry/materials so this is a proper live world, not a costly forest
+// of cloned CAD placeholders.
+const treeTrunkGeo=new THREE.CylinderGeometry(.22,.34,3.8,6),treeCrownGeo=new THREE.ConeGeometry(2.2,6.4,8);
+const treeTrunkMat=new THREE.MeshStandardMaterial({color:0x62462d,roughness:1}),treeCrownMat=new THREE.MeshStandardMaterial({color:0x395b32,roughness:.95});
+const trees=new THREE.Group();trees.name="LAKE PERRIS TREES";scene.add(trees);
+for(let i=0;i<190;i++){
+  const a=i*2.3999632297,r=245+(i%17)*16+((i*19)%23),x=Math.cos(a)*r,z=Math.sin(a)*r;
+  if(x>610&&z>560)continue;
+  const h=.72+(i%7)*.075,g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=a*.37;g.scale.setScalar(h);
+  const trunk=new THREE.Mesh(treeTrunkGeo,treeTrunkMat),crown=new THREE.Mesh(treeCrownGeo,treeCrownMat);trunk.position.y=1.9;crown.position.y=6.1;trunk.castShadow=crown.castShadow=true;trees.add(g);g.add(trunk,crown);
+}
 // The PDF places Lake Perris southeast of the festival core. In this CAD/world
 // mirrored CAD/world transform that is +X/+Z.
 const lake=new THREE.Mesh(new THREE.CircleGeometry(760,128),new THREE.MeshPhysicalMaterial({color:0x1d7898,roughness:.13,metalness:.08,transparent:true,opacity:.94,clearcoat:.35}));

@@ -350,6 +350,15 @@ function adaDeck(x,z,rot,w,d){
   addBox(g,w,.25,d,0,.18,0,M.dark);
   for(const [px,pz,rw,rd] of [[0,-d/2,w,.08],[-w/2,0,.08,d],[w/2,0,.08,d]])addBox(g,rw,1,rd,px,.65,pz,M.gold);
 }
+function adaWalkway(x,z,rot,w,d){
+  const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;detail.add(g);
+  const deck=new THREE.MeshStandardMaterial({color:0x96b7df,roughness:.92});
+  addBox(g,w,.08,d,0,.05,0,deck);
+  // Low contrasting curbs keep the mapped accessible route readable from the
+  // bird's-eye view without turning it into an invented fence.
+  addBox(g,w,.06,.08,0,.11,-d/2,M.blue);
+  addBox(g,w,.06,.08,0,.11,d/2,M.blue);
+}
 function activationAsset(fp,color=0xd9358f){
   const g=new THREE.Group();g.position.set(fp.x,0,fp.z);g.rotation.y=fp.rot;detail.add(g);
   const mat=new THREE.MeshStandardMaterial({color,roughness:.72});
@@ -357,6 +366,15 @@ function activationAsset(fp,color=0xd9358f){
   for(const x of [-fp.w/2,fp.w/2])for(const z of [-fp.d/2,fp.d/2])addPost(g,x,z,3,M.truss);
   addBox(g,fp.w+.16,.14,.16,0,3,-fp.d/2,mat);
   addBox(g,fp.w+.16,.14,.16,0,3,fp.d/2,mat);
+}
+function photoBoothAsset(fp){
+  const g=new THREE.Group();g.position.set(fp.x,0,fp.z);g.rotation.y=fp.rot;detail.add(g);
+  const shell=new THREE.MeshStandardMaterial({color:0xf4eee5,roughness:.84});
+  addBox(g,fp.w,2.55,fp.d,0,1.28,0,shell);
+  addBox(g,fp.w+.12,.16,fp.d+.12,0,2.64,0,M.pink);
+  addBox(g,fp.w*.68,1.72,.08,0,1.22,-fp.d/2-.045,M.dark);
+  const lens=new THREE.Mesh(new THREE.CylinderGeometry(.18,.18,.1,12),M.gold);
+  lens.position.set(0,1.88,-fp.d/2-.11);lens.rotation.x=Math.PI/2;g.add(lens);
 }
 function platformAsset(fp){
   const g=new THREE.Group();g.position.set(fp.x,0,fp.z);g.rotation.y=fp.rot;detail.add(g);
@@ -456,6 +474,14 @@ function buildDetailedAssets(data){
   if(chapel){peakedTent(chapel.x,chapel.z,30*.3048,20*.3048,chapel.rot);useTent(chapel)}
   const art=namedFootprint("ART SALES / TENT / 10x10","Tents");
   if(art){peakedTent(art.x,art.z,10*.3048,10*.3048,art.rot,0xe7d5b9);useTent(art)}
+  // The PDF identifies this square as PHOTO BOOTH even though the DXF entity
+  // inherited the bathroom-truck layer. Preserve its exact CAD footprint and
+  // correct only the asset semantics.
+  const photoBooth=namedFootprint("PHOTO / BOOTH","Porta Potties _ Bathroom Trucks",5);
+  if(photoBooth){
+    photoBoothAsset(photoBooth);
+    makeLabel("PHOTO BOOTH",photoBooth.x,photoBooth.z);
+  }
   const extra=namedFootprint("ADDTL / 40x40 / STRETCH / TENT","Stretch Tents");
   if(extra){stretchTentAsset(extra.x,extra.z,40*.3048,40*.3048,extra.rot);useTent(extra)}
   const innerStage=namedFootprint("INNERBASS STAGE / 16' x 12'","Stages");
@@ -501,6 +527,10 @@ function buildDetailedAssets(data){
     const mid={point:[(adaA.point[0]+viewA.point[0])/2,(adaA.point[1]+viewA.point[1])/2],rotation:viewA.rotation};
     pdfSizedAsset(mid,12,8,adaDeck,"ADA VIEWING");
   }
+  // Explicit PDF dimensions for the two accessible routes. The DXF text
+  // entities supply their insertion points and path-aligned rotation.
+  pdfSizedAsset(anchor("ADA WALKWAY (8’ x 270’)"),270,8,adaWalkway,null);
+  pdfSizedAsset(anchor("ADA WALKWAY (8’ x 200’)"),200,8,adaWalkway,null);
   // Both FOH footprints are explicitly dimensioned on the PDF. They are text
   // annotations rather than closed CAD polygons, so use the dimension entity's
   // insertion point and rotation.
@@ -568,6 +598,7 @@ function buildDetailedAssets(data){
     if(Math.abs(fp.x)>500||Math.abs(fp.z)>500)continue;
     if(trailer&&Math.hypot(fp.x-trailer.point[0],fp.z-trailer.point[1])<6)continue;
     if(solarAnchor&&Math.hypot(fp.x-solarAnchor.point[0],fp.z-solarAnchor.point[1])<10&&fp.w>1.8)continue;
+    if(photoBooth&&Math.hypot(fp.x-photoBooth.x,fp.z-photoBooth.z)<1)continue;
     restroomFootprintAsset(fp);
   }
   // Remaining CAD stage polygons are access decks or risers. Keep their literal

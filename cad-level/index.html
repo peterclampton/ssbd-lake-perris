@@ -259,12 +259,14 @@ function serviceAsset(x,z,rot,w,d,color=0xe7e1d6){
   addBox(g,Math.min(1.05,w*.32),2,.08,0,1.08,-d/2-.045,M.blue);
   return g;
 }
-function entranceAsset(x,z,rot,name){
+function entranceAsset(x,z,rot,name,width){
   const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;detail.add(g);
-  for(const px of [-5.5,5.5]){addBox(g,1.1,8,1.1,px,4,0,M.truss);addBox(g,1.45,.42,1.45,px,8.25,0,M.gold)}
-  addBox(g,12.1,.75,.75,0,7.6,0,M.truss);addBox(g,9.5,1.25,.34,0,6.9,-.4,M.pink);
-  for(let i=-2;i<=2;i++){const l=new THREE.Mesh(new THREE.SphereGeometry(.24,8,6),new THREE.MeshStandardMaterial({color:0x302b35,emissive:i%2?0x29d3c6:0xffd166,emissiveIntensity:2}));l.position.set(i*1.8,7.55,.5);g.add(l)}
-  makeLabel(name,x,9.8,z);
+  const clear=Math.max(3,width),post=.55;
+  for(const px of [-clear/2,clear/2]){addBox(g,post,6.4,post,px,3.2,0,M.truss);addBox(g,post+.18,.35,post+.18,px,6.58,0,M.gold)}
+  addBox(g,clear+post,.55,.55,0,6.15,0,M.truss);addBox(g,clear*.76,.92,.28,0,5.63,-.32,M.pink);
+  const lights=Math.max(3,Math.round(clear/1.7));
+  for(let i=0;i<lights;i++){const l=new THREE.Mesh(new THREE.SphereGeometry(.2,8,6),new THREE.MeshStandardMaterial({color:0x302b35,emissive:i%2?0x29d3c6:0xffd166,emissiveIntensity:2}));l.position.set((i-(lights-1)/2)*clear/lights,6.13,.42);g.add(l)}
+  makeLabel(name,x,z);
 }
 function restroomAsset(x,z,rot,count=3){
   const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;detail.add(g);
@@ -416,9 +418,19 @@ function buildDetailedAssets(data){
   pdfSizedAsset(anchor("BAR 1"),30,20,barAsset,"BAR 1");
   pdfSizedAsset(anchor("BAR 2"),10,40,barAsset,"BAR 2");
   const bar6=anchor("BAR 6");if(bar6)makeLabel("BAR 6 · FOOTPRINT PENDING",bar6.point[0],bar6.point[1]);
-  const east=anchor("ENTRANCE"),west=data.anchors.find(a=>a.text==="ENTRANCE"&&a!==east);
-  if(east)entranceAsset(east.point[0],east.point[1],east.rotation,"EAST ENTRANCE");
-  if(west)entranceAsset(west.point[0],west.point[1],west.rotation,"WEST ENTRANCE");
+  const entrances=data.anchors.filter(a=>a.text==="ENTRANCE");
+  for(let n=0;n<entrances.length;n++){
+    const a=entrances[n];
+    const gates=data.inserts.filter(i=>i.layer==="Emergency Exits"&&i.bounds)
+      .map(i=>({fp:i.bounds,dist:Math.hypot(i.bounds.point[0]-a.point[0],i.bounds.point[1]-a.point[1])}))
+      .sort((x,y)=>x.dist-y.dist);
+    // PDF entrance text is offset for legibility; the nearest emergency-exit
+    // block is the physical gate symbol. Never use the old arbitrary 12m arch.
+    if(gates[0]&&gates[0].dist<45){
+      const fp=gates[0].fp;
+      entranceAsset(fp.point[0],fp.point[1],fp.rotation,n===0?"EAST ENTRANCE":"WEST ENTRANCE",fp.width);
+    }
+  }
   // PDF sheet: ADA Viewing is explicitly 12' x 8'. The DXF provides separate
   // ADA and VIEWING text entities at the platform. Use their midpoint rather
   // than the earlier eyeballed center.

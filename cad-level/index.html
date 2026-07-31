@@ -87,8 +87,24 @@ const terrain=new THREE.Mesh(terrainGeo,new THREE.MeshStandardMaterial({color:0x
 terrain.rotation.x=-Math.PI/2;terrain.receiveShadow=true;scene.add(terrain);
 const grass=new THREE.Mesh(new THREE.CircleGeometry(330,128),new THREE.MeshStandardMaterial({color:0x587f42,roughness:.98}));
 grass.rotation.x=-Math.PI/2;grass.position.y=.035;grass.receiveShadow=true;scene.add(grass);
+// This is the full-resolution Vectorworks satellite underlay, registered from
+// the DXF IMAGE insertion transform—not stretched or eyeballed.  It is the
+// source of truth for the real Lake Perris shoreline, beach, roads and every
+// existing tree location.  Keep the old procedural world beneath it only as a
+// fallback; it must not replace the surveyed aerial context.
+const aerialCorners=[[-2549.9626,1767.6678],[1861.7716,939.9352],[1379.957,-1628.0892],[-3031.7772,-800.3565]];
+const aerialGeo=new THREE.BufferGeometry();
+aerialGeo.setAttribute('position',new THREE.Float32BufferAttribute(aerialCorners.flatMap(([x,z])=>[x,.062,z]),3));
+aerialGeo.setAttribute('uv',new THREE.Float32BufferAttribute([0,0,1,0,1,1,0,1],2));
+aerialGeo.setIndex([0,1,2,0,2,3]);aerialGeo.computeVertexNormals();
+const aerialTexture=new THREE.TextureLoader().load('../assets/lake-perris-aerial.jpg');
+aerialTexture.encoding=THREE.sRGBEncoding;aerialTexture.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
+const aerial=new THREE.Mesh(aerialGeo,new THREE.MeshBasicMaterial({map:aerialTexture}));
+aerial.name='VECTORWORKS GEOREGISTERED SATELLITE AERIAL';aerial.receiveShadow=true;scene.add(aerial);
+terrain.visible=false;grass.visible=false;
 const shore=new THREE.Mesh(new THREE.RingGeometry(LAKE_RADIUS,LAKE_RADIUS+3.2,160),new THREE.MeshStandardMaterial({color:0xcdbb83,roughness:1,side:THREE.DoubleSide}));
 shore.rotation.x=-Math.PI/2;shore.position.set(LAKE_X,WATER_LEVEL+.012,LAKE_Z);shore.receiveShadow=true;scene.add(shore);
+shore.visible=false;
 const skyGeo=new THREE.SphereGeometry(1900,48,24);
 const sky=new THREE.Mesh(skyGeo,new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,uniforms:{top:{value:new THREE.Color(0x2872b2)},bottom:{value:new THREE.Color(0xd9e9ee)}},vertexShader:'varying vec3 vP; void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',fragmentShader:'uniform vec3 top;uniform vec3 bottom;varying vec3 vP;void main(){float h=clamp(normalize(vP).y*.5+.5,0.,1.);gl_FragColor=vec4(mix(bottom,top,smoothstep(.04,.92,h)),1.);}'}));
 scene.add(sky);
@@ -116,7 +132,12 @@ for(const band of treeBands)for(const [bx,bz] of band)for(let j=0;j<4;j++){
   const trunk=new THREE.Mesh(treeTrunkGeo,treeTrunkMat),crown=new THREE.Mesh(treeCrownGeo,treeCrownMat);trunk.position.y=1.9;crown.position.y=6.1;trunk.castShadow=crown.castShadow=true;trees.add(g);g.add(trunk,crown);
   treeIndex++;
 }
-const lake=new THREE.Mesh(new THREE.CircleGeometry(LAKE_RADIUS,160),new THREE.MeshPhysicalMaterial({color:0x1d7898,roughness:.13,metalness:.08,transparent:true,opacity:.94,clearcoat:.35}));
+// The satellite layer already carries the real tree map. Hide the previous
+// hand-placed proxy forest until individual 3D trees are sampled from it.
+trees.visible=false;
+// Preserve the satellite's exact water shape/colour; this is only a light
+// reflective sheen above it, not a replacement blue disc.
+const lake=new THREE.Mesh(new THREE.CircleGeometry(LAKE_RADIUS,160),new THREE.MeshPhysicalMaterial({color:0x1d7898,roughness:.13,metalness:.08,transparent:true,opacity:.38,clearcoat:.35}));
 lake.rotation.x=-Math.PI/2; lake.position.set(LAKE_X,WATER_LEVEL,LAKE_Z); lake.receiveShadow=true;scene.add(lake);
 
 const palette={

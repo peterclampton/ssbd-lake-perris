@@ -2648,6 +2648,18 @@ window.sideLeds = [];
       CAD_LIMITLESS.worldDeck[1] + CAD_LIMITLESS.scale*(s*dx + c*dz)
     ];
   }
+  // CAD fence work around the stage/VIP corner. These are the actual 6' scrim
+  // polylines from the production drawing, transformed with the same measured
+  // deck anchor as the Limitless structures above. Keeping the source points
+  // here means future placement work has one coordinate system, not another
+  // round of eyeballed world-space fence segments.
+  function cadScrimPath(points, height=3.35){
+    for(let i=1;i<points.length;i++){
+      const [x1,z1] = limitlessCadToWorld(points[i-1]);
+      const [x2,z2] = limitlessCadToWorld(points[i]);
+      scrimFenceRun(x1,z1,x2,z2,height);
+    }
+  }
   const [cadDeckX, cadDeckZ] = limitlessCadToWorld(CAD_LIMITLESS.deck);
   const [cadLoungeX, cadLoungeZ] = limitlessCadToWorld(CAD_LIMITLESS.lounge);
   const [cadSolarX, cadSolarZ] = limitlessCadToWorld(CAD_LIMITLESS.solar);
@@ -2659,12 +2671,31 @@ window.sideLeds = [];
   };
   window.LIMITLESS = LIMITLESS;   // the collider clearance pass runs far below
 
-  // Dedicated black-scrim pocket around Limitless Lounge and the raised deck.
-  // The lounge entrance remains open at the lower stage-side corner.
-  scrimFenceRun(35, 55, 30.5, 47.0);
-  scrimFenceRun(30.5, 47.0, 22.0, 36.5);
-  scrimFenceRun(22.0, 36.5, 12.0, 36.0);
-  scrimFenceRun(24.5, 56.5, 11.5, 51.5);
+  // Stage-right / Limitless fence runs, taken directly from the CAD plan.
+  // The former four-segment "pocket" was a hand-traced approximation and
+  // crossed the deck approach. These preserve the real bends and the planned
+  // access gaps around the lounge and viewing deck.
+  cadScrimPath([
+    [40337.31567413751,14486.05819117338],
+    [40564.09288317884,14796.23852863882]
+  ]);
+  cadScrimPath([
+    [40563.54462045031,14796.64708963917],
+    [40369.66314657407,15000.55219907701],
+    [40584.96730547314,15188.67624040231],
+    [40750.88668368337,14998.78486916152]
+  ]);
+  cadScrimPath([
+    [40642.44835538942,14887.61521929271],
+    [41209.67350027253,15453.94342361625],
+    [41210.68833778061,15427.75090732187]
+  ]);
+  cadScrimPath([
+    [41796.0,14794.0],
+    [41494.0,14468.0],
+    [41144.0,14438.0],
+    [41144.0,14436.0]
+  ]);
 
   // LIMITLESS VIEWING DECK — RAISED 32'x20' platform hugging the stage's east flank,
   // angled with the stage line. Its floor and guests sit above the 3.35m scrim.

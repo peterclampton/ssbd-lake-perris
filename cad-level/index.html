@@ -1347,10 +1347,11 @@ function buildDetailedAssets(data){
   });
   makeLabel("COCONUT COVE VENDORS · ADA RAMP",161.0554,118.5);
   const productionAnchor=anchor("PRODUCTION");let dumpsterIndex=0;
-  // Every remaining tent uses its closed DXF outline. The six matching 13m x
-  // 12.5m rectangles directly behind Production Lot 9 are the dumpster bank
-  // in the PDF, not tents. Select that matched six-pad run by its footprint;
-  // the old broad proximity test silently converted nearby support tents too.
+  // Every remaining tent uses its closed DXF outline. The six narrow 13.81m x
+  // 4.34m pads directly behind Production Lot 9 are the dumpster bank in the
+  // current DXF, not tents. Their seventh lookalike is the adjacent support
+  // pad at the north end of the run, so the southward row coordinate is part
+  // of the selector; a broad proximity test silently converted support tents.
   // Skip the two named tents
   // above so they are not drawn twice.
   for(const path of data.paths){
@@ -1358,7 +1359,7 @@ function buildDetailedAssets(data){
     const fp=pathFootprint(path);if(!fp||fp.w<1.5||fp.d<1.5||fp.w>45||fp.d>45)continue;
     const productionDumpsterPad=path.layer==="Tents"&&productionAnchor
       &&Math.hypot(fp.x-productionAnchor.point[0],fp.z-productionAnchor.point[1])<72
-      &&fp.w>12&&fp.w<14&&fp.d>11.5&&fp.d<13.5;
+      &&fp.w>13.4&&fp.w<14.2&&fp.d>4.0&&fp.d<4.7&&fp.z<-80;
     if(productionDumpsterPad){
       dumpsterAsset(fp,dumpsterIndex++);continue;
     }

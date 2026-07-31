@@ -621,7 +621,11 @@ function buildDetailedAssets(data){
   const coconutStage=coconutStageAnchor?exactFootprint(data,coconutStageAnchor,"Stages",18):null;
   if(coconutStage)festivalStage(coconutStage.x,coconutStage.z,coconutStage.rot,coconutStage.w,coconutStage.d);
   const coconutBar=namedFootprint("Coconut Cove Bar","Stages");
-  if(coconutBar)barAsset(coconutBar.x,coconutBar.z,coconutBar.rot,coconutBar.w,coconutBar.d);
+  if(coconutBar){
+    barAsset(coconutBar.x,coconutBar.z,coconutBar.rot,coconutBar.w,coconutBar.d);
+    // The PDF calls this same physical footprint Bar 3.
+    makeLabel("BAR 3 · COCONUT COVE",coconutBar.x,coconutBar.z);
+  }
   // These bars are PDF annotations rather than closed DXF polygons. Their
   // centers and orientation come from the DXF text entities; dimensions come
   // only from printed PDF callouts.
@@ -721,7 +725,21 @@ function buildDetailedAssets(data){
     }
     else pdfSizedAsset(a,w,d,serviceAsset,label,0);
   }
-  const placed=[];for(const a of data.anchors){const food=/^FOOD(?: TRUCK)?$/i.test(a.text),vendor=/^VENDORS?$/i.test(a.text);if(!food&&!vendor)continue;
+  // Named businesses use the nearest closed CAD footprint, not their offset
+  // annotation point. Seed the generic-placement dedupe list with them.
+  const placed=[];
+  const namedBusinesses=[
+    ["SHINE DINER","SHINE / DINER","Food"],
+    ["COFFEE","COFFEE","Food"],
+    ["GENERAL STORE","STORE","Vendors"]
+  ];
+  for(const [label,text,layer] of namedBusinesses){
+    const a=anchor(text),fp=a?exactFootprint(data,a,layer,12):null;
+    if(!fp||placed.some(p=>Math.hypot(p[0]-fp.x,p[1]-fp.z)<2))continue;
+    placed.push([fp.x,fp.z]);stallAsset(fp.x,fp.z,fp.rot,fp.w,fp.d,layer==="Food");
+    makeLabel(label,fp.x,fp.z);
+  }
+  for(const a of data.anchors){const food=/^FOOD(?: TRUCK)?$/i.test(a.text),vendor=/^VENDORS?$/i.test(a.text);if(!food&&!vendor)continue;
     const fp=exactFootprint(data,a,food?"Food":"Vendors");if(!fp||placed.some(p=>Math.hypot(p[0]-fp.x,p[1]-fp.z)<2))continue;
     placed.push([fp.x,fp.z]);stallAsset(fp.x,fp.z,fp.rot,fp.w,fp.d,food)}
   // Every remaining tent uses its closed DXF outline. Skip the two named tents

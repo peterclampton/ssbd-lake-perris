@@ -378,6 +378,81 @@ function activationAsset(fp,color=0xd9358f){
   addBox(g,fp.w+.16,.14,.16,0,3,-fp.d/2,mat);
   addBox(g,fp.w+.16,.14,.16,0,3,fp.d/2,mat);
 }
+function cinemaTentAsset(fp){
+  // The 40x60 Event Tent insert is the literal Butwood Cinemas footprint.
+  // Keep that full CAD envelope and furnish only inside it.
+  const g=peakedTent(fp.point[0],fp.point[1],fp.width,fp.depth,fp.rotation,0xe7ddc8);
+  g.name="BUTWOOD CINEMAS · CAD";
+  const screenW=fp.width*.68;
+  addBox(g,screenW,fp.depth*.31,.16,0,fp.depth*.19,fp.depth*.35,M.dark);
+  const screen=new THREE.MeshStandardMaterial({color:0x19131f,emissive:0x47235f,emissiveIntensity:.72,roughness:.56});
+  addBox(g,screenW*.91,fp.depth*.24,.08,0,fp.depth*.20,fp.depth*.35-.1,screen);
+  // Low cinema benches remain within the surveyed tent footprint.
+  for(let row=0;row<4;row++){
+    const z=fp.depth*.16-row*fp.depth*.13;
+    addBox(g,fp.width*.58,.34,.42,0,.3,z,M.wood);
+  }
+  makeLabel("BUTWOOD CINEMAS",fp.point[0],fp.point[1]);
+}
+function butservatoryAsset(fp){
+  // The closed But Area polygon is the exact Griffith Butservatory pad.
+  const g=new THREE.Group();g.position.set(fp.x,0,fp.z);g.rotation.y=fp.rot;g.name="GRIFFITH BUTSERVATORY · CAD";detail.add(g);
+  addBox(g,fp.w,.16,fp.d,0,.09,0,new THREE.MeshStandardMaterial({color:0x60477c,roughness:.9}));
+  const radius=Math.min(fp.w,fp.d)*.34;
+  const dome=new THREE.Mesh(new THREE.SphereGeometry(radius,28,14,0,Math.PI*2,0,Math.PI/2),
+    new THREE.MeshStandardMaterial({color:0xe7e1d5,roughness:.48,metalness:.18}));
+  dome.scale.y=.72;dome.position.y=radius*.72;dome.castShadow=true;g.add(dome);
+  const slit=addBox(g,radius*.16,radius*.72,radius*1.48,0,radius*.72,0,M.dark);
+  slit.rotation.x=-.18;
+  // Telescope barrel fits inside the CAD pad and gives the named structure its
+  // intended identity without changing its surveyed footprint.
+  const scope=new THREE.Mesh(new THREE.CylinderGeometry(radius*.11,radius*.15,radius*1.05,14),M.truss);
+  scope.position.set(0,radius*.86,-radius*.05);scope.rotation.x=Math.PI/2-.42;g.add(scope);
+  makeLabel("GRIFFITH BUTSERVATORY",fp.x,fp.z);
+}
+function butAreaAttractionAsset(fp,name){
+  // These are closed But Area polygons from the CAD. The styling changes by
+  // attraction, but every wall/deck remains inscribed in that exact polygon's
+  // minimum-area rectangle.
+  const g=new THREE.Group();g.position.set(fp.x,0,fp.z);g.rotation.y=fp.rot;g.name=name+" · CAD";detail.add(g);
+  const accent=new THREE.MeshStandardMaterial({color:0xd9358f,roughness:.7,emissive:0x44102d,emissiveIntensity:.2});
+  addBox(g,fp.w,.14,fp.d,0,.08,0,new THREE.MeshStandardMaterial({color:0x58416f,roughness:.94}));
+  if(/SMELL MUSEUM/.test(name)){
+    // Open-sided museum: the CAD rectangle stays readable while exhibition
+    // partitions and the mapped train-stop edge give it identity.
+    for(const x of [-fp.w*.36,0,fp.w*.36])addBox(g,.12,2.25,fp.d*.64,x,1.13,0,M.canvas);
+    addBox(g,fp.w*.78,.22,.34,0,.32,-fp.d*.36,M.gold);
+  }else if(/FASHION DISTRICT/.test(name)){
+    for(const x of [-fp.w*.34,0,fp.w*.34])addPost(g,x,-fp.d*.36,2.8,M.truss);
+    addBox(g,fp.w*.84,.18,.18,0,2.75,-fp.d*.36,accent);
+    addBox(g,fp.w*.70,.12,fp.d*.34,0,.15,fp.d*.12,M.canvas);
+  }else if(/CAMP JUICY/.test(name)){
+    const canopy=new THREE.Mesh(new THREE.ConeGeometry(Math.min(fp.w,fp.d)*.42,1.4,8),accent);
+    canopy.position.y=3.05;canopy.castShadow=true;g.add(canopy);
+    for(const x of [-fp.w*.35,fp.w*.35])for(const z of [-fp.d*.35,fp.d*.35])addPost(g,x,z,2.55,M.wood);
+  }else{
+    // Wook phone / remaining named micro-attractions: an open exact-footprint
+    // pavilion, not a guessed building envelope.
+    for(const x of [-fp.w*.42,fp.w*.42])for(const z of [-fp.d*.42,fp.d*.42])addPost(g,x,z,2.65,M.truss);
+    addBox(g,fp.w*.88,.16,.16,0,2.62,-fp.d*.42,accent);
+    addBox(g,fp.w*.44,1.05,.45,0,.55,0,M.dark);
+  }
+  makeLabel(name,fp.x,fp.z);
+}
+function artGalleryAsset(fp){
+  // Gallery walls and hanging panels are inscribed in the existing 40x40 CAD
+  // stretch-tent footprint; the canopy itself is built elsewhere.
+  const g=new THREE.Group();g.position.set(fp.x,0,fp.z);g.rotation.y=fp.rot;g.name="ART GALLERY · CAD";detail.add(g);
+  const wall=new THREE.MeshStandardMaterial({color:0xf2eee5,roughness:.9});
+  for(const x of [-fp.w*.27,0,fp.w*.27]){
+    addBox(g,.10,2.15,fp.d*.58,x,1.08,0,wall);
+    for(const z of [-fp.d*.18,fp.d*.18]){
+      const art=new THREE.MeshStandardMaterial({color:z<0?0xd9358f:0x42a89e,emissive:z<0?0x42102d:0x113f43,emissiveIntensity:.24});
+      addBox(g,.13,.92,fp.d*.16,x+(x===0?.07:-.07),1.35,z,art);
+    }
+  }
+  makeLabel("ART GALLERY",fp.x,fp.z);
+}
 function photoBoothAsset(fp){
   const g=new THREE.Group();g.position.set(fp.x,0,fp.z);g.rotation.y=fp.rot;detail.add(g);
   const shell=new THREE.MeshStandardMaterial({color:0xf4eee5,roughness:.84});
@@ -494,7 +569,38 @@ function buildDetailedAssets(data){
     makeLabel("PHOTO BOOTH",photoBooth.x,photoBooth.z);
   }
   const extra=namedFootprint("ADDTL / 40x40 / STRETCH / TENT","Stretch Tents");
-  if(extra){stretchTentAsset(extra.x,extra.z,40*.3048,40*.3048,extra.rot);useTent(extra)}
+  if(extra){
+    stretchTentAsset(extra.x,extra.z,40*.3048,40*.3048,extra.rot);useTent(extra);
+    // The PDF identifies this exact same 40x40 footprint as ART GALLERY.
+    artGalleryAsset(extra);
+  }
+  const butservatory=namedFootprint("GRIFFITH / BUTSERVATORY","But Area",6);
+  if(butservatory)butservatoryAsset(butservatory);
+  // Promote all other named But-area CAD pads into designed attractions. The
+  // name comes from the nearest PDF/DXF annotation; the polygon alone controls
+  // center, rotation, width and depth.
+  const butNames=[
+    ["CAMP JUICY",anchor("CAMP / JUICY")],
+    ["SMELL MUSEUM / TRAIN STOP",anchor("SMELL / MUSEUM / / TRAIN STOP")],
+    ["FASHION DISTRICT",anchor("FASHION / DISTRICT")],
+    ["WOOK PHONE",anchor("wook / phone")]
+  ];
+  const usedBut=[];
+  for(const [name,a] of butNames){
+    if(!a)continue;
+    const candidates=data.paths.filter(p=>p.layer==="But Area"&&p.closed).map(pathFootprint)
+      .filter(fp=>fp&&!usedBut.some(p=>Math.hypot(p[0]-fp.x,p[1]-fp.z)<1))
+      .map(fp=>({fp,dist:Math.hypot(fp.x-a.point[0],fp.z-a.point[1])}))
+      .filter(x=>x.dist<12).sort((x,y)=>x.dist-y.dist);
+    // Some attractions intentionally span two or three adjacent CAD pads.
+    // Build every pad close to its own annotation, never bridge the gaps.
+    for(const {fp} of candidates){
+      if(butservatory&&Math.hypot(fp.x-butservatory.x,fp.z-butservatory.z)<3)continue;
+      usedBut.push([fp.x,fp.z]);butAreaAttractionAsset(fp,name);
+    }
+  }
+  const butwoodCinema=data.inserts.find(i=>i.name==="Event Tent 40x60 Event (2D)"&&i.bounds)?.bounds;
+  if(butwoodCinema)cinemaTentAsset(butwoodCinema);
   const innerStage=namedFootprint("INNERBASS STAGE / 16' x 12'","Stages");
   if(innerStage)festivalStage(innerStage.x,innerStage.z,innerStage.rot,16*.3048,12*.3048);
   const coconutStageAnchor=data.anchors.find(a=>a.text.toUpperCase().startsWith("STAGE /")&&a.point[0]>150);
@@ -603,7 +709,7 @@ function buildDetailedAssets(data){
   for(const item of data.inserts){
     const fp=item.bounds;if(!fp||Math.abs(fp.point[0])>500||Math.abs(fp.point[1])>500)continue;
     if(/^Event Tent /i.test(item.name)){
-      if(item.name==="Event Tent 40x60 Event 2 (2D)")continue;
+      if(item.name==="Event Tent 40x60 Event 2 (2D)"||item.name==="Event Tent 40x60 Event (2D)")continue;
       peakedTent(fp.point[0],fp.point[1],fp.width,fp.depth,fp.rotation);
     }else if(/^Vehicle Mobile Restroom Trailer/i.test(item.name)){
       restroomTrailer(fp.point[0],fp.point[1],fp.rotation,fp.width,fp.depth);
@@ -672,7 +778,9 @@ fetch("site-plan.json",{cache:"no-store"}).then(r=>r.json()).then(data=>{
 
 function buildLayerPanel(){
   const box=document.querySelector("#layers");
-  const hiddenByDefault=new Set(["But Area","CRASH BARRICADE","Food","Group Camping","None","Park Infrastructure","Parking","Porta Potties _ Bathroom Trucks","Preparty","Sponsor Activations","Stage-Main","Stages","Stretch Tents","Tents","Vendors"]);
+  // Parking is authoritative ground geometry, not raw massing, so it stays
+  // visible. Designed duplicates of structures remain hidden beneath assets.
+  const hiddenByDefault=new Set(["But Area","CRASH BARRICADE","Food","Group Camping","None","Park Infrastructure","Porta Potties _ Bathroom Trucks","Preparty","Sponsor Activations","Stage-Main","Stages","Stretch Tents","Tents","Vendors"]);
   [...roots.keys()].sort().forEach(layer=>{const label=document.createElement("label"),input=document.createElement("input");input.type="checkbox";input.checked=!hiddenByDefault.has(layer);
     roots.get(layer).visible=input.checked;
     input.onchange=()=>roots.get(layer).visible=input.checked;label.append(input,document.createTextNode(layer));box.append(label)});

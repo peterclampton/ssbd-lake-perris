@@ -271,6 +271,18 @@ const M={
 };
 function addBox(g,w,h,d,x,y,z,mat=M.dark){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);m.castShadow=m.receiveShadow=true;g.add(m);return m}
 function addPost(g,x,z,h=4,mat=M.truss){return addBox(g,.18,h,.18,x,h/2,z,mat)}
+function hippedRoof(g,w,d,eave,peak,mat){
+  // Rectangular canopy with a ridge along its long axis.  Shared by public
+  // tents and FOH so neither can regress to a diamond-shaped scaled cone.
+  const hw=w/2,hd=d/2,ridgeHalf=Math.max(w,d)*.18,longX=w>=d;
+  const ridge=longX?[[-ridgeHalf,peak,0],[ridgeHalf,peak,0]]:[[0,peak,-ridgeHalf],[0,peak,ridgeHalf]];
+  const corners=[[-hw,eave,-hd],[hw,eave,-hd],[hw,eave,hd],[-hw,eave,hd]];
+  const verts=[...corners,...ridge].flat();
+  const faces=longX?[0,1,5,0,5,4,1,2,5,2,3,4,2,4,5,3,0,4]
+                        :[0,1,4,1,2,5,1,5,4,2,3,5,3,0,4,3,4,5];
+  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));geo.setIndex(faces);geo.computeVertexNormals();
+  const roof=new THREE.Mesh(geo,mat);roof.castShadow=roof.receiveShadow=true;g.add(roof);return roof;
+}
 function peakedTent(x,z,w,d,rot,color=0xf1eadb){
   const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;detail.add(g);
   const mat=color===0xf1eadb?M.canvas:new THREE.MeshStandardMaterial({color,roughness:.86,side:THREE.DoubleSide});
@@ -279,16 +291,8 @@ function peakedTent(x,z,w,d,rot,color=0xf1eadb){
   // viewed from above -- the exact broken roof visible on the VIP and merch
   // tents.  This hipped mesh keeps every eave on the CAD rectangle and uses a
   // short ridge on long tents, as real frame tents do.
-  const hw=w/2,hd=d/2,eave=3.18,peak=5.18;
-  const ridgeHalf=Math.max(0,Math.max(w,d)*.18);
-  const longX=w>=d;
-  const ridge=longX?[[-ridgeHalf,peak,0],[ridgeHalf,peak,0]]:[[0,peak,-ridgeHalf],[0,peak,ridgeHalf]];
-  const corners=[[-hw,eave,-hd],[hw,eave,-hd],[hw,eave,hd],[-hw,eave,hd]];
-  const roofVerts=[...corners,...ridge].flat();
-  const roofFaces=longX?[0,1,5,0,5,4,1,2,5,2,3,4,2,4,5,3,0,4]
-                       :[0,1,4,1,2,5,1,5,4,2,3,5,3,0,4,3,4,5];
-  const roofGeo=new THREE.BufferGeometry();roofGeo.setAttribute('position',new THREE.Float32BufferAttribute(roofVerts,3));roofGeo.setIndex(roofFaces);roofGeo.computeVertexNormals();
-  const canopy=new THREE.Mesh(roofGeo,mat);canopy.castShadow=true;canopy.receiveShadow=true;g.add(canopy);
+  const eave=3.18,peak=5.18;
+  hippedRoof(g,w,d,eave,peak,mat);
   const valance=new THREE.MeshStandardMaterial({color:color===0xf1eadb?0xd7cfbe:color,roughness:.92,side:THREE.DoubleSide});
   addBox(g,w+.08,.34,.10,0,eave-.17,-d/2,valance);addBox(g,w+.08,.34,.10,0,eave-.17,d/2,valance);
   addBox(g,.10,.34,d+.08,-w/2,eave-.17,0,valance);addBox(g,.10,.34,d+.08,w/2,eave-.17,0,valance);
@@ -704,7 +708,7 @@ function restroomFootprintAsset(fp){
 function fohAsset(x,z,rot,w,d){
   const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;detail.add(g);
   addBox(g,w,.22,d,0,.12,0,M.dark);for(const px of [-w*.45,w*.45])for(const pz of [-d*.45,d*.45])addPost(g,px,pz,3.1);
-  const roof=new THREE.Mesh(new THREE.ConeGeometry(Math.max(w,d)*.72,1.6,4),M.canvas);roof.position.y=3.8;roof.rotation.y=Math.PI/4;g.add(roof);
+  hippedRoof(g,w,d,3.1,4.7,M.canvas);
   addBox(g,w*.62,1.2,d*.27,0,.65,0,M.dark);
 }
 function adaDeck(x,z,rot,w,d){

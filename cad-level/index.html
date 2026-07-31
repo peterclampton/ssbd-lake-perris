@@ -239,10 +239,25 @@ function barAsset(x,z,rot,w,d){
   for(const px of [-w/2,w/2])for(const pz of [-d/2,d/2])addPost(g,px,pz,3.2);
   addBox(g,w+.25,.18,.2,0,3.15,-d/2,M.pink);return g;
 }
+function pdfSizedAsset(anchor,wFeet,dFeet,builder,label,rotationOffset=0){
+  if(!anchor)return null;
+  const w=wFeet*.3048,d=dFeet*.3048,rot=anchor.rotation+rotationOffset;
+  const asset=builder(anchor.point[0],anchor.point[1],rot,w,d);
+  if(label)makeLabel(label,anchor.point[0],anchor.point[1]);
+  return asset;
+}
 function stallAsset(x,z,rot,w,d,food){
   const g=new THREE.Group(),col=food?0xf0a34a:0xdb4f93;g.position.set(x,0,z);g.rotation.y=rot;detail.add(g);
   addBox(g,w,2.5,d,0,1.25,0,new THREE.MeshStandardMaterial({color:col,roughness:.8}));
   addBox(g,w+.18,.22,d+.18,0,2.68,0,M.canvas);addBox(g,w*.66,.9,.18,0,1.6,-d/2-.02,M.dark);
+}
+function serviceAsset(x,z,rot,w,d,color=0xe7e1d6){
+  const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;detail.add(g);
+  const wall=new THREE.MeshStandardMaterial({color,roughness:.88});
+  addBox(g,w,2.65,d,0,1.33,0,wall);
+  addBox(g,w+.16,.18,d+.16,0,2.76,0,M.dark);
+  addBox(g,Math.min(1.05,w*.32),2,.08,0,1.08,-d/2-.045,M.blue);
+  return g;
 }
 function entranceAsset(x,z,rot,name){
   const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;detail.add(g);
@@ -331,6 +346,11 @@ function buildDetailedAssets(data){
   const namedFootprint=(text,layer,maxDist=12)=>{
     const a=anchor(text);return a?exactFootprint(data,a,layer,maxDist):null;
   };
+  const exactAnchor=(text,point)=>{
+    const matches=data.anchors.filter(a=>a.text===text);
+    if(!point)return matches[0]||null;
+    return matches.sort((a,b)=>Math.hypot(a.point[0]-point[0],a.point[1]-point[1])-Math.hypot(b.point[0]-point[0],b.point[1]-point[1]))[0]||null;
+  };
   const usedTents=[];
   const useTent=(fp)=>usedTents.push([fp.x,fp.z]);
   const tentUsed=(fp,dist=5)=>usedTents.some(p=>Math.hypot(p[0]-fp.x,p[1]-fp.z)<dist);
@@ -366,13 +386,59 @@ function buildDetailedAssets(data){
   if(coconutStage)festivalStage(coconutStage.x,coconutStage.z,coconutStage.rot,coconutStage.w,coconutStage.d);
   const coconutBar=namedFootprint("Coconut Cove Bar","Stages");
   if(coconutBar)barAsset(coconutBar.x,coconutBar.z,coconutBar.rot,coconutBar.w,coconutBar.d);
-  barAsset(36.8317,92.5351,-.25,30*.3048,20*.3048);
-  barAsset(57.1547,30.8776,-.1,40*.3048,10*.3048);
+  // These three bars are PDF annotations rather than closed DXF polygons.
+  // Their centers and orientation come from the DXF text entities; dimensions
+  // come only from the printed PDF callouts. Bar 6 has no printed dimensions,
+  // so it remains a labelled CAD marker until a physical footprint is supplied.
+  pdfSizedAsset(anchor("BAR 1"),30,20,barAsset,"BAR 1");
+  pdfSizedAsset(anchor("BAR 2"),10,40,barAsset,"BAR 2");
+  const bar6=anchor("BAR 6");if(bar6)makeLabel("BAR 6 · FOOTPRINT PENDING",bar6.point[0],bar6.point[1]);
   const east=anchor("ENTRANCE"),west=data.anchors.find(a=>a.text==="ENTRANCE"&&a!==east);
   if(east)entranceAsset(east.point[0],east.point[1],east.rotation,"EAST ENTRANCE");
   if(west)entranceAsset(west.point[0],west.point[1],west.rotation,"WEST ENTRANCE");
-  fohAsset(62.45,62.1,.05,20*.3048,20*.3048);
-  adaDeck(55.6751,68.4,.05,12*.3048,8*.3048);
+  // PDF sheet: ADA Viewing is explicitly 12' x 8'. The DXF provides separate
+  // ADA and VIEWING text entities at the platform. Use their midpoint rather
+  // than the earlier eyeballed center.
+  const viewA=anchor("VIEWING"),adaA=viewA?exactAnchor("ADA",viewA.point):null;
+  if(adaA&&viewA){
+    const mid={point:[(adaA.point[0]+viewA.point[0])/2,(adaA.point[1]+viewA.point[1])/2],rotation:viewA.rotation};
+    pdfSizedAsset(mid,12,8,adaDeck,"ADA VIEWING");
+  }
+  // Both FOH footprints are explicitly dimensioned on the PDF. They are text
+  // annotations rather than closed CAD polygons, so use the dimension entity's
+  // insertion point and rotation.
+  const sameFoh=exactAnchor("20 x 20",[64.6564,65.5089]);
+  if(sameFoh)pdfSizedAsset(sameFoh,20,20,fohAsset,"SAME STAGE FOH");
+  const coveFoh=exactAnchor("FOH / 10 x 10",[199.0277,-28.6668]);
+  if(coveFoh)pdfSizedAsset(coveFoh,10,10,fohAsset,"COCONUT COVE FOH");
+
+  // PDF-verified support footprints. These are dimension annotations placed
+  // inside their rectangles in the CAD, so the annotation insertion supplies
+  // center/rotation while the printed dimensions supply size.
+  const pdfBlocks=[
+    ["20 x 20",[-31.0424,-65.9352],20,20,"SUSTAINABILITY TENT","tent"],
+    ["10 X 20",[122.9776,-92.6682],10,20,"GUEST SERVICES / ADA","service"],
+    ["10 x 20",[118.2844,-76.6623],10,20,"ICE SALES","service"],
+    ["20 x 20",[122.9066,-101.9584],20,20,"VOLUNTEER","tent"],
+    ["10 x 20",[170.4453,-35.5087],10,20,"INNERSPACE GREEN ROOM","service"],
+    ["10 x 20",[112.2525,-120.1887],10,20,"SECURITY HQ","service"],
+    ["10 x 20",[-46.8326,147.2966],10,20,"BUT STAGE GREEN ROOM","service"],
+    ["10 x 20",[94.2229,-66.8308],10,20,"PEER SUPPORT","tent"],
+    ["20 x 20",[85.8825,-58.6118],20,20,"FIRST AID","tent"],
+    ["24x24 / HOSP / STORAGE",[24.5239,3.8007],24,24,"HOSPITAL STORAGE","service"],
+    ["10 x 20",[27.0419,80.0681],10,20,"VIP BAR STORAGE","service"],
+    ["10 x 20",[64.7082,22.0797],10,20,"BAR STORAGE","service"],
+    ["10 x 20",[219.62,160.1731],10,20,"COCONUT COVE BAR STORAGE","service"],
+    ["10 x 10",[103.5042,-41.742],10,10,"BAR 5 STORAGE","service"]
+  ];
+  for(const [text,near,w,d,label,kind] of pdfBlocks){
+    const a=exactAnchor(text,near);if(!a)continue;
+    if(kind==="tent"){
+      peakedTent(a.point[0],a.point[1],w*.3048,d*.3048,a.rotation);
+      makeLabel(label,a.point[0],a.point[1]);
+    }
+    else pdfSizedAsset(a,w,d,serviceAsset,label,0);
+  }
   const placed=[];for(const a of data.anchors){const food=/^FOOD(?: TRUCK)?$/i.test(a.text),vendor=/^VENDORS?$/i.test(a.text);if(!food&&!vendor)continue;
     const fp=exactFootprint(data,a,food?"Food":"Vendors");if(!fp||placed.some(p=>Math.hypot(p[0]-fp.x,p[1]-fp.z)<2))continue;
     placed.push([fp.x,fp.z]);stallAsset(fp.x,fp.z,fp.rot,fp.w,fp.d,food)}

@@ -2744,6 +2744,40 @@ window.sideLeds = [];
     [41050.0,14382.0]
   ]);
 
+  // Remaining CAD 6' scrim, transcribed after filtering out drawing-only
+  // construction marks and the long north return that previously speared out
+  // of Same Stage.  These finish the real site edges: food/service pockets,
+  // the beach-side production return, and the public/production separation.
+  // They deliberately remain separate paths where the CAD shows an opening.
+  const CAD_SITE_SCRIM = [
+    // Gate 8 / food-side service pockets
+    [[-94.8,26.8],[-97.6,24.3],[-89.0,15.2],[-86.6,17.7]],
+    [[-71.8,17.7],[-71.8,14.0],[-59.3,14.1],[-59.5,17.5]],
+    // Same Stage / VIP circulation — short runs only; no backstage spear.
+    [[42.3,62.6],[37.9,53.2]],
+    [[37.9,53.2],[44.0,48.8],[39.3,42.8],[33.9,47.0]],
+    [[36.2,50.4],[24.1,32.7],[24.0,33.3]],
+    [[-4.8,-12.9],[0.0,-7.1],[-15.8,13.2],[-9.9,19.9]],
+    [[-4.8,-13.0],[-7.7,-19.9]],
+    [[5.3,47.1],[11.7,57.2],[20.8,59.8]],
+    [[40.4,58.9],[23.0,61.7]],
+    // East / lake-side perimeter and the production return toward Gate 2.
+    [[-130.5,-37.2],[-126.2,-46.9],[-104.7,-47.7],[-95.2,-59.1]],
+    [[-130.5,-37.3],[-136.4,-23.7],[-141.2,-25.8]],
+    [[-77.0,-83.8],[-82.0,-93.8],[-83.2,-108.8],[-84.4,-122.9],[-81.3,-137.9]],
+    [[-57.3,-114.1],[-55.2,-117.7],[-65.3,-122.7],[-72.6,-107.3],[-69.4,-105.6]],
+    [[-52.0,-64.5],[-42.3,-56.7]],
+    // West / Gate 3 service-side breaks.
+    [[77.1,-46.5],[67.5,-39.4]],
+    [[70.1,-63.1],[57.8,-51.4]],
+    [[57.8,-51.4],[66.8,-40.3]]
+  ];
+  for(const path of CAD_SITE_SCRIM) {
+    for(let i=1;i<path.length;i++) scrimFenceRun(
+      path[i-1][0], path[i-1][1], path[i][0], path[i][1]
+    );
+  }
+
   // LIMITLESS VIEWING DECK — RAISED 32'x20' platform hugging the stage's east flank,
   // angled with the stage line. Its floor and guests sit above the 3.35m scrim.
   {

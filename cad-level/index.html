@@ -7,7 +7,7 @@
 <style>
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#9ecfff;font:13px/1.4 "Segoe UI",system-ui,sans-serif;color:#152238}
 canvas{display:block}
-#hud{position:fixed;inset:0;pointer-events:none}
+#hud{position:fixed;inset:0;pointer-events:none;z-index:10}
 #title{position:absolute;left:22px;top:20px;text-transform:uppercase;letter-spacing:2px;text-shadow:0 1px #fff}
 #title b{font-size:17px;letter-spacing:3px}
 #title small{display:block;color:#3d5578;letter-spacing:1px}
@@ -37,6 +37,12 @@ canvas{display:block}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 "use strict";
+// A blank canvas is never an acceptable failure mode. Surface any browser
+// runtime error in the HUD so a bad asset/API cannot silently look like sky.
+window.addEventListener('error',event=>{
+  const status=document.querySelector('#status');
+  if(status)status.textContent=`Runtime error: ${event.message}`;
+});
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x91c6ee);
 scene.fog=new THREE.FogExp2(0xb9cde0,.00105);
@@ -97,10 +103,15 @@ const aerialGeo=new THREE.BufferGeometry();
 aerialGeo.setAttribute('position',new THREE.Float32BufferAttribute(aerialCorners.flatMap(([x,z])=>[x,.062,z]),3));
 aerialGeo.setAttribute('uv',new THREE.Float32BufferAttribute([0,0,1,0,1,1,0,1],2));
 aerialGeo.setIndex([0,1,2,0,2,3]);aerialGeo.computeVertexNormals();
-const aerialTexture=new THREE.TextureLoader().load('../assets/lake-perris-aerial.jpg');
-aerialTexture.encoding=THREE.sRGBEncoding;aerialTexture.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
-const aerial=new THREE.Mesh(aerialGeo,new THREE.MeshBasicMaterial({map:aerialTexture}));
+// Do not decode the full aerial as a WebGL texture in this lightweight viewer:
+// Safari can lose the entire WebGL context on large photo textures. The image
+// is served in the separate Site aerial reference view instead.
+const aerial=new THREE.Mesh(aerialGeo,new THREE.MeshBasicMaterial({visible:false}));
 aerial.name='VECTORWORKS GEOREGISTERED SATELLITE AERIAL';aerial.receiveShadow=true;scene.add(aerial);
+// Kept out of the WebGL scene while the browser-level renderer uses its
+// compact fallback. The full TIFF remains the alignment authority and is
+// exposed through the Site aerial view rather than crashing the live world.
+aerial.visible=false;
 terrain.visible=false;grass.visible=false;
 const shore=new THREE.Mesh(new THREE.RingGeometry(LAKE_RADIUS,LAKE_RADIUS+3.2,160),new THREE.MeshStandardMaterial({color:0xcdbb83,roughness:1,side:THREE.DoubleSide}));
 shore.rotation.x=-Math.PI/2;shore.position.set(LAKE_X,WATER_LEVEL+.012,LAKE_Z);shore.receiveShadow=true;scene.add(shore);
@@ -1335,7 +1346,7 @@ let yaw=0,pitch=-.32;const keys={};
 // frame for every visual review.
 function festivalView(){camera.position.set(-48,18,54);yaw=-1.22;pitch=-.14}
 function overview(){camera.position.set(30,430,35);yaw=0;pitch=-Math.PI/2+.001}
-function siteOverview(){camera.position.set(-590,1850,120);yaw=0;pitch=-Math.PI/2+.001}
+function siteOverview(){window.open('site-aerial.html','_blank','noopener')}
 document.querySelector("#overview").onclick=overview;document.querySelector("#site").onclick=siteOverview;document.querySelector("#spawn").onclick=festivalView;
 addEventListener("keydown",e=>{keys[e.code]=true;if(e.code.startsWith("Arrow"))e.preventDefault()});
 addEventListener("keyup",e=>keys[e.code]=false);

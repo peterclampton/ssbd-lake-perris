@@ -57,6 +57,9 @@ GEOMETRY_LAYERS = {
     "Power-Parts-Supply",
     "Trash",
     "Camp Lanes",
+    # Aerial/PDF semantic layer containing three real 10x10 tent inserts and a
+    # symbol. Its raster underlay is ignored by the exporter.
+    "COLORMAPGOOD",
 }
 
 

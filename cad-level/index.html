@@ -458,6 +458,12 @@ function adaWalkway(x,z,rot,w,d){
   addBox(g,w,.06,.08,0,.11,-d/2,M.blue);
   addBox(g,w,.06,.08,0,.11,d/2,M.blue);
 }
+function eightInchStepAsset(fp){
+  const g=new THREE.Group();g.position.set(fp.point[0],0,fp.point[1]);g.rotation.y=fp.rotation;g.name="LIMITLESS 8 INCH STEP · CAD";detail.add(g);
+  // Printed plan callout is 8", so height is authoritative too.
+  addBox(g,fp.width,8*.0254,fp.depth,0,4*.0254,0,M.dark);
+  addBox(g,fp.width,.07,.08,0,8*.0254+.04,-fp.depth/2,M.gold);
+}
 function activationAsset(fp,color=0xd9358f){
   const g=new THREE.Group();g.position.set(fp.x,0,fp.z);g.rotation.y=fp.rot;detail.add(g);
   const mat=new THREE.MeshStandardMaterial({color,roughness:.72});
@@ -779,8 +785,15 @@ function buildDetailedAssets(data){
   // insertion point and rotation.
   const sameFoh=exactAnchor("20 x 20",[64.6564,65.5089]);
   if(sameFoh)pdfSizedAsset(sameFoh,20,20,fohAsset,"SAME STAGE FOH");
-  const coveFoh=exactAnchor("FOH / 10 x 10",[199.0277,-28.6668]);
-  if(coveFoh)pdfSizedAsset(coveFoh,10,10,fohAsset,"COCONUT COVE FOH");
+  const coveFohLabel=exactAnchor("FOH / 10 x 10",[199.0277,-28.6668]);
+  const coveFohTent=data.inserts.filter(i=>i.layer==="COLORMAPGOOD"&&i.name==="Event Tent 10x10 Pop-Up (2D)"&&i.bounds)
+    .map(i=>i.bounds).sort((a,b)=>Math.hypot(a.point[0]-coveFohLabel.point[0],a.point[1]-coveFohLabel.point[1])-Math.hypot(b.point[0]-coveFohLabel.point[0],b.point[1]-coveFohLabel.point[1]))[0];
+  if(coveFohTent){
+    fohAsset(coveFohTent.point[0],coveFohTent.point[1],coveFohTent.rotation,coveFohTent.width,coveFohTent.depth);
+    makeLabel("COCONUT COVE FOH",coveFohTent.point[0],coveFohTent.point[1]);
+  }else if(coveFohLabel)pdfSizedAsset(coveFohLabel,10,10,fohAsset,"COCONUT COVE FOH");
+  const limitlessStep=data.inserts.find(i=>i.layer==="COLORMAPGOOD"&&i.name==="Symbol-1 (2D)"&&i.bounds)?.bounds;
+  if(limitlessStep)eightInchStepAsset(limitlessStep);
 
   // PDF-verified support footprints. These are dimension annotations placed
   // inside their rectangles in the CAD, so the annotation insertion supplies
@@ -840,6 +853,7 @@ function buildDetailedAssets(data){
     const fp=item.bounds;if(!fp||Math.abs(fp.point[0])>500||Math.abs(fp.point[1])>500)continue;
     if(/^Event Tent /i.test(item.name)){
       if(item.name==="Event Tent 40x60 Event 2 (2D)"||item.name==="Event Tent 40x60 Event (2D)")continue;
+      if(coveFohTent===fp)continue;
       peakedTent(fp.point[0],fp.point[1],fp.width,fp.depth,fp.rotation);
     }else if(/^Vehicle Mobile Restroom Trailer/i.test(item.name)){
       restroomTrailer(fp.point[0],fp.point[1],fp.rotation,fp.width,fp.depth);
@@ -893,7 +907,7 @@ function buildDetailedAssets(data){
 fetch("site-plan.json",{cache:"no-store"}).then(r=>r.json()).then(data=>{
   for(const path of data.paths){
     const layer=path.layer,parent=rootFor(layer),fence=/FENCE|Bike Rack/.test(layer);
-    if(layer==="Group Camping"||layer==="But Area"||layer==="Stage-Main"||layer==="None"||layer==="CRASH BARRICADE")continue;
+    if(layer==="Group Camping"||layer==="But Area"||layer==="Stage-Main"||layer==="None"||layer==="CRASH BARRICADE"||layer==="COLORMAPGOOD")continue;
     if(path.closed&&!fence&&shapeMesh(path,layer,parent))continue;
     const h=layer==="SCRIM 8' FENCE"?2.45:layer==="Bike Rack"?1.05:fence?1.85:.18;
     const w=layer==="Bike Rack"?.08:fence?.11:.16,mat=material(layer);

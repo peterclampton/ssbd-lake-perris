@@ -57,7 +57,11 @@ const WATER_LEVEL=-.22;
 // The lake lies southeast of the festival core in this mirrored CAD/world
 // coordinate space. These constants drive the water, shore and terrain cutout
 // together so the surface cannot float through a hillside.
-const LAKE_X=750,LAKE_Z=720,LAKE_RADIUS=760;
+const LAKE_X=750,LAKE_Z=720;
+// The waterline is tangent to the lake-facing corner of the CAD's Coconut
+// Cove 130' stretch tent ([214.2843,174.8828]). Do not leave an invented
+// strip of beach between that tent and Lake Perris.
+const LAKE_RADIUS=764.293;
 const terrainGeo=new THREE.PlaneGeometry(2300,2300,160,160);
 const terrainPos=terrainGeo.attributes.position;
 for(let i=0;i<terrainPos.count;i++){
@@ -76,7 +80,7 @@ const terrain=new THREE.Mesh(terrainGeo,new THREE.MeshStandardMaterial({color:0x
 terrain.rotation.x=-Math.PI/2;terrain.receiveShadow=true;scene.add(terrain);
 const grass=new THREE.Mesh(new THREE.CircleGeometry(330,128),new THREE.MeshStandardMaterial({color:0x587f42,roughness:.98}));
 grass.rotation.x=-Math.PI/2;grass.position.y=.035;grass.receiveShadow=true;scene.add(grass);
-const shore=new THREE.Mesh(new THREE.RingGeometry(LAKE_RADIUS,LAKE_RADIUS+28,160),new THREE.MeshStandardMaterial({color:0xcdbb83,roughness:1,side:THREE.DoubleSide}));
+const shore=new THREE.Mesh(new THREE.RingGeometry(LAKE_RADIUS,LAKE_RADIUS+3.2,160),new THREE.MeshStandardMaterial({color:0xcdbb83,roughness:1,side:THREE.DoubleSide}));
 shore.rotation.x=-Math.PI/2;shore.position.set(LAKE_X,WATER_LEVEL+.012,LAKE_Z);shore.receiveShadow=true;scene.add(shore);
 const skyGeo=new THREE.SphereGeometry(1900,48,24);
 const sky=new THREE.Mesh(skyGeo,new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,uniforms:{top:{value:new THREE.Color(0x2872b2)},bottom:{value:new THREE.Color(0xd9e9ee)}},vertexShader:'varying vec3 vP; void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',fragmentShader:'uniform vec3 top;uniform vec3 bottom;varying vec3 vP;void main(){float h=clamp(normalize(vP).y*.5+.5,0.,1.);gl_FragColor=vec4(mix(bottom,top,smoothstep(.04,.92,h)),1.);}'}));

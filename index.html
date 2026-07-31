@@ -2612,33 +2612,31 @@ window.sideLeds = [];
 
 // ---------- VIP GARDEN — surveyed west-side layout with flower-arch gate ----------
 {
-  // Purple plan lines become black scrim. The flower arch and stage-facing
-  // bike-rack handoff remain open, matching the two intentional map gaps.
-  scrimFenceRun(22, 59, 49, 39);
-  scrimFenceRun(49, 39, 52, 30);
-  scrimFenceRun(52, 30, 55.5, 19);
-  scrimFenceRun(55.5, 19, 26, 15);
-  // FOH/VIP handoff: black scrim starts exactly where the bike-rack spur ends
-  // and follows the mapped bends toward Bar 1. The VIP Gate gap stays open.
-  scrimFenceRun(-2.5,20,7,17.5);
-  scrimFenceRun(7,17.5,18,14);
+  // CAD VIP boundary.  The old hand-drawn garden sat down beside FOH, which
+  // made every VIP asset look like it had drifted toward the stage.  The CAD
+  // boundary runs north from the Limitless corner to the actual VIP gate.
+  scrimFenceRun(-11.3,58.1,-12.2,66.3);
+  scrimFenceRun(-12.2,66.3,-9.8,71.2);
+  scrimFenceRun(-9.8,71.2,-7.7,77.0);
+  scrimFenceRun(-7.7,77.0,-6.6,80.3);
+  scrimFenceRun(-6.6,80.3,-1.5,96.5);
   const archF = new THREE.Mesh(new THREE.TorusGeometry(3.4, 0.35, 8, 20, Math.PI),
     new THREE.MeshStandardMaterial({color:0xe0559f, roughness:0.8}));
-  archF.position.set(22, 0.4, 14.6); scene.add(archF);
+  archF.position.set(-5.7, 0.4, 100.3); scene.add(archF);
   for(let i=0;i<7;i++){
     const fl = new THREE.Mesh(new THREE.SphereGeometry(0.28,6,6),
       new THREE.MeshStandardMaterial({color:[0xffd166,0xff5f8f,0xffffff][i%3], roughness:0.8}));
     const a = Math.PI*i/6;
-    fl.position.set(22+Math.cos(a)*3.4, 0.4+Math.sin(a)*3.4, 14.6); scene.add(fl);
+    fl.position.set(-5.7+Math.cos(a)*3.4, 0.4+Math.sin(a)*3.4, 100.3); scene.add(fl);
   }
-  makeLabel("VIP", 31, 6.4, 33, 0.9);
-  makeLabel("FAMILY GARDEN", 47, 5.6, 52, 0.85);
-  makeLabel("VIP GATE", 22, 5.4, 14.6, 0.8);
+  makeLabel("VIP", 28.9, 6.4, 81.9, 0.9);
+  makeLabel("FAMILY GARDEN", 69.7, 5.6, 108.7, 0.85);
+  makeLabel("VIP GATE", -5.7, 5.4, 100.3, 0.8);
 
-  // The blue permanent restroom and its white service trailer sit in the
-  // circular Family Garden island, west of the lounge.
+  // CAD marks the permanent VIP restroom as its own footprint; the separate
+  // three-door mobile trailer is instantiated below at its actual CAD anchor.
   {
-    const vrx=32.2, vrz=39.3, vrRot=0.15;
+    const vrx=30.4, vrz=93.9, vrRot=0.15;
     const vr=new THREE.Group(); vr.position.set(vrx,0,vrz); vr.rotation.y=vrRot; scene.add(vr);
     const body=new THREE.Mesh(new THREE.BoxGeometry(7,3.1,4),
       new THREE.MeshStandardMaterial({color:0x2b8fd8,roughness:0.76}));
@@ -2654,18 +2652,6 @@ window.sideLeds = [];
     addCyl(vrx,vrz,3.7);
     makeLabel("VIP RESTROOM",vrx,5.4,vrz,0.7);
 
-    const tx=33, tz=44;
-    const trailer=new THREE.Group(); trailer.position.set(tx,0,tz);
-    trailer.rotation.y=0.08; scene.add(trailer);
-    const shell=new THREE.Mesh(new THREE.BoxGeometry(5.6,2.6,2.5),
-      new THREE.MeshStandardMaterial({color:0xe8e8e5,roughness:0.66,metalness:0.12}));
-    shell.position.y=1.55; trailer.add(shell);
-    for(const lx of [-2,2]){
-      const wheel=new THREE.Mesh(new THREE.CylinderGeometry(0.42,0.42,0.24,12),dark);
-      wheel.rotation.z=Math.PI/2; wheel.position.set(lx,0.45,-1.25); trailer.add(wheel);
-    }
-    addBox(tx,tz,6,3);
-    makeLabel("VIP RESTROOM TRAILER",tx,5.1,tz,0.58);
   }
 
   // LIMITLESS COMPLEX — CAD-aligned, not eyeballed.
@@ -2914,7 +2900,8 @@ window.sideLeds = [];
 
   // VIP LOUNGE — 50x30 tensile tent replacing the former umbrella cluster.
   {
-    const vpx=9.3, vpz=33.7, vrot=0.33;
+    // CAD label/footprint: VIP Lounge 50x30.
+    const vpx=8.8, vpz=76.6, vrot=0.33;
     const vg = new THREE.Group(); vg.position.set(vpx, 0, vpz); vg.rotation.y = vrot; scene.add(vg);
     const roofMat = new THREE.MeshStandardMaterial({
       color:0xf2ead8, roughness:0.82, side:THREE.DoubleSide
@@ -2955,7 +2942,8 @@ window.sideLeds = [];
 
   // BAR 1 — 30x20 bar just inside the VIP gate
   {
-    const b1x=16.5, b1z=19.1, b1rot=1.36;
+    // CAD label/footprint: Bar 1 30x20, immediately inside the actual VIP gate.
+    const b1x=-7.8, b1z=92.5, b1rot=0.18;
     const bg = new THREE.Group(); bg.position.set(b1x, 0, b1z); bg.rotation.y=b1rot; scene.add(bg);
     const canopy = new THREE.Mesh(new THREE.BoxGeometry(9, 0.2, 6),
       new THREE.MeshStandardMaterial({color:0x2f9e44, roughness:0.8}));
@@ -2975,7 +2963,7 @@ window.sideLeds = [];
     const tender = makePerson(0x2a2a30); tender.position.set(0, 0, -3.4); bg.add(tender);
     makeLabel("BAR 1", b1x, 5.8, b1z, 0.85);
 
-    const bsx=12.2, bsz=23.5;
+    const bsx=-9.1, bsz=94.4;
     const storage=new THREE.Mesh(new THREE.BoxGeometry(4.2,2.7,3.1),
       new THREE.MeshStandardMaterial({color:0xd8d4cc,roughness:0.88}));
     storage.position.set(bsx,1.35,bsz); scene.add(storage);

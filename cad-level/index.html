@@ -355,45 +355,67 @@ function festivalStage(x,z,rot,w=24,d=13,butwood=false){
   return g;
 }
 function innerbassStageAsset(fp){
-  // Photo reference (2026-07-31): Innerbass is a compact outdoor DJ stage
-  // under a colourful faceted shade canopy, with twin speaker stacks, tall
-  // truss masts, moon-and-wing decor, and a close front barrier—not a generic
-  // roofed concert box.
+  // Photo reference (2026-07-31): a saturated orange/teal/lime sail roof,
+  // purple subs under tall khaki line arrays, black DJ deck, psychedelic
+  // tapestry panels, and an orange moon-ring with gold crescent wings.
   const w=16*.3048,d=12*.3048;
   const g=new THREE.Group();g.name="INNERBASS STAGE · PHOTO-DERIVED";
   g.position.set(fp.x,0,fp.z);g.rotation.y=fp.rot;detail.add(g);
   const deckMat=new THREE.MeshStandardMaterial({color:0x15191e,roughness:.7,metalness:.2});
-  const speakerMat=new THREE.MeshStandardMaterial({color:0x111217,roughness:.56,metalness:.3});
-  const ledMat=new THREE.MeshStandardMaterial({color:0x182b48,emissive:0x3fc7d8,emissiveIntensity:1.35,roughness:.35});
-  const wingMat=new THREE.MeshStandardMaterial({color:0xe5e7e2,roughness:.68,side:THREE.DoubleSide});
+  const black=new THREE.MeshStandardMaterial({color:0x111116,roughness:.62,metalness:.22});
+  const purple=new THREE.MeshStandardMaterial({color:0x201651,roughness:.5,metalness:.24});
+  const khaki=new THREE.MeshStandardMaterial({color:0x4a5142,roughness:.78});
+  const orange=new THREE.MeshStandardMaterial({color:0xbc572c,roughness:.58,metalness:.2});
+  const gold=new THREE.MeshStandardMaterial({color:0xd7b93d,roughness:.45,metalness:.32});
+  const cyan=new THREE.MeshStandardMaterial({color:0x159bad,emissive:0x073a5a,emissiveIntensity:.7,roughness:.48});
   addBox(g,w,.72,d,0,.36,0,deckMat);
-  // DJ table and a pair of bright LED faces sit in the open front of the deck.
-  addBox(g,w*.38,1.18,.52,0,1.15,-d*.15,M.dark);
-  addBox(g,w*.30,.72,.055,0,1.34,-d*.15-.29,ledMat);
+  // Black DJ deck, blue LED lip, and two low monitor wedges at the public face.
+  addBox(g,w*.42,1.12,.58,0,1.1,-d*.13,black);
+  addBox(g,w*.36,.09,.07,0,1.45,-d*.45,cyan);
+  for(const x of [-w*.21,w*.21]){const mon=new THREE.Mesh(new THREE.BoxGeometry(w*.18,.42,.58),black);mon.position.set(x,.55,-d*.42);mon.rotation.x=-.28;g.add(mon)}
+  // Tall left/right arrays: purple sub stacks below, six horn cabinets above.
   for(const side of [-1,1]){
-    const sx=side*(w*.43);
-    for(let n=0;n<3;n++)addBox(g,w*.13,.88,d*.22,sx,.78+n*.9,-d*.04,speakerMat);
-    addBox(g,w*.15,3.0,d*.26,sx,1.65,d*.30,speakerMat);
-    addPost(g,sx,d*.48,6.5,M.truss);addPost(g,sx,-d*.48,6.5,M.truss);
+    const sx=side*(w*.43),cabW=w*.17;
+    for(let n=0;n<2;n++)addBox(g,cabW,.62,d*.35,sx,.31+n*.63,-d*.06,purple);
+    for(let n=0;n<5;n++){
+      addBox(g,cabW*.85,.52,d*.27,sx,1.55+n*.5,d*.08,khaki);
+      const horn=new THREE.Mesh(new THREE.ConeGeometry(cabW*.22,.18,4),black);horn.position.set(sx,1.55+n*.5,-d*.08);horn.rotation.x=Math.PI/2;g.add(horn);
+    }
+    addPost(g,sx,d*.51,6.0,M.truss);addPost(g,sx,-d*.51,6.0,M.truss);
   }
-  addBox(g,w+.6,.14,.14,0,6.38,-d*.48,M.truss);
-  // Four irregular shade sails make the photographed geometric canopy, while
-  // staying lightweight enough for the browser renderer.
-  const sailCols=[0xd88436,0x5a84a0,0xe1ba45,0x865c9a];
-  const apex=[0,7.1,0];
+  addBox(g,w+.5,.14,.14,0,5.92,-d*.5,M.truss);
+  // The roof is a four-panel tensile canopy with the reference's orange,
+  // turquoise, and acid-lime radial geometry (visible from below as well).
+  const sailCols=[0xd8662d,0x16a9a0,0xb9cf3e,0xd8662d];
+  const apex=[0,6.58,0];
   const corners=[[-w*.57,6.35,-d*.58],[w*.57,6.55,-d*.58],[w*.57,6.28,d*.58],[-w*.57,6.48,d*.58]];
   for(let i=0;i<4;i++){
     const a=corners[i],b=corners[(i+1)%4],geo=new THREE.BufferGeometry();
     geo.setAttribute("position",new THREE.Float32BufferAttribute([...a,...b,...apex],3));geo.setIndex([0,1,2]);geo.computeVertexNormals();
     const sail=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:sailCols[i],roughness:.82,side:THREE.DoubleSide}));sail.castShadow=true;g.add(sail);
   }
-  // Crescent/wing focal piece behind the DJ, approximated with a moon disk and
-  // two broad white wings readable from the player approach.
-  const moon=new THREE.Mesh(new THREE.CircleGeometry(.76,24),wingMat);moon.position.set(0,3.5,d*.42+.05);moon.rotation.y=Math.PI;g.add(moon);
+  // Psychedelic fabric walls either side of the moon portal: alternating
+  // purple/teal vertical strips, like the provided reference photo.
   for(const side of [-1,1]){
-    const wing=new THREE.Mesh(new THREE.ConeGeometry(.72,2.5,3),wingMat);wing.position.set(side*1.13,3.35,d*.43);wing.rotation.z=side*Math.PI*.42;wing.rotation.x=Math.PI/2;g.add(wing);
+    const px=side*w*.23;
+    addBox(g,w*.19,2.42,.07,px,3.0,d*.43,black);
+    for(let n=0;n<8;n++)addBox(g,w*.014,2.28,.025,px-w*.08+n*w*.023,3.0,d*.47,n%2?cyan:purple);
   }
-  // Low crowd-control barrier along the public face.
+  // The focal Moon Portal is an orange ring with seven small gold crescents
+  // across its crown and a layered feather wing to each side.
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(1.12,.14,8,28),orange);ring.position.set(0,3.15,d*.43);ring.rotation.y=Math.PI;g.add(ring);
+  for(let n=0;n<7;n++){
+    const a=Math.PI*.14+n*Math.PI*.12,rx=Math.cos(a)*1.08,ry=Math.sin(a)*1.08;
+    const moon=new THREE.Mesh(new THREE.SphereGeometry(.19,10,8),gold);moon.position.set(rx,3.15+ry,d*.31);g.add(moon);
+    const cut=new THREE.Mesh(new THREE.SphereGeometry(.16,10,8),black);cut.position.set(rx+.075,3.15+ry+.035,d*.29);g.add(cut);
+  }
+  for(const side of [-1,1]){
+    for(let n=0;n<5;n++){
+      const feather=new THREE.Mesh(new THREE.ConeGeometry(.16,.94+n*.08,4),gold);feather.position.set(side*(1.12+n*.10),2.48+n*.19,d*.43);feather.rotation.z=side*(.72+n*.08);feather.rotation.x=Math.PI/2;g.add(feather);
+    }
+  }
+  // Low crowd-control barrier along the public face, with the same clean
+  // straight-rail silhouette as the reference.
   const railMat=new THREE.MeshStandardMaterial({color:0x7d8790,roughness:.42,metalness:.65});
   addBox(g,w*1.12,.08,.08,0,1.08,-d*.66,railMat);
   for(let x=-w*.54;x<=w*.54;x+=1.2)addPost(g,x,-d*.66,1.1,railMat);

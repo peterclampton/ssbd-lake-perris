@@ -53,6 +53,7 @@ sun.shadow.mapSize.set(2048,2048); Object.assign(sun.shadow.camera,{left:-260,ri
 // This is an actual world, not a CAD sheet sitting on two discs: a broad,
 // irregular Lake Perris basin with low surrounding foothills, shoreline and a
 // horizon-grade sky.  The surveyed festival pads remain flat and authoritative.
+const WATER_LEVEL=-.22;
 const terrainGeo=new THREE.PlaneGeometry(2300,2300,160,160);
 const terrainPos=terrainGeo.attributes.position;
 for(let i=0;i<terrainPos.count;i++){
@@ -60,7 +61,7 @@ for(let i=0;i<terrainPos.count;i++){
   const basin=Math.max(0,(r-270)/650);
   const ridge=basin*basin*(18+10*Math.sin(x*.008)+7*Math.cos(z*.011)+5*Math.sin((x+z)*.015));
   const detail=basin*(2.8*Math.sin(x*.035)*Math.cos(z*.028)+1.3*Math.sin((x-z)*.07));
-  terrainPos.setZ(i,Math.max(-.25,ridge+detail-.2));
+  terrainPos.setZ(i,Math.max(WATER_LEVEL-.05,ridge+detail-.2));
 }
 terrainGeo.computeVertexNormals();
 const terrain=new THREE.Mesh(terrainGeo,new THREE.MeshStandardMaterial({color:0x9c875d,roughness:1}));
@@ -68,7 +69,7 @@ terrain.rotation.x=-Math.PI/2;terrain.receiveShadow=true;scene.add(terrain);
 const grass=new THREE.Mesh(new THREE.CircleGeometry(330,128),new THREE.MeshStandardMaterial({color:0x587f42,roughness:.98}));
 grass.rotation.x=-Math.PI/2;grass.position.y=.035;grass.receiveShadow=true;scene.add(grass);
 const shore=new THREE.Mesh(new THREE.RingGeometry(330,420,128),new THREE.MeshStandardMaterial({color:0xcdbb83,roughness:1,side:THREE.DoubleSide}));
-shore.rotation.x=-Math.PI/2;shore.position.y=.025;scene.add(shore);
+shore.rotation.x=-Math.PI/2;shore.position.y=WATER_LEVEL+.015;scene.add(shore);
 const skyGeo=new THREE.SphereGeometry(1900,48,24);
 const sky=new THREE.Mesh(skyGeo,new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,uniforms:{top:{value:new THREE.Color(0x2872b2)},bottom:{value:new THREE.Color(0xd9e9ee)}},vertexShader:'varying vec3 vP; void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',fragmentShader:'uniform vec3 top;uniform vec3 bottom;varying vec3 vP;void main(){float h=clamp(normalize(vP).y*.5+.5,0.,1.);gl_FragColor=vec4(mix(bottom,top,smoothstep(.04,.92,h)),1.);}'}));
 scene.add(sky);
@@ -89,7 +90,7 @@ for(let i=0;i<190;i++){
 // The PDF places Lake Perris southeast of the festival core. In this CAD/world
 // mirrored CAD/world transform that is +X/+Z.
 const lake=new THREE.Mesh(new THREE.CircleGeometry(760,128),new THREE.MeshPhysicalMaterial({color:0x1d7898,roughness:.13,metalness:.08,transparent:true,opacity:.94,clearcoat:.35}));
-lake.rotation.x=-Math.PI/2; lake.position.set(750,.04,720); scene.add(lake);
+lake.rotation.x=-Math.PI/2; lake.position.set(750,WATER_LEVEL,720); scene.add(lake);
 
 const palette={
   "SCRIM 6' FENCE":0x17191d,"SCRIM 8' FENCE":0x111318,"Fence Line":0xbf342b,"Bike Rack":0x25a842,
@@ -341,6 +342,22 @@ function foodVendorAsset(fp,index){
   }
   const menu=addBox(g,Math.min(1.15,fp.w*.32),.7,.06,fp.w*.28,2.55,-fp.d/2-.16,M.dark);
   menu.name="FOOD MENU";
+}
+function dumpsterAsset(fp,index){
+  // The white rectangles behind Production Lot 9 are the plan's dumpster bank,
+  // not event tents. Keep the mapped pad, but populate it with roll-off bins.
+  const g=new THREE.Group();g.name=`PRODUCTION DUMPSTER BANK ${index+1} · CAD`;g.position.set(fp.x,0,fp.z);g.rotation.y=fp.rot;detail.add(g);
+  const binMat=new THREE.MeshStandardMaterial({color:0x354f42,roughness:.8,metalness:.16});
+  const lidMat=new THREE.MeshStandardMaterial({color:0x263b32,roughness:.74,metalness:.2});
+  const count=Math.max(2,Math.min(5,Math.round(fp.w/3.1)));
+  for(let i=0;i<count;i++){
+    const x=(i-(count-1)/2)*Math.min(2.8,fp.w/count*.9),bw=Math.min(2.35,fp.w/count*.72),bd=Math.min(2.15,fp.d*.64);
+    addBox(g,bw,1.28,bd,x,.64,0,binMat);
+    const lid=addBox(g,bw+.08,.12,bd+.08,x,1.31,0,lidMat);lid.rotation.z=(i%2?-.04:.04);
+    for(const px of [-bw*.34,bw*.34])for(const pz of [-bd*.35,bd*.35]){
+      const wheel=new THREE.Mesh(new THREE.CylinderGeometry(.12,.12,.09,8),M.dark);wheel.position.set(x+px,.13,pz);wheel.rotation.x=Math.PI/2;g.add(wheel);
+    }
+  }
 }
 function serviceAsset(x,z,rot,w,d,color=0xe7e1d6){
   const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;detail.add(g);
@@ -971,11 +988,17 @@ function buildDetailedAssets(data){
     if(placed.some(p=>Math.hypot(p[0]-fp.x,p[1]-fp.z)<2))continue;
     placed.push([fp.x,fp.z]);stallAsset(fp.x,fp.z,fp.rot,fp.w,fp.d,false);vendorIndex++;
   }
-  // Every remaining tent uses its closed DXF outline. Skip the two named tents
+  const productionAnchor=anchor("PRODUCTION");let dumpsterIndex=0;
+  // Every remaining tent uses its closed DXF outline. The six white rectangles
+  // directly behind Production Lot 9 are a dumpster bank in the PDF, not tents.
+  // Skip the two named tents
   // above so they are not drawn twice.
   for(const path of data.paths){
     if(!path.closed||!(path.layer==="Tents"||path.layer==="Stretch Tents"))continue;
     const fp=pathFootprint(path);if(!fp||fp.w<1.5||fp.d<1.5||fp.w>45||fp.d>45)continue;
+    if(path.layer==="Tents"&&productionAnchor&&Math.hypot(fp.x-productionAnchor.point[0],fp.z-productionAnchor.point[1])<58){
+      dumpsterAsset(fp,dumpsterIndex++);continue;
+    }
     if(tentUsed(fp,8)||Math.hypot(fp.x-.9549,fp.z-112.7312)<8)continue;
     peakedTent(fp.x,fp.z,fp.w,fp.d,fp.rot,path.layer==="Stretch Tents"?0xe9dfc4:0xf1eadb);
   }

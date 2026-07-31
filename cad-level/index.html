@@ -154,6 +154,37 @@ lake.rotation.x=-Math.PI/2; lake.position.set(LAKE_X,WATER_LEVEL,LAKE_Z); lake.r
 // would corrupt the true shoreline visible in the Vectorworks source.
 lake.visible=false;
 
+// The TIFF is the site authority.  We cannot safely upload its 326 MB source
+// texture to this r128/Safari renderer, so these are deliberately modest,
+// aerial-traced material zones rather than a fake circular lawn.  They make
+// the playable world read like the actual park: maintained grass at the event
+// core, decomposed-granite roads/parking, concrete pads, and the broad sandy
+// beach that meets Coconut Cove and the ADA approach.
+const siteSurface=new THREE.Group();siteSurface.name="AERIAL-TRACED SITE SURFACES";scene.add(siteSurface);
+function sitePatch(name,points,color,y=.018){
+  const shape=new THREE.Shape();shape.moveTo(points[0][0],-points[0][1]);
+  for(let i=1;i<points.length;i++)shape.lineTo(points[i][0],-points[i][1]);
+  const mesh=new THREE.Mesh(new THREE.ShapeGeometry(shape),new THREE.MeshStandardMaterial({color,roughness:.96}));
+  mesh.name=name;mesh.rotation.x=-Math.PI/2;mesh.position.y=y;mesh.receiveShadow=true;siteSurface.add(mesh);return mesh;
+}
+function siteRibbon(name,points,width,color,y=.025){
+  const left=[],right=[];for(let i=0;i<points.length;i++){
+    const a=points[Math.max(0,i-1)],b=points[Math.min(points.length-1,i+1)],dx=b[0]-a[0],dz=b[1]-a[1],l=Math.hypot(dx,dz)||1;
+    left.push([points[i][0]-dz/l*width/2,points[i][1]+dx/l*width/2]);right.unshift([points[i][0]+dz/l*width/2,points[i][1]-dx/l*width/2]);
+  } return sitePatch(name,left.concat(right),color,y);
+}
+sitePatch("AERIAL LAWN",[[-220,-150],[80,-165],[235,-92],[282,20],[252,132],[202,184],[118,224],[4,262],[-124,238],[-214,148],[-250,24]],0x6f8751,.006);
+sitePatch("AERIAL BEACH SAND",[[-163,145],[-104,190],[-25,238],[48,274],[121,264],[177,229],[214,187],[201,161],[161,177],[104,205],[32,219],[-53,191]],0xd8c28b,.031);
+sitePatch("COCONUT COVE SAND APRON",[[156,151],[205,148],[231,177],[217,204],[180,216],[153,192]],0xe0ca94,.036);
+siteRibbon("AERIAL PARK ACCESS ROAD",[[-246,-92],[-173,-69],[-103,-46],[-29,-25],[38,0],[97,25],[149,54],[194,87],[236,120]],12,0x857e70,.021);
+siteRibbon("AERIAL BEACH ADA APPROACH",[[46,254],[68,236],[97,216],[126,196],[159,179],[192,162]],7.8,0xb3afa3,.041);
+sitePatch("AERIAL CONCRETE PLAZA",[[61,-22],[126,-14],[141,39],[94,55],[52,24]],0xa9a79f,.034);
+sitePatch("AERIAL EAST LOT",[[86,50],[183,72],[212,119],[147,133],[92,104]],0x98958b,.028);
+// Restore visible park vegetation only in aerial-confirmed edge bands.  The
+// core remains open grass; scattered decoration there would contradict the
+// source image and the festival plan.
+trees.visible=true;
+
 const palette={
   "SCRIM 6' FENCE":0x17191d,"SCRIM 8' FENCE":0x111318,"Fence Line":0x17191d,"Bike Rack":0x25a842,
   "Stages":0x272833,"Tents":0xf1eadb,"Stretch Tents":0xe9dfc4,"Food":0xf0a34a,"Vendors":0xdb4f93,
@@ -1121,10 +1152,12 @@ function buildDetailedAssets(data){
     if(placed.some(p=>Math.hypot(p[0]-fp.x,p[1]-fp.z)<2))continue;
     placed.push([fp.x,fp.z]);foodVendorAsset(fp,foodIndex++);
   }
-  // East Merchants belong at the plan's VENDORS callout beside the food cluster,
-  // not at the displaced MERCHANT annotation. Build the sixteen tents in two
-  // inward-facing rows around the mapped pedestrian aisle.
-  const eastMerchants=exactAnchor("VENDORS",[60,-20]);
+  // East Merchants are the CAD's explicit `MERCHANT / 16 VENDORS` callout at
+  // the East Entrance.  `VENDORS` at [60,-20] is the separate food-area
+  // annotation; using it was the source of the beach/east-merchant swap.
+  // Build the sixteen tents in two inward-facing rows around the actual
+  // merchant aisle, not the food-vendor cluster.
+  const eastMerchants=exactAnchor("16 VENDORS",[100,51])||exactAnchor("MERCHANT",[100,51]);
   if(eastMerchants){
     const aisleRot=eastMerchants.rotation,ux=Math.sin(aisleRot),uz=Math.cos(aisleRot),nx=-uz,nz=ux;
     for(let row=0;row<2;row++)for(let col=0;col<8;col++){
@@ -1135,18 +1168,16 @@ function buildDetailedAssets(data){
     }
     makeLabel("EAST MERCHANTS · 16 VENDORS",eastMerchants.point[0],eastMerchants.point[1]);
   }
-  // The eight literal Vendors-layer pads define the beach-row spacing and
-  // rotation.  The plan/aerial puts that row on the Coconut Cove beach, not
-  // alongside the East Entrance food vendors.  Move the whole CAD row as one
-  // rigid unit to the mapped Coconut Cove beach pocket; individual tents keep
-  // their surveyed size, spacing, and orientation.
+  // The eight literal Vendors-layer pads are the BEACH VENDORS beside the ADA
+  // ramp/approach.  Their CAD coordinates are already authoritative.  Do not
+  // translate this row toward Coconut Cove or the East Entrance: that is the
+  // exact confusion this pass is correcting.
   const beachPads=cadPads("Vendors").filter(fp=>fp.z>=220);
-  const beachRowCenter=beachPads.reduce((s,fp)=>[s[0]+fp.x,s[1]+fp.z],[0,0]);
   if(beachPads.length){
+    beachPads.forEach((fp,index)=>vendorTentAsset(fp.x,fp.z,fp.rot,index,fp.w,fp.d));
+    const beachRowCenter=beachPads.reduce((s,fp)=>[s[0]+fp.x,s[1]+fp.z],[0,0]);
     beachRowCenter[0]/=beachPads.length;beachRowCenter[1]/=beachPads.length;
-    const beachRowTarget=[170,205],shiftX=beachRowTarget[0]-beachRowCenter[0],shiftZ=beachRowTarget[1]-beachRowCenter[1];
-    beachPads.forEach((fp,index)=>vendorTentAsset(fp.x+shiftX,fp.z+shiftZ,fp.rot,index,fp.w,fp.d));
-    makeLabel("BEACH VENDORS",beachRowTarget[0],beachRowTarget[1]);
+    makeLabel("BEACH VENDORS · ADA RAMP",beachRowCenter[0],beachRowCenter[1]);
   }
   const productionAnchor=anchor("PRODUCTION");let dumpsterIndex=0;
   // Every remaining tent uses its closed DXF outline. The six matching 13m x

@@ -93,6 +93,68 @@ function makeLabel(text,x,z){
 }
 function isUsefulLabel(t){return /STAGE|LIMITLESS|VIP|GATE|BAR|FOOD|VENDOR|RESTROOM|SOLAR|ENTRANCE|PARKING|LOUNGE|TENT|ADA|PRODUCTION|HOSPITAL|CAMP|COCONUT|INNERBASS|BUTWOOD|CREATION|REVIVAL/i.test(t)}
 
+// Detailed assets reuse the proportions, colors, truss language, shade
+// structures and signage from the original SSBD level. Their anchors stay CAD.
+const detail=rootFor("Detailed assets");
+const M={
+  dark:new THREE.MeshStandardMaterial({color:0x252631,roughness:.84}),
+  truss:new THREE.MeshStandardMaterial({color:0x7a8390,roughness:.45,metalness:.62}),
+  gold:new THREE.MeshStandardMaterial({color:0xd9b24a,roughness:.42,metalness:.48}),
+  canvas:new THREE.MeshStandardMaterial({color:0xf1eadb,roughness:.88,side:THREE.DoubleSide}),
+  wood:new THREE.MeshStandardMaterial({color:0x8b6844,roughness:.92}),
+  pink:new THREE.MeshStandardMaterial({color:0xd9358f,roughness:.58,emissive:0x52112f,emissiveIntensity:.24}),
+  blue:new THREE.MeshStandardMaterial({color:0x3f8ecb,roughness:.75})
+};
+function addBox(g,w,h,d,x,y,z,mat=M.dark){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);m.castShadow=m.receiveShadow=true;g.add(m);return m}
+function addPost(g,x,z,h=4,mat=M.truss){return addBox(g,.18,h,.18,x,h/2,z,mat)}
+function peakedTent(x,z,w,d,rot,color=0xf1eadb){
+  const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;detail.add(g);
+  const mat=color===0xf1eadb?M.canvas:new THREE.MeshStandardMaterial({color,roughness:.86,side:THREE.DoubleSide});
+  const geo=new THREE.BufferGeometry();geo.setAttribute("position",new THREE.Float32BufferAttribute([
+    -w/2,3,-d/2,w/2,3,-d/2,w/2,5,0,-w/2,3,-d/2,w/2,5,0,-w/2,5,0,
+    -w/2,5,0,w/2,5,0,w/2,3,d/2,-w/2,5,0,w/2,3,d/2,-w/2,3,d/2
+  ],3));geo.computeVertexNormals();const roof=new THREE.Mesh(geo,mat);roof.castShadow=true;g.add(roof);
+  for(const px of [-w/2,w/2])for(const pz of [-d/2,d/2])addPost(g,px,pz,3,M.truss);
+  return g;
+}
+function festivalStage(x,z,rot,w=24,d=13,butwood=false){
+  const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;detail.add(g);
+  addBox(g,w,1,d,0,.5,0,butwood?M.wood:M.dark);addBox(g,w,1.2,1,0,9,d/2-.5,butwood?M.wood:M.pink);
+  for(const px of [-w/2,w/2])for(const pz of [-d/2,d/2])addPost(g,px,pz,9);
+  addBox(g,w+.4,.24,.24,0,8.8,-d/2,M.truss);addBox(g,w+.4,.24,.24,0,8.8,d/2,M.truss);
+  for(let i=-2;i<=2;i++){const lamp=new THREE.Mesh(new THREE.SphereGeometry(.38,10,8),new THREE.MeshStandardMaterial({color:0x26262e,emissive:i%2?0x20c8d8:0xd9358f,emissiveIntensity:2}));lamp.position.set(i*w/6,7.8,d/2+.2);g.add(lamp)}
+  return g;
+}
+function limitlessAssets(){
+  const rot=-1.48;
+  const deck=new THREE.Group();deck.position.set(14.5,0,42);deck.rotation.y=rot;detail.add(deck);
+  addBox(deck,9.75,.36,6,0,4,0,M.dark);for(const [x,z] of [[-4,-2.4],[4,-2.4],[-4,2.4],[4,2.4],[0,0]])addPost(deck,x,z,3.9);
+  for(const [x,z,w,d] of [[0,-2.95,9.7,.12],[-4.78,0,.12,6],[0,2.95,9.7,.12]])addBox(deck,w,.9,d,x,4.8,z,M.gold);
+  const lounge=new THREE.Group();lounge.position.set(2.9347,0,43.0595);lounge.rotation.y=rot;detail.add(lounge);
+  addBox(lounge,12,.22,6,0,3.55,0,M.dark);for(const x of [-5.4,0,5.4])for(const z of [-2.7,2.7])addPost(lounge,x,z,3.5);
+  addBox(lounge,8.8,.1,4,0,.06,0,new THREE.MeshStandardMaterial({color:0x322545,roughness:1}));
+  addBox(lounge,3.8,1.1,.9,0,.55,2.1,M.gold);
+  const solar=new THREE.Group();solar.position.set(-7.2303,0,45.9181);solar.rotation.y=rot;detail.add(solar);
+  for(let i=-1;i<=1;i++){const u=new THREE.Group();u.position.x=i*3.3;solar.add(u);addBox(u,2.55,2.9,2.35,0,1.45,0,M.blue);const pv=addBox(u,2.65,.09,2.15,0,3.12,0,new THREE.MeshStandardMaterial({color:0x17243b,roughness:.25,metalness:.5}));pv.rotation.x=-.15}
+}
+function barAsset(x,z,rot,w=7){
+  const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;detail.add(g);
+  addBox(g,w,1.15,2.2,0,.58,0,M.wood);addBox(g,w+.3,.2,2.5,0,1.22,0,M.gold);
+  for(const px of [-w/2,w/2])addPost(g,px,0,3.2);addBox(g,w+.5,.18,.2,0,3.15,0,M.pink);return g;
+}
+function stallAsset(x,z,rot,food){
+  const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;detail.add(g),col=food?0xf0a34a:0xdb4f93;
+  addBox(g,5.2,2.5,3.3,0,1.25,0,new THREE.MeshStandardMaterial({color:col,roughness:.8}));
+  addBox(g,5.6,.22,3.7,0,2.68,0,M.canvas);addBox(g,3.4,.9,.18,0,1.6,-1.69,M.dark);
+}
+function buildDetailedAssets(data){
+  festivalStage(42,51,-.08,25,14,false);festivalStage(-38,147,.18,20,11,true);
+  limitlessAssets();peakedTent(20.16,76.58,15,9,-.33);peakedTent(.95,112.73,12,12,.1,0xd8c7ef);
+  barAsset(36.83,92.54,-.25,9);barAsset(57.15,30.88,-.1,11);barAsset(1.77,37.24,-1.48,7);
+  const placed=[];for(const a of data.anchors){const food=/^FOOD(?: TRUCK)?$/i.test(a.text),vendor=/^VENDORS?$/i.test(a.text);if(!food&&!vendor)continue;
+    if(placed.some(p=>Math.hypot(p[0]-a.point[0],p[1]-a.point[1])<10))continue;placed.push(a.point);stallAsset(a.point[0],a.point[1],a.rotation,food)}
+}
+
 fetch("site-plan.json",{cache:"no-store"}).then(r=>r.json()).then(data=>{
   for(const path of data.paths){
     const layer=path.layer,parent=rootFor(layer),fence=/FENCE|Bike Rack/.test(layer);
@@ -102,6 +164,7 @@ fetch("site-plan.json",{cache:"no-store"}).then(r=>r.json()).then(data=>{
     for(let i=1;i<path.points.length;i++)segment(path.points[i-1],path.points[i],h,w,mat,parent);
   }
   const seen=[];for(const a of data.anchors){if(!isUsefulLabel(a.text))continue;if(seen.some(p=>Math.hypot(p[0]-a.point[0],p[1]-a.point[1])<2))continue;seen.push(a.point);makeLabel(a.text,a.point[0],a.point[1])}
+  buildDetailedAssets(data);
   buildLayerPanel();
   document.querySelector("#status").textContent=`${data.stats.entities} DXF entities · ${data.stats.paths} paths · ${data.stats.anchors} labels`;
   festivalView();

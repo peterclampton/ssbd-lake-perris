@@ -200,7 +200,7 @@ function rootFor(layer){
 // CAD geometry stays on and inspectable, but it is an alignment overlay—not a
 // second opaque city rendered on top of the authored festival assets.
 function material(layer){
-  const fence=/FENCE|Bike Rack/.test(layer);
+  const fence=/fence|bike rack/i.test(layer);
   return new THREE.MeshStandardMaterial({
     color:palette[layer]||0x6e7886,roughness:.78,metalness:fence?.32:0,
     transparent:!fence,opacity:fence?1:.18,depthWrite:fence
@@ -1196,8 +1196,11 @@ function buildDetailedAssets(data){
   }
   const butwoodCinema=data.inserts.find(i=>i.name==="Event Tent 40x60 Event (2D)"&&i.bounds)?.bounds;
   if(butwoodCinema)cinemaTentAsset(butwoodCinema);
+  const innerStageAnchor=anchor("INNERBASS STAGE / 16' x 12'");
   const innerStage=namedFootprint("INNERBASS STAGE / 16' x 12'","Stages");
-  if(innerStage)innerbassStageAsset(innerStage);
+  // The rectangle solver preserves the deck centre/dimensions, while this
+  // labelled anchor supplies its intended front/back orientation.
+  if(innerStage)innerbassStageAsset({...innerStage,rot:innerStageAnchor?innerStageAnchor.rotation:innerStage.rot});
   const coconutStageAnchor=data.anchors.find(a=>a.text.toUpperCase().startsWith("STAGE /")&&a.point[0]>150);
   const coconutStage=coconutStageAnchor?exactFootprint(data,coconutStageAnchor,"Stages",18):null;
   if(coconutStage)festivalStage(coconutStage.x,coconutStage.z,coconutStage.rot,coconutStage.w,coconutStage.d);
@@ -1215,6 +1218,13 @@ function buildDetailedAssets(data){
   pdfSizedAsset(anchor("BAR 1"),30,20,barAsset,"BAR 1");
   pdfSizedAsset(anchor("BAR 2"),10,40,barAsset,"BAR 2");
   pdfSizedAsset(anchor("BAR 6"),10,20,barAsset,"BAR 6");
+  // Innerbass has its own adjacent BAR/STORAGE pair. These were previously
+  // represented only by a loose storage-size annotation, leaving the bar
+  // absent and causing the next labelled bar to read as misplaced.
+  const innerbassBar=exactAnchor("BAR",[64.3413,19.0191]);
+  const innerbassStorage=exactAnchor("STORAGE",[63.5301,20.9496]);
+  if(innerbassBar)barAsset(innerbassBar.point[0],innerbassBar.point[1],innerbassBar.rotation,10*.3048,20*.3048);
+  if(innerbassStorage)serviceAsset(innerbassStorage.point[0],innerbassStorage.point[1],innerbassStorage.rotation,10*.3048,20*.3048);
   // Bar 4 is the exact 20x10-style Vendor block beside its PDF callout. Unlike
   // the floating text-only bars above, the inserted CAD block supplies its
   // complete oriented footprint.
@@ -1337,7 +1347,6 @@ function buildDetailedAssets(data){
     // unlabelled in the player-facing world. Medical services are represented
     // by the separately placed FIRST AID destination.
     ["24x24 / HOSP / STORAGE",[24.5239,3.8007],24,24,null,"service"],
-    ["10 x 20",[64.7082,22.0797],10,20,"BAR STORAGE","service"],
     ["10 x 20",[219.62,160.1731],10,20,"COCONUT COVE BAR STORAGE","service"],
     ["10 x 10",[103.5042,-41.742],10,10,"BAR 5 STORAGE","service"]
   ];

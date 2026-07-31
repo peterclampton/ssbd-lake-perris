@@ -528,7 +528,7 @@ function vendorTentAsset(x,z,rot,index,w=3.05,d=3.05){
   seller.add(sellerBody,sellerHead);seller.position.set(Math.min(.74,w*.25),.36,.22);g.add(seller);
   return g;
 }
-function vendorPodAsset(points,indexOffset,publicTarget,name){
+function vendorPodAsset(points,indexOffset,publicTarget,name,data){
   // A merchant pod is four 10' x 20' tents.  The 10' public opening faces
   // the guest field/ADA route; the 20' body runs back to the *existing CAD
   // scrim*. Treat the plan's four-tent pods as a unit, rather than a
@@ -549,7 +549,33 @@ function vendorPodAsset(points,indexOffset,publicTarget,name){
   // toward public circulation; +Z is consequently the fenced BOH side.
   let faceX=-Math.sin(rot),faceZ=-Math.cos(rot);
   if(faceX*publicDx+faceZ*publicDz<0)rot+=Math.PI;
-  points.forEach(([x,z],i)=>vendorTentAsset(x,z,rot,indexOffset+i,3.048,6.096));
+  // Snap the back eave directly onto the parallel, protruding CAD scrim edge.
+  // V labels are placement annotations, not the tent's rear eave, so drawing
+  // their centres literally left a very visible gap in both vendor zones.
+  const ux=Math.cos(rot),uz=-Math.sin(rot),zx=Math.sin(rot),zz=Math.cos(rot);
+  const candidates=[];
+  for(const path of data.paths){
+    if(!/SCRIM.*FENCE/.test(path.layer))continue;
+    for(let i=1;i<path.points.length;i++){
+      const a=path.points[i-1],b=path.points[i],dx=b[0]-a[0],dz=b[1]-a[1],len=Math.hypot(dx,dz);
+      if(len<1)continue;
+      const along=Math.abs((dx/len)*ux+(dz/len)*uz);
+      if(along<.86)continue;
+      const mx=(a[0]+b[0])/2,my=(a[1]+b[1])/2;
+      const localZ=(mx-center[0])*zx+(my-center[1])*zz;
+      const localX=(mx-center[0])*ux+(my-center[1])*uz;
+      const distance=Math.hypot(mx-center[0],my-center[1]);
+      // Ignore perpendicular return segments and far-away perimeter lines.
+      // If the nearest parallel edge is on the guest side, the V row needs a
+      // 180-degree flip so its actual back—not its service counter—meets it.
+      if(distance<24&&Math.abs(localX)<len/2+9)candidates.push({localZ,score:distance});
+    }
+  }
+  const snap=candidates.sort((a,b)=>a.score-b.score)[0];
+  if(snap&&snap.localZ<0){rot+=Math.PI;snap.localZ=-snap.localZ;}
+  const shift=snap?snap.localZ-3.048:0;
+  const placed=points.map(([x,z])=>[x+zx*shift,z+zz*shift]);
+  placed.forEach(([x,z],i)=>vendorTentAsset(x,z,rot,indexOffset+i,3.048,6.096));
   makeLabel(name,center[0],center[1]);
 }
 function serviceAsset(x,z,rot,w,d,color=0xe7e1d6){
@@ -1329,7 +1355,7 @@ function buildDetailedAssets(data){
   ];
   const eastFieldFaces=[[76,43],[88,43],[96,43],[96,52]];
   eastMerchantPods.forEach((pod,i)=>{
-    if(pod.length===4)vendorPodAsset(pod,i*4,eastFieldFaces[i],`EAST MERCHANTS · POD ${i+1}`);
+    if(pod.length===4)vendorPodAsset(pod,i*4,eastFieldFaces[i],`EAST MERCHANTS · POD ${i+1}`,data);
   });
   makeLabel("EAST MERCHANTS · 16 VENDORS",104,43);
   // Coconut Cove / beach V25–V40: the same four-tent 10'×20' pod logic, but
@@ -1343,7 +1369,7 @@ function buildDetailedAssets(data){
   ];
   const beachAdaFaces=[[161.0554,107.139],[161.0554,119.4],[161.0554,107.139],[171.5,107.139]];
   beachVendorPods.forEach((pod,i)=>{
-    if(pod.length===4)vendorPodAsset(pod,16+i*4,beachAdaFaces[i],`COCONUT COVE VENDORS · POD ${i+1}`);
+    if(pod.length===4)vendorPodAsset(pod,16+i*4,beachAdaFaces[i],`COCONUT COVE VENDORS · POD ${i+1}`,data);
   });
   makeLabel("COCONUT COVE VENDORS · ADA RAMP",161.0554,118.5);
   const productionAnchor=anchor("PRODUCTION");let dumpsterIndex=0;

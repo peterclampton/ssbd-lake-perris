@@ -132,11 +132,12 @@ function rod(g,x1,y1,x2,y2,z,thick,mat){
 // Same Stage is deliberately its own model. The reference is a broad open
 // scaffold wall, not the generic roofed festivalStage() box used in pass one.
 function sameStageAsset(){
-  // Exact extents of DXF Stages/Group-70 after the approved world transform:
-  // 1034.7697 x 947.5610 x 592.5896 CAD units at 0.02685 m/unit.
-  const w=27.7836,d=25.4400,h=15.9110;
+  // Exact oriented footprint of DXF Stages/Group-70. The previous pass wrongly
+  // treated its axis-aligned bounding box as width/depth. Undoing the block's
+  // 38.980048° rotation gives 998.7438 x 410.7484 CAD units.
+  const w=26.8163,d=11.0286,h=15.9110;
   const g=new THREE.Group();g.name="THE SAME STAGE · CAD";
-  g.position.set(24.2618,0,26.5208);g.rotation.y=.18811;detail.add(g);
+  g.position.set(24.2618,0,26.5208);g.rotation.y=.86849;detail.add(g);
   const orange=new THREE.MeshStandardMaterial({color:0xd58a27,roughness:.58,metalness:.34});
   const ivory=new THREE.MeshStandardMaterial({color:0xe8e4dc,roughness:.82});
   const black=new THREE.MeshStandardMaterial({color:0x101116,roughness:.7,metalness:.18});

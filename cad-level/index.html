@@ -318,6 +318,20 @@ function accessGateAsset(fp){
   addBox(g,clear*.38,.09,.09,-clear*.31,.82,0,M.gold);
   addBox(g,clear*.38,.09,.09,clear*.31,.82,0,M.gold);
 }
+function stairAsset(fp){
+  // Literal CAD stair insert footprint. Step count changes only visual
+  // subdivision; the full run and width remain the inserted oriented bounds.
+  const g=new THREE.Group();g.position.set(fp.point[0],0,fp.point[1]);g.rotation.y=fp.rotation;g.name="ACCESS STAIR · CAD";detail.add(g);
+  const steps=7,run=fp.depth/steps;
+  for(let i=0;i<steps;i++){
+    const h=.12+(i+1)*.12;
+    addBox(g,fp.width,h,run,0,h/2,-fp.depth/2+run*(i+.5),M.truss);
+  }
+  for(const x of [-fp.width*.46,fp.width*.46]){
+    addBox(g,.07,1.05,.07,x,.62,-fp.depth*.42,M.gold);
+    addBox(g,.07,1.72,.07,x,1.03,fp.depth*.42,M.gold);
+  }
+}
 function restroomAsset(x,z,rot,count=3){
   const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;detail.add(g);
   for(let i=0;i<count;i++){const u=new THREE.Group();u.position.x=(i-(count-1)/2)*2.35;g.add(u);addBox(u,2,2.7,2,0,1.35,0,M.blue);addBox(u,2.2,.16,2.2,0,2.78,0,M.dark);addBox(u,.85,1.95,.08,0,1.08,-1.02,new THREE.MeshStandardMaterial({color:0x286a99,roughness:.85}))}
@@ -645,6 +659,20 @@ function buildDetailedAssets(data){
     if(item.layer!=="Emergency Exits"||!fp||usedGateBlocks.has(fp))continue;
     if(Math.abs(fp.point[0])>500||Math.abs(fp.point[1])>500||fp.width>12)continue;
     accessGateAsset(fp);
+  }
+  // Fire Exits are a separate CAD block layer from Emergency Exits. Earlier
+  // passes exported their symbols but never promoted them into the designed
+  // level, leaving mapped egress points visually absent.
+  for(const item of data.inserts){
+    const fp=item.bounds;
+    if(item.layer!=="Fire Exits"||!fp||Math.abs(fp.point[0])>500||Math.abs(fp.point[1])>500||fp.width>12)continue;
+    accessGateAsset(fp);
+  }
+  // The two OSHA stair inserts at Limitless use their exact CAD bounds and
+  // rotation. They were previously present only as invisible insert metadata.
+  for(const item of data.inserts){
+    const fp=item.bounds;
+    if(item.layer==="Stages"&&/^All Access Stair/.test(item.name)&&fp)stairAsset(fp);
   }
   // PDF sheet: ADA Viewing is explicitly 12' x 8'. The DXF provides separate
   // ADA and VIEWING text entities at the platform. Use their midpoint rather

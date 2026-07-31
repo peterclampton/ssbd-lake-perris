@@ -30,7 +30,7 @@ canvas{display:block}
   <div id="panel">
     <h2>CAD Layers</h2>
     <div id="layers"></div>
-    <button id="overview">Bird's-eye</button><button id="spawn">Festival view</button>
+    <button id="overview">Festival aerial</button><button id="site">Site aerial</button><button id="spawn">Festival view</button>
     <div id="status">Loading authoritative plan…</div>
   </div>
 </div>
@@ -139,6 +139,9 @@ trees.visible=false;
 // reflective sheen above it, not a replacement blue disc.
 const lake=new THREE.Mesh(new THREE.CircleGeometry(LAKE_RADIUS,160),new THREE.MeshPhysicalMaterial({color:0x1d7898,roughness:.13,metalness:.08,transparent:true,opacity:.38,clearcoat:.35}));
 lake.rotation.x=-Math.PI/2; lake.position.set(LAKE_X,WATER_LEVEL,LAKE_Z); lake.receiveShadow=true;scene.add(lake);
+// The aerial carries the real water polygon.  A circular proxy, even faint,
+// would corrupt the true shoreline visible in the Vectorworks source.
+lake.visible=false;
 
 const palette={
   "SCRIM 6' FENCE":0x17191d,"SCRIM 8' FENCE":0x111318,"Fence Line":0x17191d,"Bike Rack":0x25a842,
@@ -1332,7 +1335,8 @@ let yaw=0,pitch=-.32;const keys={};
 // frame for every visual review.
 function festivalView(){camera.position.set(-48,18,54);yaw=-1.22;pitch=-.14}
 function overview(){camera.position.set(30,430,35);yaw=0;pitch=-Math.PI/2+.001}
-document.querySelector("#overview").onclick=overview;document.querySelector("#spawn").onclick=festivalView;
+function siteOverview(){camera.position.set(-590,1850,120);yaw=0;pitch=-Math.PI/2+.001}
+document.querySelector("#overview").onclick=overview;document.querySelector("#site").onclick=siteOverview;document.querySelector("#spawn").onclick=festivalView;
 addEventListener("keydown",e=>{keys[e.code]=true;if(e.code.startsWith("Arrow"))e.preventDefault()});
 addEventListener("keyup",e=>keys[e.code]=false);
 addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});

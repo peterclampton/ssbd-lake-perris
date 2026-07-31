@@ -610,11 +610,51 @@ function healersSanctuaryAsset(anchor){
 }
 function parkBuildingAsset(fp,kind){
   if(kind==="gazebo"){gazeboAsset(fp);return}
+  if(kind==="restroom"){parkRestroomAsset(fp);return}
   const g=new THREE.Group();g.position.set(fp.x,0,fp.z);g.rotation.y=fp.rot;detail.add(g);
-  const wall=new THREE.MeshStandardMaterial({color:kind==="restroom"?0xb7d2d2:0xd4c8ae,roughness:.9});
+  const wall=new THREE.MeshStandardMaterial({color:0xd4c8ae,roughness:.9});
   addBox(g,fp.w,2.85,fp.d,0,1.43,0,wall);addBox(g,fp.w+.2,.2,fp.d+.2,0,2.98,0,M.dark);
   const doors=Math.max(1,Math.min(4,Math.round(fp.w/3)));
-  for(let i=0;i<doors;i++)addBox(g,Math.min(1,fp.w*.65/doors),2.05,.08,(i-(doors-1)/2)*fp.w*.72/doors,1.08,-fp.d/2-.045,kind==="restroom"?M.blue:M.wood);
+  for(let i=0;i<doors;i++)addBox(g,Math.min(1,fp.w*.65/doors),2.05,.08,(i-(doors-1)/2)*fp.w*.72/doors,1.08,-fp.d/2-.045,M.wood);
+}
+function parkRestroomAsset(fp){
+  // Reference photo supplied 2026-07-31: the facilities beside Healers
+  // Sanctuary are permanent Lake Perris restroom buildings, not a portable
+  // restroom trailer.  Their defining character is two warm-brick wings,
+  // shaded open entry bays, concrete piers, and broad teal-green roof slabs.
+  const g=new THREE.Group();g.name="LAKE PERRIS PARK RESTROOMS · EXISTING";
+  g.position.set(fp.x,0,fp.z);g.rotation.y=fp.rot;detail.add(g);
+  const brick=new THREE.MeshStandardMaterial({color:0x765b49,roughness:.97});
+  const mortar=new THREE.MeshStandardMaterial({color:0x978574,roughness:1});
+  const concrete=new THREE.MeshStandardMaterial({color:0xb9b1a4,roughness:.96});
+  const roof=new THREE.MeshStandardMaterial({color:0x355c50,roughness:.78});
+  const fascia=new THREE.MeshStandardMaterial({color:0x1d4038,roughness:.82});
+  const shadow=new THREE.MeshStandardMaterial({color:0x171a18,roughness:1});
+  const w=Math.max(fp.w,8),d=Math.max(fp.d,6),gap=Math.min(w*.22,2.2),wingW=(w-gap)/2;
+  addBox(g,w+.65,.14,d+.65,0,.07,0,concrete);
+  for(const sx of [-1,1]){
+    const cx=sx*(gap/2+wingW/2);
+    // Brick wing with a covered, recessed entrance facing the circulation side.
+    addBox(g,wingW,2.6,d,cx,1.37,0,brick);
+    addBox(g,wingW+.8,.36,d+.92,cx,3.02,0,roof);
+    addBox(g,wingW+.86,.16,.26,cx,2.83,-d/2-.32,fascia);
+    const bayW=Math.min(wingW*.46,1.75),bayD=Math.min(d*.35,1.45);
+    addBox(g,bayW,2.12,bayD,cx-sx*(wingW*.18),1.18,-d/2+bayD*.46,shadow);
+    // Open entry is read as a dark recess, framed by the same pale concrete
+    // columns visible in the supplied park photo.
+    for(const bx of [-bayW/2,bayW/2]){
+      addBox(g,.28,2.78,.32,cx-sx*(wingW*.18)+bx,1.39,-d/2+.11,concrete);
+      addBox(g,.44,.12,.46,cx-sx*(wingW*.18)+bx,.08,-d/2+.11,concrete);
+    }
+    // Restrained horizontal brick courses keep the mass from reading as a flat
+    // colored box without inventing signage or decorative festival treatment.
+    for(let y=.55;y<2.45;y+=.42)addBox(g,wingW-.12,.026,.035,cx,y,-d/2-.012,mortar);
+  }
+  // The central open walkway between the two facilities is visible in the
+  // reference and keeps the pair legible at map scale.
+  addBox(g,gap,.04,d*.72,0,.17,-d*.12,concrete);
+  addBox(g,.25,2.82,.34,-gap/2-.05,1.41,-d/2+.12,concrete);
+  addBox(g,.25,2.82,.34,gap/2+.05,1.41,-d/2+.12,concrete);
 }
 function entranceAsset(x,z,rot,name,width){
   const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;detail.add(g);

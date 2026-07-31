@@ -844,31 +844,6 @@ function parkLocal(lx, lz){
   }
   makeLabel("ADA PARKING",PARKING.x,4.2,PARKING.z,0.85);
 
-  // SOLAR RESTROOMS x3 — these stand in the parking lot, not out by the lounge.
-  {
-    const shell = new THREE.MeshStandardMaterial({color:0x3f8ecb, roughness:0.74});
-    const roof  = new THREE.MeshStandardMaterial({color:0x24557d, roughness:0.8});
-    const panel = new THREE.MeshStandardMaterial({color:0x1a2740, roughness:0.28, metalness:0.55});
-    for(let i=0;i<3;i++){
-      const lx = -38 + i*3.4, lz = 17.5;
-      const u = new THREE.Group(); u.position.set(lx, 0, lz); pg.add(u);
-      const b = new THREE.Mesh(new THREE.BoxGeometry(2.6, 2.9, 2.4), shell);
-      b.position.y = 1.45; u.add(b);
-      const r = new THREE.Mesh(new THREE.BoxGeometry(2.9, 0.18, 2.7), roof);
-      r.position.y = 3.0; u.add(r);
-      // Roof-mounted PV is what makes them solar units rather than plain portos.
-      const pv = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.08, 2.2), panel);
-      pv.position.y = 3.18; pv.rotation.x = -0.16; u.add(pv);
-      const d = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 2.1),
-        new THREE.MeshStandardMaterial({color:0x2c6d9e, roughness:0.85}));
-      d.position.set(0, 1.1, -1.21); u.add(d);
-      const [wx, wz] = parkLocal(lx, lz);
-      deferredColliders.push({x:wx, z:wz, r:1.9});
-    }
-    const [slx, slz] = parkLocal(-34.6, 17.5);
-    makeLabel("SOLAR RESTROOMS", slx, 4.6, slz, 0.6);
-  }
-
   // CONCRETE TERRACE + GAZEBOS — where the lot runs out at its far end.
   {
     const conc = new THREE.MeshStandardMaterial({color:0xbdb8aa, roughness:0.96});
@@ -2654,22 +2629,34 @@ window.sideLeds = [];
     makeLabel("VIP RESTROOM TRAILER",tx,5.1,tz,0.58);
   }
 
-  // LIMITLESS COMPLEX ANCHOR.
-  // The deck used to sit at (-0.5, 45.4), which put it inside the Same Stage's
-  // scaffold footprint at (-13, 51) — it read as bolted onto the stage. Per the
-  // site plan it stands clear, just off stage right, with the lounge outboard of
-  // it. Stage right is +x here: facing the audience down -z, the performer's
-  // right hand points to +x.
-  //
-  // Everything downstream reads these, including the collider clearance pass —
-  // the deck footprint is used in three places and must not be re-typed.
+  // LIMITLESS COMPLEX — CAD-aligned, not eyeballed.
+  // Source: 2026_Festival_Map_-_PE_-_7-18.dxf. The drawing is in CAD units;
+  // this similarity transform preserves the measured deck -> lounge -> solar
+  // relationship at the map's rendered scale.
+  const CAD_LIMITLESS = {
+    deck: [41496.73955020502, 15045.14901826808],
+    lounge: [41066.2219780816, 15086.93359375],
+    solar: [40674.4075249566, 15053.14192708334],
+    worldDeck: [14.5, 42.0], scale: 0.02685, rotation: 3.3297
+  };
+  function limitlessCadToWorld(point){
+    const dx = point[0] - CAD_LIMITLESS.deck[0];
+    const dz = point[1] - CAD_LIMITLESS.deck[1];
+    const c = Math.cos(CAD_LIMITLESS.rotation), s = Math.sin(CAD_LIMITLESS.rotation);
+    return [
+      CAD_LIMITLESS.worldDeck[0] + CAD_LIMITLESS.scale*(c*dx - s*dz),
+      CAD_LIMITLESS.worldDeck[1] + CAD_LIMITLESS.scale*(s*dx + c*dz)
+    ];
+  }
+  const [cadDeckX, cadDeckZ] = limitlessCadToWorld(CAD_LIMITLESS.deck);
+  const [cadLoungeX, cadLoungeZ] = limitlessCadToWorld(CAD_LIMITLESS.lounge);
+  const [cadSolarX, cadSolarZ] = limitlessCadToWorld(CAD_LIMITLESS.solar);
+  // Everything downstream reads these, including the collider clearance pass.
   const LIMITLESS = {
-    deckX: 14.5, deckZ: 42.0, rot: 1.48,
+    deckX: cadDeckX, deckZ: cadDeckZ, loungeX: cadLoungeX, loungeZ: cadLoungeZ,
+    solarX: cadSolarX, solarZ: cadSolarZ, rot: 1.48,
     get lx(){ return Math.cos(this.rot); }, get lz(){ return -Math.sin(this.rot); }
   };
-  // Lounge sits outboard of the deck, on the side away from the stage.
-  LIMITLESS.loungeX = LIMITLESS.deckX + 11.6*Math.sin(LIMITLESS.rot);
-  LIMITLESS.loungeZ = LIMITLESS.deckZ + 11.6*Math.cos(LIMITLESS.rot);
   window.LIMITLESS = LIMITLESS;   // the collider clearance pass runs far below
 
   // Dedicated black-scrim pocket around Limitless Lounge and the raised deck.
@@ -2736,6 +2723,33 @@ window.sideLeds = [];
     const lct = Math.cos(llrot), lst = Math.sin(llrot);
     for(const lx of [-4.5, 0, 4.5]) addCyl(llx + lx*lct, llz - lx*lst, 1.6);
     makeLabel("LIMITLESS LOUNGE", llx, 6.6, llz, 1.0);
+  }
+
+  // 3x SOLAR RESTROOMS — CAD places these immediately outboard of Limitless.
+  {
+    const sg = new THREE.Group();
+    sg.position.set(LIMITLESS.solarX, 0, LIMITLESS.solarZ);
+    sg.rotation.y = LIMITLESS.rot;
+    scene.add(sg);
+    const shell = new THREE.MeshStandardMaterial({color:0x3f8ecb, roughness:0.74});
+    const roof = new THREE.MeshStandardMaterial({color:0x24557d, roughness:0.8});
+    const panel = new THREE.MeshStandardMaterial({color:0x1a2740, roughness:0.28, metalness:0.55});
+    for(let i=0;i<3;i++){
+      const u = new THREE.Group(); u.position.set((i-1)*3.35, 0, 0); sg.add(u);
+      const b = new THREE.Mesh(new THREE.BoxGeometry(2.6, 2.9, 2.4), shell);
+      b.position.y = 1.45; u.add(b);
+      const r = new THREE.Mesh(new THREE.BoxGeometry(2.9, 0.18, 2.7), roof);
+      r.position.y = 3.0; u.add(r);
+      const pv = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.08, 2.2), panel);
+      pv.position.y = 3.18; pv.rotation.x = -0.16; u.add(pv);
+      const door = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 2.1),
+        new THREE.MeshStandardMaterial({color:0x2c6d9e, roughness:0.85}));
+      door.position.set(0, 1.1, -1.21); u.add(door);
+      const wx = LIMITLESS.solarX + (i-1)*3.35*Math.cos(LIMITLESS.rot);
+      const wz = LIMITLESS.solarZ - (i-1)*3.35*Math.sin(LIMITLESS.rot);
+      addCyl(wx, wz, 1.9);
+    }
+    makeLabel("SOLAR RESTROOMS", LIMITLESS.solarX, 4.6, LIMITLESS.solarZ, 0.6);
   }
 
   // VIP LOUNGE — 50x30 tensile tent replacing the former umbrella cluster.

@@ -782,6 +782,10 @@ function buildDetailedAssets(data){
     if(item.layer==="Event-Worklight"&&/Light Tower/i.test(item.name))lightTowerAsset(fp,item.name);
     else if(item.layer==="Power-Parts-Supply"&&/Ambulance/i.test(item.name))ambulanceAsset(fp);
     else if(item.layer==="Trash")trashAsset(fp);
+    else if(item.layer==="Art Installations_2"){
+      activationAsset({x:fp.point[0],z:fp.point[1],w:fp.width,d:fp.depth,rot:fp.rotation},0x6a61c7);
+      makeLabel("ART INSTALLATION",fp.point[0],fp.point[1]);
+    }
   }
   // PDF sheet: ADA Viewing is explicitly 12' x 8'. The DXF provides separate
   // ADA and VIEWING text entities at the platform. Use their midpoint rather

@@ -230,10 +230,16 @@ function physicalFenceSegment(a,b,height,width,mat,parent,layer){
   for(let i=0;i<=posts;i++)addBox(g,.18,height+.14,.18,0,(height+.14)/2,-len/2+i*len/posts,postMat);
 }
 function eastBeachFenceToWater(){
-  // This is the plan's east-beach perimeter run. It terminates on the actual
-  // lake edge at (164.00,226.16); render it explicitly as one continuous
-  // assembly so it cannot disappear among the small scrim fragments.
-  const points=[[116.5025,176.4944],[132.34,193.05],[148.17,209.60],[164.0034,226.1616]];
+  // The source has this perimeter as short adjoining SCRIM entities, which
+  // made it read as a few unrelated fence stubs in the world.  These are the
+  // surveyed endpoints in their beach order: festival boundary, ADA/beach
+  // edge, then the lake endpoint.  Render the continuous installed run while
+  // preserving the separately-mapped gate openings.
+  const points=[
+    [16.1872,149.1802],[31.0312,165.1317],[33.9360,167.6126],
+    [41.9062,159.3717],[75.4485,160.6944],[116.7210,176.7808],
+    [132.3400,193.0500],[148.1700,209.6000],[164.0034,226.1616]
+  ];
   const mat=new THREE.MeshStandardMaterial({color:0x181b20,roughness:.96});
   for(let i=1;i<points.length;i++)physicalFenceSegment(points[i-1],points[i],2.45,.13,mat,detail,"SCRIM 8' FENCE");
 }

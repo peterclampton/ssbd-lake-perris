@@ -1171,6 +1171,27 @@ function scrimFenceRun(x1,z1,x2,z2,height=3.35){
   const cn=Math.max(2,Math.round(len/1.35));
   for(let i=0;i<=cn;i++) addCyl(x1+dx*i/cn,z1+dz*i/cn,0.34);
 }
+// A gate is deliberately an opening in the scrim, not a fence with a label
+// floating over it.  The CAD perimeter is broken at each access point; this
+// lightweight frame makes that break legible from both the overview and ground
+// level without accidentally closing the route with collision geometry.
+function accessGate(name, x, z, width, rot=0){
+ const g=new THREE.Group(); g.position.set(x,0,z); g.rotation.y=rot; scene.add(g);
+ const gateMat=new THREE.MeshStandardMaterial({color:0x303946,roughness:0.55,metalness:0.58});
+ const accent=new THREE.MeshStandardMaterial({color:0x00b8a9,roughness:0.4,metalness:0.35,
+   emissive:0x063b39,emissiveIntensity:0.35});
+ for(const side of [-1,1]){
+   const post=new THREE.Mesh(new THREE.BoxGeometry(0.24,4.6,0.24),gateMat);
+   post.position.set(side*width/2,2.3,0); g.add(post);
+   const cap=new THREE.Mesh(new THREE.SphereGeometry(0.22,8,8),accent);
+   cap.position.set(side*width/2,4.65,0); g.add(cap);
+ }
+ const beam=new THREE.Mesh(new THREE.BoxGeometry(width+0.28,0.24,0.24),gateMat);
+ beam.position.y=4.45; g.add(beam);
+ const strip=new THREE.Mesh(new THREE.BoxGeometry(width-0.22,0.08,0.3),accent);
+ strip.position.set(0,3.72,0); g.add(strip);
+ makeLabel(name,x,6.2,z,0.58);
+}
 function bikeRackRun(x1,z1,x2,z2){
   const dx=x2-x1,dz=z2-z1,len=Math.hypot(dx,dz),ang=Math.atan2(dx,dz);
   const green=new THREE.MeshStandardMaterial({color:0x25a842,roughness:0.55,metalness:0.38});
@@ -1340,10 +1361,14 @@ let gateDoors = [];
   scrimFenceRun(35.2, -47, 52, -61);
   scrimFenceRun(52, -61, 90, -128);
   makeLabel("WEST ENTRANCE", 127, 5.4, 5, 0.85);
-  makeLabel("GATE 6", 26, 4.8, 60, 0.6);
-  makeLabel("GATE 5", 76, 4.8, 50, 0.6);
-  makeLabel("GATE 4", 109, 4.8, 11, 0.6);
-  makeLabel("GATE 2", -118, 4.6, -97, 0.7);
+  // These are the intentional breaks between the adjacent CAD perimeter runs.
+  // Giving them frames preserves the access widths while making the circulation
+  // plan readable instead of looking like incomplete fencing.
+  accessGate("GATE 8", -108, 75.5, 8.1, 0.124);
+  accessGate("GATE 6", 26, 60, 8.0, 0);
+  accessGate("GATE 5", 76, 49.5, 9.4, 0.56);
+  accessGate("GATE 4", 109, 11, 8.0, Math.PI/2);
+  accessGate("GATE 2", -118, -97, 8.2, 1.326);
 }
 let gateOpen = false;
 

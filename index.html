@@ -2696,16 +2696,10 @@ window.sideLeds = [];
     [41144.0,14438.0],
     [41144.0,14436.0]
   ]);
-  // The CAD's long north return and the VIP-facing cross run complete this
-  // corner. They replace the visual dead-end the old pocket left behind while
-  // still leaving the documented stage and VIP approaches open.
-  cadScrimPath([
-    [42328.74568520932,14277.40971127925],
-    [42303.71702879677,13970.01620711079],
-    [42183.99808002953,13808.97361584551],
-    [42001.64101504061,13498.40865292460],
-    [41702.47890995721,12938.11135600149]
-  ]);
+  // The VIP-facing cross run completes this corner. The long CAD north return
+  // is intentionally not rendered here: in the simplified stage build it
+  // projects visibly out of the rear of Same Stage instead of reading as a
+  // backstage perimeter.
   cadScrimPath([
     [40432.0,14608.0],
     [41050.0,14382.0]

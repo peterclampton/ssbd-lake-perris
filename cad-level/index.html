@@ -103,7 +103,15 @@ function rootFor(layer){
   if(!roots.has(layer)){const g=new THREE.Group();g.name=layer;roots.set(layer,g);scene.add(g)}
   return roots.get(layer);
 }
-function material(layer){return new THREE.MeshStandardMaterial({color:palette[layer]||0x6e7886,roughness:.78,metalness:layer.includes("Fence")?.32:0})}
+// CAD geometry stays on and inspectable, but it is an alignment overlay—not a
+// second opaque city rendered on top of the authored festival assets.
+function material(layer){
+  const fence=/FENCE|Bike Rack/.test(layer);
+  return new THREE.MeshStandardMaterial({
+    color:palette[layer]||0x6e7886,roughness:.78,metalness:fence?.32:0,
+    transparent:!fence,opacity:fence?1:.18,depthWrite:fence
+  });
+}
 function segment(a,b,height,width,mat,parent){
   const dx=b[0]-a[0],dz=b[1]-a[1],len=Math.hypot(dx,dz); if(len<.03)return;
   const mesh=new THREE.Mesh(new THREE.BoxGeometry(width,height,len),mat);
@@ -125,7 +133,8 @@ function makeLabel(text,x,z){
   // Labels are survey aids, not billboards. The old 13m-wide cap obscured
   // whole structures from the Limitless spawn and made visual verification
   // impossible at ground level.
-  s.scale.set(Math.min(7.2,w/24),1.08,1);s.position.set(x,3.65,z);s.renderOrder=20;rootFor("Labels").add(s);
+  s.scale.set(Math.min(3.9,w/46),.59,1);s.position.set(x,3.65,z);s.renderOrder=20;
+  s.material.opacity=.66;rootFor("Labels").add(s);
 }
 function isUsefulLabel(t){return /STAGE|LIMITLESS|VIP|GATE|BAR|FOOD|VENDOR|RESTROOM|BATHROOM|SOLAR|ENTRANCE|PARKING|LOUNGE|TENT|ADA|PRODUCTION|HOSPITAL|CAMP|COCONUT|INNERBASS|BUTWOOD|CREATION|REVIVAL|GARDEN|PORTAL|ARTIST|FLOWER|GALLERY|DINER|STORE|COFFEE|GRIFFITH|MUSEUM|FASHION|PHONE|BALLOON|ISLAND|FERRY|PONTOON/i.test(t)}
 

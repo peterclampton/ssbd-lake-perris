@@ -22,3 +22,7 @@ Source priority:
 
 The original production level remains at `/`. This rebuild is served from
 `/cad-level/` until it is visually verified and promoted.
+
+The web level intentionally mirrors the DXF east/west around the Limitless
+Viewing Deck anchor. The production drawing's east/west presentation is
+opposite the player-facing orientation of the 3D experience.

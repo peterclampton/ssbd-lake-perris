@@ -22,6 +22,7 @@ CAD_DECK = (41496.73955020502, 15045.14901826808)
 WORLD_DECK = (14.5, 42.0)
 WORLD_SCALE = 0.02685
 WORLD_ROTATION = 3.3297
+MIRROR_EAST_WEST = True
 
 GEOMETRY_LAYERS = {
     "SCRIM 6' FENCE",
@@ -47,8 +48,11 @@ GEOMETRY_LAYERS = {
 def cad_to_world(x: float, y: float) -> list[float]:
     dx, dy = x - CAD_DECK[0], y - CAD_DECK[1]
     c, s = math.cos(WORLD_ROTATION), math.sin(WORLD_ROTATION)
+    world_x = WORLD_SCALE * (c * dx - s * dy)
+    if MIRROR_EAST_WEST:
+        world_x *= -1
     return [
-        round(WORLD_DECK[0] + WORLD_SCALE * (c * dx - s * dy), 4),
+        round(WORLD_DECK[0] + world_x, 4),
         round(WORLD_DECK[1] + WORLD_SCALE * (s * dx + c * dy), 4),
     ]
 
@@ -161,6 +165,7 @@ def main() -> None:
             "worldDeck": WORLD_DECK,
             "scale": WORLD_SCALE,
             "rotation": WORLD_ROTATION,
+            "mirrorEastWest": MIRROR_EAST_WEST,
         },
         "stats": {
             "entities": len(model),

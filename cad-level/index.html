@@ -530,24 +530,26 @@ function vendorTentAsset(x,z,rot,index,w=3.05,d=3.05){
 }
 function vendorPodAsset(points,indexOffset,publicTarget,name){
   // A merchant pod is four 10' x 20' tents.  The 10' public opening faces
-  // the guest field/ADA route; the 20' body runs back to a protected scrim
-  // line.  Treat the plan's four-tent pods as a unit, rather than a decorative
-  // string of unrelated little tents.
+  // the guest field/ADA route; the 20' body runs back to the *existing CAD
+  // scrim*. Treat the plan's four-tent pods as a unit, rather than a
+  // decorative string of unrelated little tents.
   const center=points.reduce((s,p)=>[s[0]+p[0],s[1]+p[1]],[0,0]).map(v=>v/points.length);
-  const dx=publicTarget[0]-center[0],dz=publicTarget[1]-center[1];
+  // The four literal V anchors define the row direction.  Earlier code aimed
+  // every pod at a guessed target, rotating tents away from their own CAD row
+  // and then inventing a parallel fence.  Keep local X on the V-row; choose
+  // only its 180-degree sense from the public-side target.
+  let ax=0,az=0;
+  for(let i=0;i<points.length;i++)for(let j=i+1;j<points.length;j++){
+    const dx=points[j][0]-points[i][0],dz=points[j][1]-points[i][1];
+    if(dx*dx+dz*dz>ax*ax+az*az){ax=dx;az=dz}
+  }
+  let rot=Math.atan2(-az,ax);
+  const publicDx=publicTarget[0]-center[0],publicDz=publicTarget[1]-center[1];
   // vendorTentAsset's service counter is on local -Z.  Aim that side directly
   // toward public circulation; +Z is consequently the fenced BOH side.
-  const rot=Math.atan2(-dx,-dz);
+  let faceX=-Math.sin(rot),faceZ=-Math.cos(rot);
+  if(faceX*publicDx+faceZ*publicDz<0)rot+=Math.PI;
   points.forEach(([x,z],i)=>vendorTentAsset(x,z,rot,indexOffset+i,3.048,6.096));
-  const local=points.map(([x,z])=>{
-    const rx=x-center[0],rz=z-center[1];
-    return {x:rx*Math.cos(rot)-rz*Math.sin(rot),z:rx*Math.sin(rot)+rz*Math.cos(rot)};
-  });
-  const minX=Math.min(...local.map(p=>p.x)),maxX=Math.max(...local.map(p=>p.x));
-  const rearZ=Math.max(...local.map(p=>p.z))+3.55;
-  const toWorld=(x,z)=>[center[0]+x*Math.cos(rot)+z*Math.sin(rot),center[1]-x*Math.sin(rot)+z*Math.cos(rot)];
-  const rearA=toWorld(minX-1.55,rearZ),rearB=toWorld(maxX+1.55,rearZ);
-  physicalFenceSegment(rearA,rearB,2.45,.13,new THREE.MeshStandardMaterial({color:0x181b20,roughness:.96}),detail,"SCRIM 8' FENCE");
   makeLabel(name,center[0],center[1]);
 }
 function serviceAsset(x,z,rot,w,d,color=0xe7e1d6){
@@ -1507,7 +1509,12 @@ fetch("site-plan.json",{cache:"no-store"}).then(r=>r.json()).then(data=>{
     if(layer==="Group Camping"||layer==="But Area"||layer==="Stage-Main"||layer==="None"||layer==="CRASH BARRICADE"||layer==="COLORMAPGOOD")continue;
     // Vendor pads receive staffed open-canopy assets below; suppress their
     // generic CAD extrusion so no opaque magenta blocks remain underneath.
-    if(path.closed&&!fence&&layer!=="Vendors"&&shapeMesh(path,layer,parent))continue;
+    // Tents are authored below from their literal CAD footprint.  Rendering a
+    // second generic extrusion here caused white tent ghosts beneath both the
+    // production dumpsters and the Healers Sanctuary pavilion.
+    const healerGhost=layer==="Park Infrastructure"&&path.closed&&path.points.some(p=>Math.hypot(p[0]-143.7293,p[1]-21.4455)<18);
+    if(path.closed&&(layer==="Tents"||layer==="Stretch Tents"||healerGhost))continue;
+    if(path.closed&&!fence&&layer!=="Vendors"&&layer!=="Tents"&&layer!=="Stretch Tents"&&!healerGhost&&shapeMesh(path,layer,parent))continue;
     const h=layer==="SCRIM 8' FENCE"?2.45:layer==="Bike Rack"?1.05:fence?1.85:.18;
     const w=layer==="Bike Rack"?.08:fence?.11:.16,mat=material(layer);
     for(let i=1;i<path.points.length;i++){

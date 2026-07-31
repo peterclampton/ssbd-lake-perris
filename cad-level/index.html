@@ -307,6 +307,17 @@ function entranceAsset(x,z,rot,name,width){
   for(let i=0;i<lights;i++){const l=new THREE.Mesh(new THREE.SphereGeometry(.2,8,6),new THREE.MeshStandardMaterial({color:0x302b35,emissive:i%2?0x29d3c6:0xffd166,emissiveIntensity:2}));l.position.set((i-(lights-1)/2)*clear/lights,6.13,.42);g.add(l)}
   makeLabel(name,x,z);
 }
+function accessGateAsset(fp){
+  const g=new THREE.Group();g.position.set(fp.point[0],0,fp.point[1]);g.rotation.y=fp.rotation;detail.add(g);
+  const clear=Math.max(2.1,fp.width),post=.16,h=3.25;
+  addBox(g,post,h,post,-clear/2,h/2,0,M.truss);
+  addBox(g,post,h,post,clear/2,h/2,0,M.truss);
+  addBox(g,clear+post,.14,.14,0,h,0,M.truss);
+  // Green low rails match the mapped bike-rack/access-control language and
+  // leave the center visibly passable.
+  addBox(g,clear*.38,.09,.09,-clear*.31,.82,0,M.gold);
+  addBox(g,clear*.38,.09,.09,clear*.31,.82,0,M.gold);
+}
 function restroomAsset(x,z,rot,count=3){
   const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;detail.add(g);
   for(let i=0;i<count;i++){const u=new THREE.Group();u.position.x=(i-(count-1)/2)*2.35;g.add(u);addBox(u,2,2.7,2,0,1.35,0,M.blue);addBox(u,2.2,.16,2.2,0,2.78,0,M.dark);addBox(u,.85,1.95,.08,0,1.08,-1.02,new THREE.MeshStandardMaterial({color:0x286a99,roughness:.85}))}
@@ -506,7 +517,7 @@ function buildDetailedAssets(data){
     barAsset(fp.point[0],fp.point[1],fp.rotation,fp.width,fp.depth);
     makeLabel("BAR 4",fp.point[0],fp.point[1]);
   }
-  const entrances=data.anchors.filter(a=>a.text==="ENTRANCE");
+  const entrances=data.anchors.filter(a=>a.text==="ENTRANCE"),usedGateBlocks=new Set();
   for(let n=0;n<entrances.length;n++){
     const a=entrances[n];
     const gates=data.inserts.filter(i=>i.layer==="Emergency Exits"&&i.bounds)
@@ -516,8 +527,18 @@ function buildDetailedAssets(data){
     // block is the physical gate symbol. Never use the old arbitrary 12m arch.
     if(gates[0]&&gates[0].dist<45){
       const fp=gates[0].fp;
+      usedGateBlocks.add(fp);
       entranceAsset(fp.point[0],fp.point[1],fp.rotation,n===0?"EAST ENTRANCE":"WEST ENTRANCE",fp.width);
     }
+  }
+  // Every other Emergency Exits block is a physical portal in the DXF. Render
+  // its literal oriented width and location, but do not duplicate the two
+  // entrance blocks promoted to full arches above.
+  for(const item of data.inserts){
+    const fp=item.bounds;
+    if(item.layer!=="Emergency Exits"||!fp||usedGateBlocks.has(fp))continue;
+    if(Math.abs(fp.point[0])>500||Math.abs(fp.point[1])>500||fp.width>12)continue;
+    accessGateAsset(fp);
   }
   // PDF sheet: ADA Viewing is explicitly 12' x 8'. The DXF provides separate
   // ADA and VIEWING text entities at the platform. Use their midpoint rather

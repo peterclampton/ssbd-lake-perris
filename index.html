@@ -1330,11 +1330,21 @@ let gateDoors = [];
   scrimFenceRun(-128,-77,-119,-93);
   scrimFenceRun(-117,-101,-96,-127);
   scrimFenceRun(-96,-127,-79,-148);
-  // Food BOH and Gate 8 form the public-facing southeast edge of Production
-  // Lot 9. The open break between the two runs is the mapped Gate 8 access.
-  scrimFenceRun(-130, 66, -118, 66);
-  scrimFenceRun(-118, 66, -112, 76);
-  scrimFenceRun(-104, 75, -44, 67);
+  // Production / Gate 8 side. These short returns are the individual 6' scrim
+  // pockets from the CAD drawing (BOH, waste and service), rather than one
+  // invented continuous wall across the entire production lot. The public
+  // approach through Gate 8 is deliberately kept open between them.
+  scrimFenceRun(-102.8,44.9,-106.5,44.5);
+  scrimFenceRun(-106.5,44.5,-105.0,32.1);
+  scrimFenceRun(-105.0,32.1,-101.6,32.7);
+  scrimFenceRun(-97.7,66.4,-101.3,67.7);
+  scrimFenceRun(-101.3,67.7,-105.7,53.9);
+  scrimFenceRun(-105.7,53.9,-102.4,53.1);
+  scrimFenceRun(-93.2,85.1,-96.7,86.5);
+  scrimFenceRun(-96.7,86.5,-100.2,73.9);
+  scrimFenceRun(-100.2,73.9,-96.9,72.9);
+  // The long northern public boundary resumes beyond the service pockets.
+  scrimFenceRun(-93.2,85.1,-44,67);
   // The internal purple line leaves the Gate 8 food pocket, bends around the
   // public approach, and ties into The Same Stage's screen-right backstage.
   // A generous gap beside Epic Eats keeps Gate 8 and the service counter open.
@@ -1369,6 +1379,10 @@ let gateDoors = [];
   accessGate("GATE 5", 76, 49.5, 9.4, 0.56);
   accessGate("GATE 4", 109, 11, 8.0, Math.PI/2);
   accessGate("GATE 2", -118, -97, 8.2, 1.326);
+  // Gate 3 is the mapped locked service / fire-access break beside Shine
+  // Diner. It needs the same visible portal treatment as the public gates,
+  // while the scrim on either side stays continuous.
+  accessGate("GATE 3 · SERVICE", 59.45, -17.5, 5.3, -0.34);
 }
 let gateOpen = false;
 

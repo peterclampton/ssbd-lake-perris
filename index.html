@@ -2778,6 +2778,26 @@ window.sideLeds = [];
     );
   }
 
+  // LIMITLESS VIEWING PIT — a separate labeled footprint in the CAD, located
+  // between the stage-front crowd line and the raised deck.  It had been
+  // missing entirely, which made the deck read as though it belonged directly
+  // to the stage.  This is a ground-level wristband area, not another deck.
+  {
+    const pitX=8.0574, pitZ=37.6781, pitRot=LIMITLESS.rot;
+    const pit=new THREE.Group(); pit.position.set(pitX,0,pitZ); pit.rotation.y=pitRot; scene.add(pit);
+    const floor=new THREE.Mesh(new THREE.BoxGeometry(8.8,0.10,5.4),
+      new THREE.MeshStandardMaterial({color:0x252530,roughness:0.92}));
+    floor.position.y=0.07; pit.add(floor);
+    const railMat=new THREE.MeshStandardMaterial({color:0xd9b24a,roughness:0.45,metalness:0.55});
+    for(const [x,z,w,d] of [[0,-2.62,8.9,0.10],[-4.35,0,0.10,5.3],[4.35,0,0.10,5.3]]){
+      const rail=new THREE.Mesh(new THREE.BoxGeometry(w,1.12,d),railMat);
+      rail.position.set(x,0.61,z); pit.add(rail);
+    }
+    // Keep the stage-facing side open—the CAD shows this as an access/viewing
+    // edge rather than a sealed box.
+    makeLabel("LIMITLESS VIEWING PIT",pitX,3.1,pitZ,0.70);
+  }
+
   // LIMITLESS VIEWING DECK — RAISED 32'x20' platform hugging the stage's east flank,
   // angled with the stage line. Its floor and guests sit above the 3.35m scrim.
   {

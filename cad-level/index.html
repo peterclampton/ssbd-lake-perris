@@ -89,7 +89,10 @@ function makeLabel(text,x,z){
   const cv=document.createElement("canvas"),c=cv.getContext("2d");c.font="700 28px Segoe UI";const w=Math.ceil(c.measureText(text).width)+28;
   cv.width=w*2;cv.height=78;c.scale(2,2);c.fillStyle="#162538dc";c.fillRect(0,0,w,39);c.fillStyle="white";c.textAlign="center";c.textBaseline="middle";c.font="700 14px Segoe UI";c.fillText(text,w/2,20);
   const t=new THREE.CanvasTexture(cv);t.encoding=THREE.sRGBEncoding;const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthTest:false}));
-  s.scale.set(Math.min(13,w/15),1.9,1);s.position.set(x,4,z);s.renderOrder=20;rootFor("Labels").add(s);
+  // Labels are survey aids, not billboards. The old 13m-wide cap obscured
+  // whole structures from the Limitless spawn and made visual verification
+  // impossible at ground level.
+  s.scale.set(Math.min(7.2,w/24),1.08,1);s.position.set(x,3.65,z);s.renderOrder=20;rootFor("Labels").add(s);
 }
 function isUsefulLabel(t){return /STAGE|LIMITLESS|VIP|GATE|BAR|FOOD|VENDOR|RESTROOM|BATHROOM|SOLAR|ENTRANCE|PARKING|LOUNGE|TENT|ADA|PRODUCTION|HOSPITAL|CAMP|COCONUT|INNERBASS|BUTWOOD|CREATION|REVIVAL/i.test(t)}
 
@@ -259,6 +262,26 @@ function serviceAsset(x,z,rot,w,d,color=0xe7e1d6){
   addBox(g,Math.min(1.05,w*.32),2,.08,0,1.08,-d/2-.045,M.blue);
   return g;
 }
+function rvAsset(fp){
+  const g=new THREE.Group();g.position.set(fp.x,0,fp.z);g.rotation.y=fp.rot;detail.add(g);
+  const body=new THREE.MeshStandardMaterial({color:0xf1eee6,roughness:.82});
+  const trim=new THREE.MeshStandardMaterial({color:0x536271,roughness:.72});
+  addBox(g,fp.w,2.85,fp.d,0,1.63,0,body);
+  addBox(g,fp.w+.12,.17,fp.d+.12,0,3.12,0,M.dark);
+  // Cab and glazing stay inside the literal CAD footprint.
+  const cabW=Math.min(fp.w*.28,2.25);
+  addBox(g,cabW,2.25,fp.d*.9,-fp.w/2+cabW/2,1.35,0,body);
+  addBox(g,.08,1.0,fp.d*.62,-fp.w/2-.045,1.82,0,trim);
+  const windows=Math.max(2,Math.min(5,Math.floor(fp.w/2.2)));
+  for(let i=0;i<windows;i++){
+    const x=-fp.w*.18+(i-(windows-1)/2)*fp.w*.52/windows;
+    addBox(g,Math.min(1.15,fp.w*.42/windows),.72,.07,x,2.08,-fp.d/2-.04,trim);
+  }
+  for(const x of [-fp.w*.31,fp.w*.31])for(const z of [-fp.d*.46,fp.d*.46]){
+    const wheel=new THREE.Mesh(new THREE.CylinderGeometry(.42,.42,.22,12),M.dark);
+    wheel.position.set(x,.48,z);wheel.rotation.x=Math.PI/2;g.add(wheel);
+  }
+}
 function gazeboAsset(fp){
   const g=new THREE.Group();g.position.set(fp.x,0,fp.z);g.rotation.y=fp.rot;detail.add(g);
   const roofMat=new THREE.MeshStandardMaterial({color:0xeee9dc,roughness:.82});
@@ -402,6 +425,21 @@ function buildDetailedAssets(data){
   const deck=namedFootprint("LIMITLESS / VIEWING / DECK 32'x20","Stages");
   const lounge=namedFootprint("LIMITLESS / LOUNGE / 40x20","None",20);
   if(deck&&lounge)limitlessAssets(data,deck,lounge);
+  // The PDF calls this pocket GREEN ROOM RVS. Five closed None-layer vehicle
+  // outlines sit immediately beside that annotation. Their exact oriented
+  // rectangles—not the text point—control every RV's placement and dimensions.
+  const greenRoomRvs=anchor("GREEN ROOM / RVS");
+  if(greenRoomRvs){
+    const rvs=[];
+    for(const path of data.paths){
+      if(path.layer!=="None"||!path.closed)continue;
+      const fp=pathFootprint(path);if(!fp||fp.w<4||fp.w>9||fp.d<2||fp.d>4.5)continue;
+      const dist=Math.hypot(fp.x-greenRoomRvs.point[0],fp.z-greenRoomRvs.point[1]);
+      if(dist<22)rvs.push({dist,...fp});
+    }
+    rvs.sort((a,b)=>a.dist-b.dist);
+    for(const fp of rvs)rvAsset(fp);
+  }
   const vip=namedFootprint("VIP LOUNGE","Tents");
   if(vip){peakedTent(vip.x,vip.z,50*.3048,30*.3048,vip.rot);useTent(vip)}
   const revival=insert("Event Tent 40x60 Event 2 (2D)");
@@ -427,13 +465,21 @@ function buildDetailedAssets(data){
   if(coconutStage)festivalStage(coconutStage.x,coconutStage.z,coconutStage.rot,coconutStage.w,coconutStage.d);
   const coconutBar=namedFootprint("Coconut Cove Bar","Stages");
   if(coconutBar)barAsset(coconutBar.x,coconutBar.z,coconutBar.rot,coconutBar.w,coconutBar.d);
-  // These three bars are PDF annotations rather than closed DXF polygons.
-  // Their centers and orientation come from the DXF text entities; dimensions
-  // come only from the printed PDF callouts. Bar 6 has no printed dimensions,
-  // so it remains a labelled CAD marker until a physical footprint is supplied.
+  // These bars are PDF annotations rather than closed DXF polygons. Their
+  // centers and orientation come from the DXF text entities; dimensions come
+  // only from printed PDF callouts.
   pdfSizedAsset(anchor("BAR 1"),30,20,barAsset,"BAR 1");
   pdfSizedAsset(anchor("BAR 2"),10,40,barAsset,"BAR 2");
-  const bar6=anchor("BAR 6");if(bar6)makeLabel("BAR 6 · FOOTPRINT PENDING",bar6.point[0],bar6.point[1]);
+  pdfSizedAsset(anchor("BAR 6"),10,20,barAsset,"BAR 6");
+  // Bar 4 is the exact 20x10-style Vendor block beside its PDF callout. Unlike
+  // the floating text-only bars above, the inserted CAD block supplies its
+  // complete oriented footprint.
+  const bar4Block=data.inserts.find(i=>i.name==="Block_38"&&i.layer==="Vendors"&&i.bounds);
+  if(bar4Block){
+    const fp=bar4Block.bounds;
+    barAsset(fp.point[0],fp.point[1],fp.rotation,fp.width,fp.depth);
+    makeLabel("BAR 4",fp.point[0],fp.point[1]);
+  }
   const entrances=data.anchors.filter(a=>a.text==="ENTRANCE");
   for(let n=0;n<entrances.length;n++){
     const a=entrances[n];

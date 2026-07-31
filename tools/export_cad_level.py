@@ -49,6 +49,7 @@ GEOMETRY_LAYERS = {
     "Group Camping",
     "But Area",
     "None",
+    "CRASH BARRICADE",
 }
 
 
@@ -62,6 +63,15 @@ def cad_to_world(x: float, y: float) -> list[float]:
         round(WORLD_DECK[0] + world_x, 4),
         round(WORLD_DECK[1] + WORLD_SCALE * (s * dx + c * dy), 4),
     ]
+
+
+def cad_angle_to_world(angle: float) -> float:
+    dx, dy = math.cos(angle), math.sin(angle)
+    c, s = math.cos(WORLD_ROTATION), math.sin(WORLD_ROTATION)
+    world_x, world_z = c * dx - s * dy, s * dx + c * dy
+    if MIRROR_EAST_WEST:
+        world_x *= -1
+    return math.atan2(-world_z, world_x)
 
 
 def clean_text(value: str) -> str:
@@ -215,11 +225,17 @@ def main() -> None:
             text = clean_text(entity.dxf.text if kind == "TEXT" else entity.text)
             if text:
                 point = entity.dxf.insert
+                direction = entity.dxf.get("text_direction", None)
+                angle = (
+                    math.atan2(direction.y, direction.x)
+                    if direction is not None
+                    else math.radians(float(entity.dxf.rotation or 0))
+                )
                 anchors.append({
                     "text": text,
                     "layer": layer,
                     "point": cad_to_world(point.x, point.y),
-                    "rotation": round(math.radians(float(entity.dxf.rotation or 0)), 5),
+                    "rotation": round(cad_angle_to_world(angle), 5),
                 })
             continue
         if kind == "INSERT" and layer in GEOMETRY_LAYERS:
@@ -254,6 +270,8 @@ def main() -> None:
                 if tent_size:
                     a, b = (float(v) * 0.3048 for v in tent_size.groups())
                     bounds["width"], bounds["depth"] = round(max(a, b), 4), round(min(a, b), 4)
+                if entity.dxf.name == "Event Tent 40x60 Event 2 (2D)":
+                    bounds["width"] = bounds["depth"] = round(40 * 0.3048, 4)
                 item["bounds"] = bounds
             inserts.append(item)
             continue

@@ -265,6 +265,24 @@ function restroomTrailer(x,z,rot,w,d){
   }
   for(const x1 of [-w*.43,w*.43]){addBox(g,.14,.14,d*.5,x1,.07,d*.73,M.truss);addBox(g,.14,.14,d*.5,x1,.07,-d*.73,M.truss)}
 }
+function restroomFootprintAsset(fp){
+  const g=new THREE.Group();g.position.set(fp.x,0,fp.z);g.rotation.y=fp.rot;detail.add(g);
+  const area=fp.w*fp.d;
+  if(area<1.1||fp.d<.82){
+    // Compact hand-wash symbol.
+    addBox(g,fp.w,1.05,fp.d,0,.53,0,new THREE.MeshStandardMaterial({color:0xd7e5e8,roughness:.72}));
+    for(const x of [-fp.w*.28,fp.w*.28])addBox(g,.12,.28,.18,x,1.18,0,M.truss);
+    return;
+  }
+  const h=area<5?2.72:3.0;
+  addBox(g,fp.w,h,fp.d,0,h/2,0,M.blue);
+  addBox(g,fp.w+.12,.15,fp.d+.12,0,h+.08,0,M.dark);
+  const doors=Math.max(1,Math.min(5,Math.round(fp.w/1.15)));
+  for(let i=0;i<doors;i++){
+    const x=(i-(doors-1)/2)*(fp.w*.78/doors);
+    addBox(g,Math.min(.82,fp.w*.68/doors),h*.68,.07,x,h*.39,-fp.d/2-.04,new THREE.MeshStandardMaterial({color:0x286a99,roughness:.85}));
+  }
+}
 function fohAsset(x,z,rot,w,d){
   const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;detail.add(g);
   addBox(g,w,.22,d,0,.12,0,M.dark);for(const px of [-w*.45,w*.45])for(const pz of [-d*.45,d*.45])addPost(g,px,pz,3.1);
@@ -275,6 +293,19 @@ function adaDeck(x,z,rot,w,d){
   const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;detail.add(g);
   addBox(g,w,.25,d,0,.18,0,M.dark);
   for(const [px,pz,rw,rd] of [[0,-d/2,w,.08],[-w/2,0,.08,d],[w/2,0,.08,d]])addBox(g,rw,1,rd,px,.65,pz,M.gold);
+}
+function activationAsset(fp,color=0xd9358f){
+  const g=new THREE.Group();g.position.set(fp.x,0,fp.z);g.rotation.y=fp.rot;detail.add(g);
+  const mat=new THREE.MeshStandardMaterial({color,roughness:.72});
+  addBox(g,fp.w,.18,fp.d,0,.1,0,mat);
+  for(const x of [-fp.w/2,fp.w/2])for(const z of [-fp.d/2,fp.d/2])addPost(g,x,z,3,M.truss);
+  addBox(g,fp.w+.16,.14,.16,0,3,-fp.d/2,mat);
+  addBox(g,fp.w+.16,.14,.16,0,3,fp.d/2,mat);
+}
+function platformAsset(fp){
+  const g=new THREE.Group();g.position.set(fp.x,0,fp.z);g.rotation.y=fp.rot;detail.add(g);
+  addBox(g,fp.w,.45,fp.d,0,.23,0,M.dark);
+  for(const [x,z,w,d] of [[0,-fp.d/2,fp.w,.08],[-fp.w/2,0,.08,fp.d],[fp.w/2,0,.08,fp.d]])addBox(g,w,.85,d,x,.66,z,M.gold);
 }
 function pathFootprint(path){
   const pts=path.points.slice(0,-1);if(pts.length<3)return null;
@@ -312,7 +343,8 @@ function buildDetailedAssets(data){
   if(deck&&lounge)limitlessAssets(data,deck,lounge);
   const vip=namedFootprint("VIP LOUNGE","Tents");
   if(vip){peakedTent(vip.x,vip.z,50*.3048,30*.3048,vip.rot);useTent(vip)}
-  peakedTent(.9549,112.7312,40*.3048,40*.3048,.1,0xd8c7ef);
+  const revival=insert("Event Tent 40x60 Event 2 (2D)");
+  if(revival)peakedTent(revival.point[0],revival.point[1],revival.width,revival.depth,revival.rotation,0xd8c7ef);
   // Named CAD structures: center and rotation come from their closed outline;
   // printed dimensions override only the decorative overhang in the symbol.
   const coconut=namedFootprint("COCONUT COVE / STRETCH TENT / 130'","Stretch Tents");
@@ -329,9 +361,16 @@ function buildDetailedAssets(data){
   if(extra){stretchTentAsset(extra.x,extra.z,40*.3048,40*.3048,extra.rot);useTent(extra)}
   const innerStage=namedFootprint("INNERBASS STAGE / 16' x 12'","Stages");
   if(innerStage)festivalStage(innerStage.x,innerStage.z,innerStage.rot,16*.3048,12*.3048);
+  const coconutStageAnchor=data.anchors.find(a=>a.text.toUpperCase().startsWith("STAGE /")&&a.point[0]>150);
+  const coconutStage=coconutStageAnchor?exactFootprint(data,coconutStageAnchor,"Stages",18):null;
+  if(coconutStage)festivalStage(coconutStage.x,coconutStage.z,coconutStage.rot,coconutStage.w,coconutStage.d);
+  const coconutBar=namedFootprint("Coconut Cove Bar","Stages");
+  if(coconutBar)barAsset(coconutBar.x,coconutBar.z,coconutBar.rot,coconutBar.w,coconutBar.d);
   barAsset(36.8317,92.5351,-.25,30*.3048,20*.3048);
   barAsset(57.1547,30.8776,-.1,40*.3048,10*.3048);
-  entranceAsset(134.2,-64.54,.55,"EAST ENTRANCE");entranceAsset(-49.79,227.81,-.7,"WEST ENTRANCE");
+  const east=anchor("ENTRANCE"),west=data.anchors.find(a=>a.text==="ENTRANCE"&&a!==east);
+  if(east)entranceAsset(east.point[0],east.point[1],east.rotation,"EAST ENTRANCE");
+  if(west)entranceAsset(west.point[0],west.point[1],west.rotation,"WEST ENTRANCE");
   fohAsset(62.45,62.1,.05,20*.3048,20*.3048);
   adaDeck(55.6751,68.4,.05,12*.3048,8*.3048);
   const placed=[];for(const a of data.anchors){const food=/^FOOD(?: TRUCK)?$/i.test(a.text),vendor=/^VENDORS?$/i.test(a.text);if(!food&&!vendor)continue;
@@ -350,17 +389,46 @@ function buildDetailedAssets(data){
   for(const item of data.inserts){
     const fp=item.bounds;if(!fp||Math.abs(fp.point[0])>500||Math.abs(fp.point[1])>500)continue;
     if(/^Event Tent /i.test(item.name)){
+      if(item.name==="Event Tent 40x60 Event 2 (2D)")continue;
       peakedTent(fp.point[0],fp.point[1],fp.width,fp.depth,fp.rotation);
     }else if(/^Vehicle Mobile Restroom Trailer/i.test(item.name)){
       restroomTrailer(fp.point[0],fp.point[1],fp.rotation,fp.width,fp.depth);
     }
+  }
+  // Every restroom/porto/hand-wash footprint is a literal closed CAD outline.
+  // Style varies by physical size, but position, rotation, width and depth do not.
+  const trailer=insert("Vehicle Mobile Restroom Trailer 3 Doors (2D)");
+  const solarAnchor=anchor("SOLAR / x3");
+  for(const path of data.paths){
+    if(path.layer!=="Porta Potties _ Bathroom Trucks"||!path.closed)continue;
+    const fp=pathFootprint(path);if(!fp||fp.w<=.01||fp.d<=.01||fp.w>18||fp.d>12)continue;
+    if(Math.abs(fp.x)>500||Math.abs(fp.z)>500)continue;
+    if(trailer&&Math.hypot(fp.x-trailer.point[0],fp.z-trailer.point[1])<6)continue;
+    if(solarAnchor&&Math.hypot(fp.x-solarAnchor.point[0],fp.z-solarAnchor.point[1])<10&&fp.w>1.8)continue;
+    restroomFootprintAsset(fp);
+  }
+  // Remaining CAD stage polygons are access decks or risers. Keep their literal
+  // footprints without inventing another full-height stage roof.
+  for(const path of data.paths){
+    if(path.layer!=="Stages"||!path.closed)continue;
+    const fp=pathFootprint(path);if(!fp||fp.w<1.4||fp.d<1||fp.w>20||fp.d>15)continue;
+    if(deck&&Math.hypot(fp.x-deck.x,fp.z-deck.z)<5)continue;
+    if(innerStage&&Math.hypot(fp.x-innerStage.x,fp.z-innerStage.z)<5)continue;
+    if(coconutStage&&Math.hypot(fp.x-coconutStage.x,fp.z-coconutStage.z)<5)continue;
+    if(coconutBar&&Math.hypot(fp.x-coconutBar.x,fp.z-coconutBar.z)<3)continue;
+    platformAsset(fp);
+  }
+  for(const path of data.paths){
+    if(!path.closed||!(path.layer==="Sponsor Activations"||path.layer==="Preparty"||path.layer==="Park Infrastructure"))continue;
+    const fp=pathFootprint(path);if(!fp||fp.w<1||fp.d<1||fp.w>40||fp.d>40||Math.abs(fp.x)>500||Math.abs(fp.z)>500)continue;
+    activationAsset(fp,path.layer==="Park Infrastructure"?0xc7ad77:path.layer==="Preparty"?0x7655b5:0xd9358f);
   }
 }
 
 fetch("site-plan.json",{cache:"no-store"}).then(r=>r.json()).then(data=>{
   for(const path of data.paths){
     const layer=path.layer,parent=rootFor(layer),fence=/FENCE|Bike Rack/.test(layer);
-    if(layer==="Group Camping"||layer==="But Area"||layer==="Stage-Main"||layer==="None")continue;
+    if(layer==="Group Camping"||layer==="But Area"||layer==="Stage-Main"||layer==="None"||layer==="CRASH BARRICADE")continue;
     if(path.closed&&!fence&&shapeMesh(path,layer,parent))continue;
     const h=layer==="SCRIM 8' FENCE"?2.45:layer==="Bike Rack"?1.05:fence?1.85:.18;
     const w=layer==="Bike Rack"?.08:fence?.11:.16,mat=material(layer);
@@ -375,7 +443,9 @@ fetch("site-plan.json",{cache:"no-store"}).then(r=>r.json()).then(data=>{
 
 function buildLayerPanel(){
   const box=document.querySelector("#layers");
-  [...roots.keys()].sort().forEach(layer=>{const label=document.createElement("label"),input=document.createElement("input");input.type="checkbox";input.checked=true;
+  const hiddenByDefault=new Set(["But Area","CRASH BARRICADE","Food","Group Camping","None","Park Infrastructure","Parking","Porta Potties _ Bathroom Trucks","Preparty","Sponsor Activations","Stage-Main","Stages","Stretch Tents","Tents","Vendors"]);
+  [...roots.keys()].sort().forEach(layer=>{const label=document.createElement("label"),input=document.createElement("input");input.type="checkbox";input.checked=!hiddenByDefault.has(layer);
+    roots.get(layer).visible=input.checked;
     input.onchange=()=>roots.get(layer).visible=input.checked;label.append(input,document.createTextNode(layer));box.append(label)});
 }
 

@@ -131,13 +131,11 @@ function rod(g,x1,y1,x2,y2,z,thick,mat){
 }
 // Same Stage is deliberately its own model. The reference is a broad open
 // scaffold wall, not the generic roofed festivalStage() box used in pass one.
-function sameStageAsset(){
-  // Exact oriented footprint of DXF Stages/Group-70. The previous pass wrongly
-  // treated its axis-aligned bounding box as width/depth. Undoing the block's
-  // 38.980048° rotation gives 998.7438 x 410.7484 CAD units.
-  const w=26.8163,d=11.0286,h=15.9110;
+function sameStageAsset(fp){
+  // Exact minimum-area oriented footprint of DXF Stages/Group-70.
+  const w=fp.width,d=fp.depth,h=fp.height;
   const g=new THREE.Group();g.name="THE SAME STAGE · CAD";
-  g.position.set(24.2618,0,26.5208);g.rotation.y=.86849;detail.add(g);
+  g.position.set(fp.point[0],0,fp.point[1]);g.rotation.y=fp.rotation;detail.add(g);
   const orange=new THREE.MeshStandardMaterial({color:0xd58a27,roughness:.58,metalness:.34});
   const ivory=new THREE.MeshStandardMaterial({color:0xe8e4dc,roughness:.82});
   const black=new THREE.MeshStandardMaterial({color:0x101116,roughness:.7,metalness:.18});
@@ -189,7 +187,7 @@ function sameStageAsset(){
     const lamp=new THREE.Mesh(new THREE.CylinderGeometry(.22,.28,.48,8),i%2?lampMatA:lampMatB);
     lamp.position.set(i*w/12,1.5,-d*.42);lamp.rotation.x=-.9;g.add(lamp);
   }
-  makeLabel("THE SAME STAGE",24.2618,18.5,26.5208);
+  makeLabel("THE SAME STAGE",fp.point[0],fp.point[1]);
   return g;
 }
 function limitlessAssets(){
@@ -230,6 +228,16 @@ function restroomAsset(x,z,rot,count=3){
   const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;detail.add(g);
   for(let i=0;i<count;i++){const u=new THREE.Group();u.position.x=(i-(count-1)/2)*2.35;g.add(u);addBox(u,2,2.7,2,0,1.35,0,M.blue);addBox(u,2.2,.16,2.2,0,2.78,0,M.dark);addBox(u,.85,1.95,.08,0,1.08,-1.02,new THREE.MeshStandardMaterial({color:0x286a99,roughness:.85}))}
 }
+function restroomTrailer(x,z,rot,w,d){
+  const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;detail.add(g);
+  addBox(g,w,3.05,d,0,1.53,0,new THREE.MeshStandardMaterial({color:0xf3f0e7,roughness:.8}));
+  addBox(g,w+.15,.16,d+.15,0,3.12,0,M.dark);
+  for(let i=-1;i<=1;i++){
+    const door=addBox(g,w*.22,2.18,.08,i*w*.27,1.2,-d/2-.045,M.blue);
+    addBox(g,.09,.09,.1,i*w*.27+w*.075,1.2,-d/2-.11,M.gold);
+  }
+  for(const x1 of [-w*.43,w*.43]){addBox(g,.14,.14,d*.5,x1,.07,d*.73,M.truss);addBox(g,.14,.14,d*.5,x1,.07,-d*.73,M.truss)}
+}
 function fohAsset(x,z,rot,w,d){
   const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;detail.add(g);
   addBox(g,w,.22,d,0,.12,0,M.dark);for(const px of [-w*.45,w*.45])for(const pz of [-d*.45,d*.45])addPost(g,px,pz,3.1);
@@ -260,7 +268,9 @@ function exactFootprint(data,anchor,layer){
   return bestDist<12?best:null;
 }
 function buildDetailedAssets(data){
-  sameStageAsset();
+  const insert=(name)=>data.inserts.find(i=>i.name===name&&i.bounds)?.bounds;
+  const same=insert("Group-70");
+  if(same)sameStageAsset(same);
   // CAD calls But a 40x20 stage: 12.192m x 6.096m, not the oversized 20x11m
   // placeholder from the first visual pass.
   festivalStage(-38.17,147.1,.18,12.192,6.096,true);
@@ -282,6 +292,16 @@ function buildDetailedAssets(data){
     const fp=pathFootprint(path);if(!fp||fp.w<1.5||fp.d<1.5||fp.w>45||fp.d>45)continue;
     if(Math.hypot(fp.x-20.1567,fp.z-76.5835)<8||Math.hypot(fp.x-.9549,fp.z-112.7312)<8)continue;
     peakedTent(fp.x,fp.z,fp.w,fp.d,fp.rot,path.layer==="Stretch Tents"?0xe9dfc4:0xf1eadb);
+  }
+  // Block inserts carry their own CAD rotation and minimum-area bounds. These
+  // cannot be placed from nearby labels: several labels are tens of metres away.
+  for(const item of data.inserts){
+    const fp=item.bounds;if(!fp||Math.abs(fp.point[0])>500||Math.abs(fp.point[1])>500)continue;
+    if(/^Event Tent /i.test(item.name)){
+      peakedTent(fp.point[0],fp.point[1],fp.width,fp.depth,fp.rotation);
+    }else if(/^Vehicle Mobile Restroom Trailer/i.test(item.name)){
+      restroomTrailer(fp.point[0],fp.point[1],fp.rotation,fp.width,fp.depth);
+    }
   }
 }
 

@@ -410,8 +410,15 @@ function vendorTentAsset(x,z,rot,index){
     const item=new THREE.Mesh(n%2?new THREE.CylinderGeometry(.13,.16,.28,9):new THREE.BoxGeometry(.23,.25,.23),new THREE.MeshStandardMaterial({color:cols[(index+n+2)%cols.length],roughness:.82}));
     item.position.set(-.72+n*.36,1.02,-1.28);g.add(item);
   }
-  const seller=new THREE.Mesh(new THREE.CapsuleGeometry(.18,.72,4,8),new THREE.MeshStandardMaterial({color:0x563f31,roughness:.92}));
-  seller.position.set(.74,.72,.22);g.add(seller);
+  // The pinned Three.js build predates CapsuleGeometry. Compose the little
+  // vendor figure from primitives so a missing optional geometry cannot stop
+  // the entire CAD scene from loading.
+  const sellerMat=new THREE.MeshStandardMaterial({color:0x563f31,roughness:.92});
+  const seller=new THREE.Group();
+  const sellerBody=new THREE.Mesh(new THREE.CylinderGeometry(.18,.18,.72,8),sellerMat);
+  const sellerHead=new THREE.Mesh(new THREE.SphereGeometry(.18,8,6),sellerMat);
+  sellerBody.position.y=.36;sellerHead.position.y=.81;
+  seller.add(sellerBody,sellerHead);seller.position.set(.74,.36,.22);g.add(seller);
   return g;
 }
 function serviceAsset(x,z,rot,w,d,color=0xe7e1d6){

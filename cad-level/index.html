@@ -54,8 +54,12 @@ const grass=new THREE.Mesh(new THREE.CircleGeometry(450,96),new THREE.MeshStanda
 grass.rotation.x=-Math.PI/2; grass.receiveShadow=true; scene.add(grass);
 const earth=new THREE.Mesh(new THREE.CircleGeometry(1500,96),new THREE.MeshStandardMaterial({color:0xab9667,roughness:1}));
 earth.rotation.x=-Math.PI/2; earth.position.y=-.08; scene.add(earth);
-const lake=new THREE.Mesh(new THREE.PlaneGeometry(1500,900),new THREE.MeshPhysicalMaterial({color:0x277b9d,roughness:.16,metalness:.05,transparent:true,opacity:.91}));
-lake.rotation.x=-Math.PI/2; lake.position.set(80,.04,-520); scene.add(lake);
+// The PDF places Lake Perris southeast of the festival core. In this CAD/world
+// transform that is -X/+Z. The original preview put it on the exact opposite
+// side, which made the entire plan feel mirrored even though its geometry was
+// internally consistent.
+const lake=new THREE.Mesh(new THREE.CircleGeometry(760,128),new THREE.MeshPhysicalMaterial({color:0x277b9d,roughness:.16,metalness:.05,transparent:true,opacity:.91}));
+lake.rotation.x=-Math.PI/2; lake.position.set(-720,.04,720); scene.add(lake);
 
 const palette={
   "SCRIM 6' FENCE":0x17191d,"SCRIM 8' FENCE":0x111318,"Fence Line":0x24272b,"Bike Rack":0x25a842,
@@ -112,8 +116,10 @@ function buildLayerPanel(){
 }
 
 let yaw=0,pitch=-.32;const keys={};
-function festivalView(){camera.position.set(-5,70,-15);yaw=0;pitch=-1.03}
-function overview(){camera.position.set(0,330,20);yaw=0;pitch=-Math.PI/2+.001}
+// Viewpoint requested by Peter: standing at Limitless and looking into the
+// festival. Solar is behind; Butwood is right; food and East Entrance are left.
+function festivalView(){camera.position.set(26.1,14,43.1);yaw=1.30;pitch=-.24}
+function overview(){camera.position.set(-30,430,35);yaw=0;pitch=-Math.PI/2+.001}
 document.querySelector("#overview").onclick=overview;document.querySelector("#spawn").onclick=festivalView;
 addEventListener("keydown",e=>{keys[e.code]=true;if(e.code.startsWith("Arrow"))e.preventDefault()});
 addEventListener("keyup",e=>keys[e.code]=false);

@@ -6,8 +6,8 @@ Source priority:
 
 1. `2026_Festival_Map_-_PE_-_7-18.dxf` controls coordinates, scale, rotation,
    footprints, fence runs, access gaps, and labels.
-2. The festival PDF controls human-readable intent where CAD symbols or layers
-   are ambiguous.
+2. `2026 Festival Map - PE - 7-18.pdf` controls human-readable intent, aerial
+   orientation, shoreline context, and ambiguous CAD symbols or layers.
 3. `ssbd-lake-perris_28` controls the visual language and interaction design:
    materials, stage/tent/vendor styling, lighting, water, terrain, HUD, and
    movement.

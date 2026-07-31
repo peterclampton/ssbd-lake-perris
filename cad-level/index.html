@@ -326,9 +326,19 @@ function foodVendorAsset(fp,index){
   addBox(g,fp.w,2.35,fp.d,0,1.18,0,shell);
   // The local -Z side is the public serving face.
   addBox(g,fp.w*.78,.82,.10,0,1.38,-fp.d/2-.055,new THREE.MeshStandardMaterial({color:0xe6d8bc,roughness:.78}));
+  addBox(g,fp.w*.88,.72,.62,0,.38,-fp.d/2-.31,new THREE.MeshStandardMaterial({color:0xc99d64,roughness:.84}));
   addBox(g,fp.w+.26,.22,fp.d+.32,0,2.68,0,canopy);
   for(const x of [-fp.w*.36,0,fp.w*.36])addBox(g,Math.min(.28,fp.w*.13),.23,.25,x,2.81,-fp.d/2-.08,canopy);
   for(const x of [-fp.w*.43,fp.w*.43])addPost(g,x,-fp.d*.42,2.72,M.truss);
+  // A projecting striped awning, visible counter wares, and a board make the
+  // CAD pads read as food service rather than coloured storage containers.
+  const awning=new THREE.Mesh(new THREE.PlaneGeometry(fp.w*.86,Math.min(1.45,fp.d*.32),1,1),canopy);
+  awning.position.set(0,2.55,-fp.d/2-.42);awning.rotation.x=-.58;g.add(awning);
+  const wareMat=new THREE.MeshStandardMaterial({color:index%3===0?0xe8c06d:index%3===1?0x93b56c:0xd77b45,roughness:.86});
+  for(let i=0;i<Math.max(3,Math.floor(fp.w/1.2));i++){
+    const ware=new THREE.Mesh(index%2?new THREE.CylinderGeometry(.14,.12,.28,10):new THREE.SphereGeometry(.17,10,8),wareMat);
+    ware.position.set((i-(Math.max(3,Math.floor(fp.w/1.2))-1)/2)*.55,.91,-fp.d/2-.46);g.add(ware);
+  }
   const menu=addBox(g,Math.min(1.15,fp.w*.32),.7,.06,fp.w*.28,2.55,-fp.d/2-.16,M.dark);
   menu.name="FOOD MENU";
 }

@@ -132,60 +132,63 @@ function rod(g,x1,y1,x2,y2,z,thick,mat){
 // Same Stage is deliberately its own model. The reference is a broad open
 // scaffold wall, not the generic roofed festivalStage() box used in pass one.
 function sameStageAsset(){
-  // The PDF puts Limitless on stage-right. After the approved east/west mirror,
-  // the stage centre is west of the deck at the CAD-derived (-13, 51) anchor.
-  const g=new THREE.Group();g.name="THE SAME STAGE · CAD";g.position.set(-13,0,51);g.rotation.y=0;detail.add(g);
+  // Exact extents of DXF Stages/Group-70 after the approved world transform:
+  // 1034.7697 x 947.5610 x 592.5896 CAD units at 0.02685 m/unit.
+  const w=27.7836,d=25.4400,h=15.9110;
+  const g=new THREE.Group();g.name="THE SAME STAGE · CAD";
+  g.position.set(24.2618,0,26.5208);g.rotation.y=.18811;detail.add(g);
   const orange=new THREE.MeshStandardMaterial({color:0xd58a27,roughness:.58,metalness:.34});
   const ivory=new THREE.MeshStandardMaterial({color:0xe8e4dc,roughness:.82});
   const black=new THREE.MeshStandardMaterial({color:0x101116,roughness:.7,metalness:.18});
   const screen=new THREE.MeshStandardMaterial({color:0x17131f,emissive:0x25103f,emissiveIntensity:.55,roughness:.5});
 
-  // 144' show deck from the design file, with shallow audience-facing depth.
-  addBox(g,44,1.15,10,0,.58,0,black);
-  addBox(g,20,6.5,.45,0,4.45,3.65,screen);
+  addBox(g,w,1.15,d,0,.58,0,black);
+  addBox(g,w*.46,h*.41,.45,0,h*.28,d*.30,screen);
 
   // Curved scaffold wall: 17 bays, higher end towers and the same shallow bow
   // visible in Peter's reference image.
-  const wallZ=x=>5.7-.008*x*x, wallH=x=>12.8+Math.abs(x)*.12;
+  const wallZ=x=>d*.34-.018*x*x, wallH=x=>h*.79+Math.abs(x)*.22;
   for(let i=0;i<=16;i++){
-    const x=-26+i*3.25,z=wallZ(x),h=wallH(x);
-    addBox(g,.16,h,.16,x,h/2,z,orange);
-    for(let y=3.1;y<h;y+=3.1)addBox(g,3.25,.13,.13,x,y,z,orange);
-    if(i<16&&i%2===0)rod(g,x,3.1,x+3.25,6.2,z-.05,.12,orange);
-    if(i<16&&i%2===1)rod(g,x,6.2,x+3.25,3.1,z-.05,.12,orange);
+    const bay=w/16,x=-w/2+i*bay,z=wallZ(x),wh=wallH(x);
+    addBox(g,.16,wh,.16,x,wh/2,z,orange);
+    for(let y=3.1;y<wh;y+=3.1)addBox(g,bay,.13,.13,x,y,z,orange);
+    if(i<16&&i%2===0)rod(g,x,3.1,x+bay,6.2,z-.05,.12,orange);
+    if(i<16&&i%2===1)rod(g,x,6.2,x+bay,3.1,z-.05,.12,orange);
   }
 
   // Patterned side towers: pale checker blocks with the black zigzag strokes
   // that define the real facade.
   for(const side of [-1,1]){
-    const tx=side*23.5;
+    const tx=side*w*.38;
     for(let c=0;c<4;c++)for(let r=0;r<7;r++){
-      const panel=addBox(g,1.75,1.65,.28,tx+side*(c-1.5)*1.78,2.1+r*1.68,wallZ(tx)-.35,
+      const pw=w*.063;
+      const panel=addBox(g,pw,1.65,.28,tx+side*(c-1.5)*pw,2.1+r*1.68,wallZ(tx)-.35,
         (c+r)%3===0?black:ivory);
       panel.rotation.y=-side*.08;
     }
-    const zx=side*19.8;
+    const zx=side*w*.31;
     for(let k=0;k<6;k++){
       const y1=2.2+k*1.9,y2=y1+1.55;
-      rod(g,zx+side*(k%2?0:2.3),y1,zx+side*(k%2?2.3:0),y2,wallZ(zx)-.7,.48,black);
+      const run=w*.083;
+      rod(g,zx+side*(k%2?0:run),y1,zx+side*(k%2?run:0),y2,wallZ(zx)-.7,.48,black);
     }
     // line array on the outside edge
-    for(let j=0;j<8;j++)addBox(g,1.45,.56,1.05,side*27,13.2-j*.63,1.5+j*.08,black);
+    for(let j=0;j<8;j++)addBox(g,1.25,.56,1.05,side*(w/2-.7),h*.86-j*.63,d*.08+j*.08,black);
   }
 
   // Dense moving-light field across the scaffold and deck edge.
   const lampMatA=new THREE.MeshStandardMaterial({color:0x24252c,emissive:0x56d7ee,emissiveIntensity:1.8});
   const lampMatB=new THREE.MeshStandardMaterial({color:0x24252c,emissive:0xd9358f,emissiveIntensity:1.8});
   for(let i=0;i<32;i++){
-    const x=-24+(i%16)*3.2,y=3.0+Math.floor(i/16)*4.3+(i%3)*1.15;
+    const x=-w*.43+(i%16)*(w*.86/15),y=3.0+Math.floor(i/16)*4.3+(i%3)*1.15;
     const lamp=new THREE.Mesh(new THREE.SphereGeometry(.24,8,6),i%2?lampMatA:lampMatB);
     lamp.position.set(x,y,wallZ(x)-.55);g.add(lamp);
   }
   for(let i=-5;i<=5;i++){
     const lamp=new THREE.Mesh(new THREE.CylinderGeometry(.22,.28,.48,8),i%2?lampMatA:lampMatB);
-    lamp.position.set(i*3.5,1.5,-3.8);lamp.rotation.x=-.9;g.add(lamp);
+    lamp.position.set(i*w/12,1.5,-d*.42);lamp.rotation.x=-.9;g.add(lamp);
   }
-  makeLabel("THE SAME STAGE",-13,18.5,51);
+  makeLabel("THE SAME STAGE",24.2618,18.5,26.5208);
   return g;
 }
 function limitlessAssets(){
@@ -200,15 +203,16 @@ function limitlessAssets(){
   const solar=new THREE.Group();solar.position.set(-7.2303,0,45.9181);solar.rotation.y=rot;detail.add(solar);
   for(let i=-1;i<=1;i++){const u=new THREE.Group();u.position.x=i*3.3;solar.add(u);addBox(u,2.55,2.9,2.35,0,1.45,0,M.blue);const pv=addBox(u,2.65,.09,2.15,0,3.12,0,new THREE.MeshStandardMaterial({color:0x17243b,roughness:.25,metalness:.5}));pv.rotation.x=-.15}
 }
-function barAsset(x,z,rot,w=7){
+function barAsset(x,z,rot,w,d){
   const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;detail.add(g);
-  addBox(g,w,1.15,2.2,0,.58,0,M.wood);addBox(g,w+.3,.2,2.5,0,1.22,0,M.gold);
-  for(const px of [-w/2,w/2])addPost(g,px,0,3.2);addBox(g,w+.5,.18,.2,0,3.15,0,M.pink);return g;
+  addBox(g,w,1.15,d,0,.58,0,M.wood);addBox(g,w+.12,.2,d+.12,0,1.22,0,M.gold);
+  for(const px of [-w/2,w/2])for(const pz of [-d/2,d/2])addPost(g,px,pz,3.2);
+  addBox(g,w+.25,.18,.2,0,3.15,-d/2,M.pink);return g;
 }
-function stallAsset(x,z,rot,food){
+function stallAsset(x,z,rot,w,d,food){
   const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;detail.add(g),col=food?0xf0a34a:0xdb4f93;
-  addBox(g,5.2,2.5,3.3,0,1.25,0,new THREE.MeshStandardMaterial({color:col,roughness:.8}));
-  addBox(g,5.6,.22,3.7,0,2.68,0,M.canvas);addBox(g,3.4,.9,.18,0,1.6,-1.69,M.dark);
+  addBox(g,w,2.5,d,0,1.25,0,new THREE.MeshStandardMaterial({color:col,roughness:.8}));
+  addBox(g,w+.18,.22,d+.18,0,2.68,0,M.canvas);addBox(g,w*.66,.9,.18,0,1.6,-d/2-.02,M.dark);
 }
 function entranceAsset(x,z,rot,name){
   const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;detail.add(g);
@@ -221,29 +225,46 @@ function restroomAsset(x,z,rot,count=3){
   const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;detail.add(g);
   for(let i=0;i<count;i++){const u=new THREE.Group();u.position.x=(i-(count-1)/2)*2.35;g.add(u);addBox(u,2,2.7,2,0,1.35,0,M.blue);addBox(u,2.2,.16,2.2,0,2.78,0,M.dark);addBox(u,.85,1.95,.08,0,1.08,-1.02,new THREE.MeshStandardMaterial({color:0x286a99,roughness:.85}))}
 }
-function fohAsset(x,z,rot){
+function fohAsset(x,z,rot,w,d){
   const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;detail.add(g);
-  addBox(g,6,.22,6,0,.12,0,M.dark);for(const px of [-2.7,2.7])for(const pz of [-2.7,2.7])addPost(g,px,pz,3.1);
-  const roof=new THREE.Mesh(new THREE.ConeGeometry(4.5,1.6,4),M.canvas);roof.position.y=3.8;roof.rotation.y=Math.PI/4;g.add(roof);
-  addBox(g,3.8,1.2,1.6,0,.65,0,M.dark);
+  addBox(g,w,.22,d,0,.12,0,M.dark);for(const px of [-w*.45,w*.45])for(const pz of [-d*.45,d*.45])addPost(g,px,pz,3.1);
+  const roof=new THREE.Mesh(new THREE.ConeGeometry(Math.max(w,d)*.72,1.6,4),M.canvas);roof.position.y=3.8;roof.rotation.y=Math.PI/4;g.add(roof);
+  addBox(g,w*.62,1.2,d*.27,0,.65,0,M.dark);
 }
-function adaDeck(x,z,rot){
+function adaDeck(x,z,rot,w,d){
   const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;detail.add(g);
-  addBox(g,5,.25,3.5,0,.18,0,M.dark);for(const [px,pz,w,d] of [[0,-1.7,5,.08],[-2.45,0,.08,3.4],[2.45,0,.08,3.4]])addBox(g,w,1,d,px,.65,pz,M.gold);
+  addBox(g,w,.25,d,0,.18,0,M.dark);
+  for(const [px,pz,rw,rd] of [[0,-d/2,w,.08],[-w/2,0,.08,d],[w/2,0,.08,d]])addBox(g,rw,1,rd,px,.65,pz,M.gold);
+}
+function exactFootprint(data,anchor,layer){
+  let best=null,bestDist=Infinity;
+  for(const path of data.paths){
+    if(path.layer!==layer||!path.closed||path.points.length<4)continue;
+    const pts=path.points.slice(0,-1),cx=pts.reduce((s,p)=>s+p[0],0)/pts.length,cz=pts.reduce((s,p)=>s+p[1],0)/pts.length;
+    const dist=Math.hypot(cx-anchor.point[0],cz-anchor.point[1]);if(dist>=bestDist)continue;
+    let edge=[1,0],longest=0;
+    for(let i=0;i<pts.length;i++){const q=pts[(i+1)%pts.length],dx=q[0]-pts[i][0],dz=q[1]-pts[i][1],len=Math.hypot(dx,dz);if(len>longest){longest=len;edge=[dx/len,dz/len]}}
+    const side=[-edge[1],edge[0]],us=pts.map(p=>p[0]*edge[0]+p[1]*edge[1]),vs=pts.map(p=>p[0]*side[0]+p[1]*side[1]);
+    bestDist=dist;best={x:cx,z:cz,w:Math.max(...us)-Math.min(...us),d:Math.max(...vs)-Math.min(...vs),rot:Math.atan2(-edge[1],edge[0])};
+  }
+  return bestDist<12?best:null;
 }
 function buildDetailedAssets(data){
   sameStageAsset();
   // CAD calls But a 40x20 stage: 12.192m x 6.096m, not the oversized 20x11m
   // placeholder from the first visual pass.
   festivalStage(-38.17,147.1,.18,12.192,6.096,true);
-  limitlessAssets();peakedTent(20.16,76.58,15,9,-.33);peakedTent(.95,112.73,12,12,.1,0xd8c7ef);
-  barAsset(36.83,92.54,-.25,9);barAsset(57.15,30.88,-.1,11);barAsset(1.77,37.24,-1.48,7);
+  limitlessAssets();
+  peakedTent(20.1567,76.5835,50*.3048,30*.3048,-.33);
+  peakedTent(.9549,112.7312,40*.3048,40*.3048,.1,0xd8c7ef);
+  barAsset(36.8317,92.5351,-.25,30*.3048,20*.3048);
+  barAsset(57.1547,30.8776,-.1,40*.3048,10*.3048);
   entranceAsset(134.2,-64.54,.55,"EAST ENTRANCE");entranceAsset(-49.79,227.81,-.7,"WEST ENTRANCE");
-  fohAsset(63,63,.05);adaDeck(55.7,68.4,.05);
+  fohAsset(62.45,62.1,.05,20*.3048,20*.3048);
+  adaDeck(55.6751,68.4,.05,12*.3048,8*.3048);
   const placed=[];for(const a of data.anchors){const food=/^FOOD(?: TRUCK)?$/i.test(a.text),vendor=/^VENDORS?$/i.test(a.text);if(!food&&!vendor)continue;
-    if(placed.some(p=>Math.hypot(p[0]-a.point[0],p[1]-a.point[1])<10))continue;placed.push(a.point);stallAsset(a.point[0],a.point[1],a.rotation,food)}
-  const baths=[];for(const a of data.anchors){if(!/RESTROOM|BATHROOM/i.test(a.text))continue;if(Math.abs(a.point[0])>400||Math.abs(a.point[1])>400)continue;
-    if(baths.some(p=>Math.hypot(p[0]-a.point[0],p[1]-a.point[1])<12))continue;baths.push(a.point);restroomAsset(a.point[0],a.point[1],a.rotation,3)}
+    const fp=exactFootprint(data,a,food?"Food":"Vendors");if(!fp||placed.some(p=>Math.hypot(p[0]-fp.x,p[1]-fp.z)<2))continue;
+    placed.push([fp.x,fp.z]);stallAsset(fp.x,fp.z,fp.rot,fp.w,fp.d,food)}
 }
 
 fetch("site-plan.json",{cache:"no-store"}).then(r=>r.json()).then(data=>{

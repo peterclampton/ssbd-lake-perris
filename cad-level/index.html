@@ -89,7 +89,7 @@ function makeLabel(text,x,z){
   const cv=document.createElement("canvas"),c=cv.getContext("2d");c.font="700 28px Segoe UI";const w=Math.ceil(c.measureText(text).width)+28;
   cv.width=w*2;cv.height=78;c.scale(2,2);c.fillStyle="#162538dc";c.fillRect(0,0,w,39);c.fillStyle="white";c.textAlign="center";c.textBaseline="middle";c.font="700 14px Segoe UI";c.fillText(text,w/2,20);
   const t=new THREE.CanvasTexture(cv);t.encoding=THREE.sRGBEncoding;const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthTest:false}));
-  s.scale.set(Math.min(26,w/8),3.8,1);s.position.set(x,5,z);s.renderOrder=20;rootFor("Labels").add(s);
+  s.scale.set(Math.min(13,w/15),1.9,1);s.position.set(x,4,z);s.renderOrder=20;rootFor("Labels").add(s);
 }
 function isUsefulLabel(t){return /STAGE|LIMITLESS|VIP|GATE|BAR|FOOD|VENDOR|RESTROOM|BATHROOM|SOLAR|ENTRANCE|PARKING|LOUNGE|TENT|ADA|PRODUCTION|HOSPITAL|CAMP|COCONUT|INNERBASS|BUTWOOD|CREATION|REVIVAL/i.test(t)}
 
@@ -116,6 +116,24 @@ function peakedTent(x,z,w,d,rot,color=0xf1eadb){
   ],3));geo.computeVertexNormals();const roof=new THREE.Mesh(geo,mat);roof.castShadow=true;g.add(roof);
   for(const px of [-w/2,w/2])for(const pz of [-d/2,d/2])addPost(g,px,pz,3,M.truss);
   return g;
+}
+function stretchTentAsset(x,z,w,d,rot,color=0xe9dfc4){
+  const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;detail.add(g);
+  const mat=new THREE.MeshStandardMaterial({color,roughness:.84,side:THREE.DoubleSide});
+  const geo=new THREE.BufferGeometry(),verts=[],cols=8,rows=8;
+  for(let iz=0;iz<=rows;iz++)for(let ix=0;ix<=cols;ix++){
+    const px=(ix/cols-.5)*w,pz=(iz/rows-.5)*d;
+    const nx=Math.abs(px)/(w/2),nz=Math.abs(pz)/(d/2);
+    const y=3.15+2.35*(1-nx*nx)*(1-nz*nz)+.38*Math.sin(ix*Math.PI/cols)*Math.sin(iz*Math.PI/rows);
+    verts.push(px,y,pz);
+  }
+  const idx=[];for(let iz=0;iz<rows;iz++)for(let ix=0;ix<cols;ix++){
+    const a=iz*(cols+1)+ix,b=a+1,c=a+cols+1,d1=c+1;idx.push(a,c,b,b,c,d1);
+  }
+  geo.setAttribute("position",new THREE.Float32BufferAttribute(verts,3));geo.setIndex(idx);geo.computeVertexNormals();
+  const canopy=new THREE.Mesh(geo,mat);canopy.castShadow=true;g.add(canopy);
+  for(const px of [-w/2,w/2])for(const pz of [-d/2,d/2])addPost(g,px,pz,3.15,M.truss);
+  addPost(g,0,0,5.45,M.truss);return g;
 }
 function festivalStage(x,z,rot,w=24,d=13,butwood=false){
   const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;detail.add(g);
@@ -190,21 +208,30 @@ function sameStageAsset(fp){
   makeLabel("THE SAME STAGE",fp.point[0],fp.point[1]);
   return g;
 }
-function limitlessAssets(){
-  const rot=-1.48;
-  const deck=new THREE.Group();deck.position.set(14.5,0,42);deck.rotation.y=rot;detail.add(deck);
+function limitlessAssets(data,deckFp,loungeFp){
+  const deck=new THREE.Group();deck.position.set(deckFp.x,0,deckFp.z);deck.rotation.y=deckFp.rot;detail.add(deck);
   const deckW=32*.3048,deckD=20*.3048;
   addBox(deck,deckW,.36,deckD,0,4,0,M.dark);
   for(const [x,z] of [[-deckW*.41,-deckD*.4],[deckW*.41,-deckD*.4],[-deckW*.41,deckD*.4],[deckW*.41,deckD*.4],[0,0]])addPost(deck,x,z,3.9);
   for(const [x,z,w,d] of [[0,-deckD/2,deckW,.12],[-deckW/2,0,.12,deckD],[0,deckD/2,deckW,.12]])addBox(deck,w,.9,d,x,4.8,z,M.gold);
-  const lounge=new THREE.Group();lounge.position.set(2.9347,0,43.0595);lounge.rotation.y=rot;detail.add(lounge);
+  const lounge=new THREE.Group();lounge.position.set(loungeFp.x,0,loungeFp.z);lounge.rotation.y=loungeFp.rot;detail.add(lounge);
   const loungeW=40*.3048,loungeD=20*.3048;
   addBox(lounge,loungeW,.22,loungeD,0,3.55,0,M.dark);
   for(const x of [-loungeW*.45,0,loungeW*.45])for(const z of [-loungeD*.45,loungeD*.45])addPost(lounge,x,z,3.5);
   addBox(lounge,loungeW*.73,.1,loungeD*.66,0,.06,0,new THREE.MeshStandardMaterial({color:0x322545,roughness:1}));
   addBox(lounge,loungeW*.32,1.1,.9,0,.55,loungeD*.35,M.gold);
-  const solar=new THREE.Group();solar.position.set(-7.2303,0,45.9181);solar.rotation.y=rot;detail.add(solar);
-  for(let i=-1;i<=1;i++){const u=new THREE.Group();u.position.x=i*3.3;solar.add(u);addBox(u,2.55,2.9,2.35,0,1.45,0,M.blue);const pv=addBox(u,2.65,.09,2.15,0,3.12,0,new THREE.MeshStandardMaterial({color:0x17243b,roughness:.25,metalness:.5}));pv.rotation.x=-.15}
+  const solarAnchor=data.anchors.find(a=>a.text==="SOLAR / x3"),solar=[];
+  if(solarAnchor)for(const path of data.paths){
+    if(path.layer!=="Porta Potties _ Bathroom Trucks"||!path.closed)continue;
+    const fp=pathFootprint(path);if(!fp||fp.w<1.8||fp.w>3||fp.d<1||fp.d>2)continue;
+    const dist=Math.hypot(fp.x-solarAnchor.point[0],fp.z-solarAnchor.point[1]);if(dist<10)solar.push({dist,...fp});
+  }
+  solar.sort((a,b)=>a.dist-b.dist);
+  for(const fp of solar.slice(0,3)){
+    const u=new THREE.Group();u.position.set(fp.x,0,fp.z);u.rotation.y=fp.rot;detail.add(u);
+    addBox(u,fp.w,2.9,fp.d,0,1.45,0,M.blue);
+    const pv=addBox(u,fp.w+.12,.09,Math.max(.9,fp.d-.12),0,3.12,0,new THREE.MeshStandardMaterial({color:0x17243b,roughness:.25,metalness:.5}));pv.rotation.x=-.15;
+  }
 }
 function barAsset(x,z,rot,w,d){
   const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;detail.add(g);
@@ -213,7 +240,7 @@ function barAsset(x,z,rot,w,d){
   addBox(g,w+.25,.18,.2,0,3.15,-d/2,M.pink);return g;
 }
 function stallAsset(x,z,rot,w,d,food){
-  const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;detail.add(g),col=food?0xf0a34a:0xdb4f93;
+  const g=new THREE.Group(),col=food?0xf0a34a:0xdb4f93;g.position.set(x,0,z);g.rotation.y=rot;detail.add(g);
   addBox(g,w,2.5,d,0,1.25,0,new THREE.MeshStandardMaterial({color:col,roughness:.8}));
   addBox(g,w+.18,.22,d+.18,0,2.68,0,M.canvas);addBox(g,w*.66,.9,.18,0,1.6,-d/2-.02,M.dark);
 }
@@ -257,7 +284,7 @@ function pathFootprint(path){
   const side=[-edge[1],edge[0]],us=pts.map(p=>p[0]*edge[0]+p[1]*edge[1]),vs=pts.map(p=>p[0]*side[0]+p[1]*side[1]);
   return {x:cx,z:cz,w:Math.max(...us)-Math.min(...us),d:Math.max(...vs)-Math.min(...vs),rot:Math.atan2(-edge[1],edge[0])};
 }
-function exactFootprint(data,anchor,layer){
+function exactFootprint(data,anchor,layer,maxDist=12){
   let best=null,bestDist=Infinity;
   for(const path of data.paths){
     if(path.layer!==layer||!path.closed||path.points.length<4)continue;
@@ -265,18 +292,43 @@ function exactFootprint(data,anchor,layer){
     const dist=Math.hypot(fp.x-anchor.point[0],fp.z-anchor.point[1]);if(dist>=bestDist)continue;
     bestDist=dist;best=fp;
   }
-  return bestDist<12?best:null;
+  return bestDist<maxDist?best:null;
 }
 function buildDetailedAssets(data){
   const insert=(name)=>data.inserts.find(i=>i.name===name&&i.bounds)?.bounds;
+  const anchor=(text)=>data.anchors.find(a=>a.text===text);
+  const namedFootprint=(text,layer,maxDist=12)=>{
+    const a=anchor(text);return a?exactFootprint(data,a,layer,maxDist):null;
+  };
+  const usedTents=[];
+  const useTent=(fp)=>usedTents.push([fp.x,fp.z]);
+  const tentUsed=(fp,dist=5)=>usedTents.some(p=>Math.hypot(p[0]-fp.x,p[1]-fp.z)<dist);
   const same=insert("Group-70");
   if(same)sameStageAsset(same);
-  // CAD calls But a 40x20 stage: 12.192m x 6.096m, not the oversized 20x11m
-  // placeholder from the first visual pass.
-  festivalStage(-38.17,147.1,.18,12.192,6.096,true);
-  limitlessAssets();
-  peakedTent(20.1567,76.5835,50*.3048,30*.3048,-.33);
+  const but=namedFootprint("THE BUT STAGE","Stage-Main");
+  if(but)festivalStage(but.x,but.z,but.rot,but.w,but.d,true);
+  const deck=namedFootprint("LIMITLESS / VIEWING / DECK 32'x20","Stages");
+  const lounge=namedFootprint("LIMITLESS / LOUNGE / 40x20","None",20);
+  if(deck&&lounge)limitlessAssets(data,deck,lounge);
+  const vip=namedFootprint("VIP LOUNGE","Tents");
+  if(vip){peakedTent(vip.x,vip.z,50*.3048,30*.3048,vip.rot);useTent(vip)}
   peakedTent(.9549,112.7312,40*.3048,40*.3048,.1,0xd8c7ef);
+  // Named CAD structures: center and rotation come from their closed outline;
+  // printed dimensions override only the decorative overhang in the symbol.
+  const coconut=namedFootprint("COCONUT COVE / STRETCH TENT / 130'","Stretch Tents");
+  if(coconut){stretchTentAsset(coconut.x,coconut.z,coconut.w,coconut.d,coconut.rot);useTent(coconut)}
+  const inner=namedFootprint("INNERBASS / STRETCH TENT / 130'","Stretch Tents");
+  if(inner){stretchTentAsset(inner.x,inner.z,inner.w,inner.d,inner.rot,0xd9c8ea);useTent(inner)}
+  const merch=namedFootprint("FESTIVAL / MERCH / 10x40","Tents");
+  if(merch){peakedTent(merch.x,merch.z,40*.3048,10*.3048,merch.rot,0xe9dce8);useTent(merch)}
+  const chapel=namedFootprint("CHAPEL / / / / / / / / / / / / / / / / / / / / / / / / / / / / 20x30","Tents");
+  if(chapel){peakedTent(chapel.x,chapel.z,30*.3048,20*.3048,chapel.rot);useTent(chapel)}
+  const art=namedFootprint("ART SALES / TENT / 10x10","Tents");
+  if(art){peakedTent(art.x,art.z,10*.3048,10*.3048,art.rot,0xe7d5b9);useTent(art)}
+  const extra=namedFootprint("ADDTL / 40x40 / STRETCH / TENT","Stretch Tents");
+  if(extra){stretchTentAsset(extra.x,extra.z,40*.3048,40*.3048,extra.rot);useTent(extra)}
+  const innerStage=namedFootprint("INNERBASS STAGE / 16' x 12'","Stages");
+  if(innerStage)festivalStage(innerStage.x,innerStage.z,innerStage.rot,16*.3048,12*.3048);
   barAsset(36.8317,92.5351,-.25,30*.3048,20*.3048);
   barAsset(57.1547,30.8776,-.1,40*.3048,10*.3048);
   entranceAsset(134.2,-64.54,.55,"EAST ENTRANCE");entranceAsset(-49.79,227.81,-.7,"WEST ENTRANCE");
@@ -290,7 +342,7 @@ function buildDetailedAssets(data){
   for(const path of data.paths){
     if(!path.closed||!(path.layer==="Tents"||path.layer==="Stretch Tents"))continue;
     const fp=pathFootprint(path);if(!fp||fp.w<1.5||fp.d<1.5||fp.w>45||fp.d>45)continue;
-    if(Math.hypot(fp.x-20.1567,fp.z-76.5835)<8||Math.hypot(fp.x-.9549,fp.z-112.7312)<8)continue;
+    if(tentUsed(fp,8)||Math.hypot(fp.x-.9549,fp.z-112.7312)<8)continue;
     peakedTent(fp.x,fp.z,fp.w,fp.d,fp.rot,path.layer==="Stretch Tents"?0xe9dfc4:0xf1eadb);
   }
   // Block inserts carry their own CAD rotation and minimum-area bounds. These
@@ -308,6 +360,7 @@ function buildDetailedAssets(data){
 fetch("site-plan.json",{cache:"no-store"}).then(r=>r.json()).then(data=>{
   for(const path of data.paths){
     const layer=path.layer,parent=rootFor(layer),fence=/FENCE|Bike Rack/.test(layer);
+    if(layer==="Group Camping"||layer==="But Area"||layer==="Stage-Main"||layer==="None")continue;
     if(path.closed&&!fence&&shapeMesh(path,layer,parent))continue;
     const h=layer==="SCRIM 8' FENCE"?2.45:layer==="Bike Rack"?1.05:fence?1.85:.18;
     const w=layer==="Bike Rack"?.08:fence?.11:.16,mat=material(layer);

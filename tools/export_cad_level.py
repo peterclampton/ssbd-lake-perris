@@ -31,6 +31,7 @@ GEOMETRY_LAYERS = {
     "Fence Line",
     "Bike Rack",
     "Stages",
+    "Stage-Main",
     "Tents",
     "Stretch Tents",
     "Food",
@@ -43,6 +44,11 @@ GEOMETRY_LAYERS = {
     "Traffic",
     "Sponsor Activations",
     "Preparty",
+    # Reference-only design layers. The browser uses these outlines to place
+    # detailed assets but does not draw the raw CAD polygons over the level.
+    "Group Camping",
+    "But Area",
+    "None",
 }
 
 

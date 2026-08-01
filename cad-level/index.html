@@ -124,12 +124,23 @@ aerialGeo.setIndex([0,1,2,0,2,3]);aerialGeo.computeVertexNormals();
 // Do not decode the full aerial as a WebGL texture in this lightweight viewer:
 // Safari can lose the entire WebGL context on large photo textures. The image
 // is served in the separate Site aerial reference view instead.
-const aerial=new THREE.Mesh(aerialGeo,new THREE.MeshBasicMaterial({visible:false}));
+// A 2k derivative of the supplied TIFF is small enough for Safari/mobile GPU
+// budgets (unlike the 326 MB source), while retaining its exact registered
+// grass → sand → water edge, roads, concrete and tree shadows.
+const groundTexture=new THREE.TextureLoader().load("assets/lake-perris-ground.jpg",tex=>{
+  tex.encoding=THREE.sRGBEncoding;
+  tex.generateMipmaps=false;
+  tex.minFilter=THREE.LinearFilter;
+  tex.magFilter=THREE.LinearFilter;
+  tex.anisotropy=Math.min(2,renderer.capabilities.getMaxAnisotropy());
+  aerial.material.needsUpdate=true;
+});
+const aerial=new THREE.Mesh(aerialGeo,new THREE.MeshBasicMaterial({map:groundTexture}));
 aerial.name='VECTORWORKS GEOREGISTERED SATELLITE AERIAL';aerial.receiveShadow=true;scene.add(aerial);
 // Kept out of the WebGL scene while the browser-level renderer uses its
 // compact fallback. The full TIFF remains the alignment authority and is
 // exposed through the Site aerial view rather than crashing the live world.
-aerial.visible=false;
+aerial.visible=true;
 terrain.visible=false;grass.visible=false;
 const shore=new THREE.Mesh(new THREE.RingGeometry(LAKE_RADIUS,LAKE_RADIUS+3.2,160),new THREE.MeshStandardMaterial({color:0xcdbb83,roughness:1,side:THREE.DoubleSide}));
 shore.rotation.x=-Math.PI/2;shore.position.set(LAKE_X,WATER_LEVEL+.012,LAKE_Z);shore.receiveShadow=true;scene.add(shore);
@@ -218,6 +229,10 @@ sitePatch("AERIAL EAST LOT",[[86,50],[183,72],[212,119],[147,133],[92,104]],0x98
 // core remains open grass; scattered decoration there would contradict the
 // source image and the festival plan.
 trees.visible=true;
+// The registered TIFF now provides the ground material itself. Keep the old
+// hand-traced color patches out of the render so their guessed shoreline can
+// never cover the actual Lake Perris grass, beach or water boundary.
+siteSurface.visible=false;
 
 const palette={
   "SCRIM 6' FENCE":0x17191d,"SCRIM 8' FENCE":0x111318,"Fence Line":0x17191d,"Bike Rack":0x25a842,
@@ -1364,13 +1379,14 @@ function buildDetailedAssets(data){
       makeLabel("ART INSTALLATION",fp.point[0],fp.point[1]);
     }
   }
-  // PDF sheet: ADA Viewing is explicitly 12' x 8'. The DXF provides separate
-  // ADA and VIEWING text entities at the platform. Use their midpoint rather
-  // than the earlier eyeballed center.
+  // Same Stage ADA is one labeled unit: ADA / VIEWING / 12' x 8'.  The old
+  // two-label midpoint ignored the dimension anchor and slid the platform off
+  // its intended ramp pad. Use all three CAD callouts as one local cluster.
   const viewA=anchor("VIEWING"),adaA=viewA?exactAnchor("ADA",viewA.point):null;
-  if(adaA&&viewA){
-    const mid={point:[(adaA.point[0]+viewA.point[0])/2,(adaA.point[1]+viewA.point[1])/2],rotation:viewA.rotation};
-    pdfSizedAsset(mid,12,8,adaDeck,"ADA VIEWING");
+  const adaDim=adaA?exactAnchor("12’ x 8’",adaA.point):null;
+  if(adaA&&viewA&&adaDim){
+    const mid={point:[(adaA.point[0]+viewA.point[0]+adaDim.point[0])/3,(adaA.point[1]+viewA.point[1]+adaDim.point[1])/3],rotation:adaDim.rotation};
+    pdfSizedAsset(mid,12,8,adaDeck,"SAME STAGE ADA RAMP / VIEWING");
   }
   // Explicit PDF dimensions for the two accessible routes. The DXF text
   // entities supply their insertion points and path-aligned rotation.
@@ -1379,8 +1395,16 @@ function buildDetailedAssets(data){
   // Both FOH footprints are explicitly dimensioned on the PDF. They are text
   // annotations rather than closed CAD polygons, so use the dimension entity's
   // insertion point and rotation.
-  const sameFoh=exactAnchor("20 x 20",[64.6564,65.5089]);
-  if(sameFoh)pdfSizedAsset(sameFoh,20,20,fohAsset,"SAME STAGE FOH");
+  const fohFront=exactAnchor("FRONT",[62.749,60.5566]);
+  const fohHouse=fohFront?exactAnchor("OF HOUSE",fohFront.point):null;
+  const fohDim=fohFront?exactAnchor("20 x 20",fohFront.point):null;
+  if(fohFront&&fohHouse&&fohDim){
+    // The three stacked FOH callouts describe a single 20'×20' pad. Their
+    // cluster centroid is its CAD placement; the old code used only the last
+    // text baseline, which pushed FOH out of position.
+    const sameFoh={point:[(fohFront.point[0]+fohHouse.point[0]+fohDim.point[0])/3,(fohFront.point[1]+fohHouse.point[1]+fohDim.point[1])/3],rotation:fohDim.rotation};
+    pdfSizedAsset(sameFoh,20,20,fohAsset,"SAME STAGE FOH");
+  }
   const coveFohLabel=exactAnchor("FOH / 10 x 10",[199.0277,-28.6668]);
   const coveFohTent=data.inserts.filter(i=>i.layer==="COLORMAPGOOD"&&i.name==="Event Tent 10x10 Pop-Up (2D)"&&i.bounds)
     .map(i=>i.bounds).sort((a,b)=>Math.hypot(a.point[0]-coveFohLabel.point[0],a.point[1]-coveFohLabel.point[1])-Math.hypot(b.point[0]-coveFohLabel.point[0],b.point[1]-coveFohLabel.point[1]))[0];

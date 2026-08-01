@@ -1260,27 +1260,28 @@ function buildDetailedAssets(data){
   const coconutStageAnchor=data.anchors.find(a=>a.text.toUpperCase().startsWith("STAGE /")&&a.point[0]>150);
   const coconutStage=coconutStageAnchor?exactFootprint(data,coconutStageAnchor,"Stages",18):null;
   if(coconutStage)festivalStage(coconutStage.x,coconutStage.z,coconutStage.rot,coconutStage.w,coconutStage.d);
-  const coconutBar=namedFootprint("Coconut Cove Bar","Stages");
-  if(coconutBar){
-    barAsset(coconutBar.x,coconutBar.z,coconutBar.rot,coconutBar.w,coconutBar.d);
-    // The PDF calls this same physical footprint Bar 3.
-    makeLabel("BAR 3 · COCONUT COVE",coconutBar.x,coconutBar.z);
+  // Bars are physical CAD fixtures.  Their nearby text is a callout—not an
+  // insertion point—and was the source of the previous scattered/duplicated
+  // bar pass.  Use the literal blocks or closed outlines below instead.
+  const coveBarBlock=data.inserts.filter(i=>i.name==="Group"&&i.layer==="None"&&i.bounds)
+    .map(i=>i.bounds).sort((a,b)=>Math.hypot(a.point[0]-209.4548,a.point[1]-160.6841)-Math.hypot(b.point[0]-209.4548,b.point[1]-160.6841))[0];
+  if(coveBarBlock){
+    barAsset(coveBarBlock.point[0],coveBarBlock.point[1],coveBarBlock.rotation,coveBarBlock.width,coveBarBlock.depth);
+    makeLabel("BAR 3 · COCONUT COVE",coveBarBlock.point[0],coveBarBlock.point[1]);
   }
   const pontoon=anchor("PONTOON");
   if(pontoon)pontoonDockAsset(pontoon.point[0],pontoon.point[1],pontoon.rotation);
-  // These bars are PDF annotations rather than closed DXF polygons. Their
-  // centers and orientation come from the DXF text entities; dimensions come
-  // only from printed PDF callouts.
-  pdfSizedAsset(anchor("BAR 1"),30,20,barAsset,"BAR 1");
-  pdfSizedAsset(anchor("BAR 2"),10,40,barAsset,"BAR 2");
-  pdfSizedAsset(anchor("BAR 6"),10,20,barAsset,"BAR 6");
-  // Innerbass has its own adjacent BAR/STORAGE pair. These were previously
-  // represented only by a loose storage-size annotation, leaving the bar
-  // absent and causing the next labelled bar to read as misplaced.
-  const innerbassBar=exactAnchor("BAR",[64.3413,19.0191]);
-  const innerbassStorage=exactAnchor("STORAGE",[63.5301,20.9496]);
-  if(innerbassBar)barAsset(innerbassBar.point[0],innerbassBar.point[1],innerbassBar.rotation,10*.3048,20*.3048);
-  if(innerbassStorage)serviceAsset(innerbassStorage.point[0],innerbassStorage.point[1],innerbassStorage.rotation,10*.3048,20*.3048);
+  const bar1Block=data.inserts.find(i=>i.name==="Block_19"&&i.layer==="Tents"&&i.bounds)?.bounds;
+  if(bar1Block){barAsset(bar1Block.point[0],bar1Block.point[1],bar1Block.rotation,bar1Block.width,bar1Block.depth);makeLabel("BAR 1",bar1Block.point[0],bar1Block.point[1]);}
+  // The Innerbass/Bar 2 pair is two adjacent 20'×10' CAD blocks.  Block_29 is
+  // the service bar; Block_30 is its BOH storage.  Do not re-create either at
+  // the offset BAR/STORAGE labels.
+  const bar2Block=data.inserts.find(i=>i.name==="Block_29"&&i.layer==="Tents"&&i.bounds)?.bounds;
+  const bar2Storage=data.inserts.find(i=>i.name==="Block_30"&&i.layer==="Tents"&&i.bounds)?.bounds;
+  if(bar2Block){barAsset(bar2Block.point[0],bar2Block.point[1],bar2Block.rotation,bar2Block.width,bar2Block.depth);makeLabel("BAR 2",bar2Block.point[0],bar2Block.point[1]);}
+  if(bar2Storage)serviceAsset(bar2Storage.point[0],bar2Storage.point[1],bar2Storage.rotation,bar2Storage.width,bar2Storage.depth);
+  const bar6Anchor=anchor("BAR 6"),bar6=bar6Anchor?exactFootprint(data,bar6Anchor,"Tents",14):null;
+  if(bar6){barAsset(bar6.x,bar6.z,bar6.rot,bar6.w,bar6.d);useTent(bar6);makeLabel("BAR 6",bar6.x,bar6.z);}
   // Bar 4 is the exact 20x10-style Vendor block beside its PDF callout. Unlike
   // the floating text-only bars above, the inserted CAD block supplies its
   // complete oriented footprint.
@@ -1403,8 +1404,11 @@ function buildDetailedAssets(data){
     // unlabelled in the player-facing world. Medical services are represented
     // by the separately placed FIRST AID destination.
     ["24x24 / HOSP / STORAGE",[24.5239,3.8007],24,24,null,"service"],
-    ["10 x 20",[219.62,160.1731],10,20,"COCONUT COVE BAR STORAGE","service"],
-    ["10 x 10",[103.5042,-41.742],10,10,"BAR 5 STORAGE","service"]
+    // Coconut Cove's nearby STORAGE text is likewise only a callout; the
+    // actual Group footprint is already rendered above as BAR 3.
+    // BAR 5's storage callout has no matching physical footprint in this DXF.
+    // Leaving it unrendered is preferable to putting another floating box at
+    // a text insertion point.
   ];
   for(const [text,near,w,d,label,kind] of pdfBlocks){
     const a=exactAnchor(text,near);if(!a)continue;
@@ -1414,13 +1418,13 @@ function buildDetailedAssets(data){
     }
     else pdfSizedAsset(a,w,d,serviceAsset,label,0);
   }
-  // VIP service is one bar/storage pair in the plan.  The former pass placed
-  // only an arbitrary 10x20 storage box and never promoted the adjacent BAR
-  // callout.  Keep both at their paired plan anchors and orientations.
-  const vipBar=exactAnchor("BAR",[27.1232,76.3726]);
-  const vipStorage=exactAnchor("STORAGE",[26.3209,78.3514]);
-  if(vipBar)barAsset(vipBar.point[0],vipBar.point[1],vipBar.rotation,20*.3048,10*.3048);
-  if(vipStorage)serviceAsset(vipStorage.point[0],vipStorage.point[1],vipStorage.rotation,10*.3048,20*.3048);
+  // VIP service is the literal Vendor block beside VIP Lounge, not the two
+  // offset BAR/STORAGE text entities.  The lounge's own tent remains separate.
+  const vipBarBlock=data.inserts.find(i=>i.name==="Block_37"&&i.layer==="Vendors"&&i.bounds)?.bounds;
+  if(vipBarBlock){
+    barAsset(vipBarBlock.point[0],vipBarBlock.point[1],vipBarBlock.rotation,vipBarBlock.width,vipBarBlock.depth);
+    makeLabel("VIP BAR",vipBarBlock.point[0],vipBarBlock.point[1]);
+  }
   // Named businesses use the nearest closed CAD footprint, not their offset
   // annotation point. Seed the generic-placement dedupe list with them.
   const placed=[];

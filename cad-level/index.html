@@ -219,12 +219,12 @@ for(const [bx,bz] of tiffCanopyCenters){
 // The satellite layer already carries the real tree map. Hide the previous
 // hand-placed proxy forest until individual 3D trees are sampled from it.
 trees.visible=false;
-// This is the separate visible lake surface that reaches the Coco Cove beach.
-// It was incorrectly disabled during the aerial-underlay experiment, leaving
-// the water at the TIFF's flat colour rather than a readable water level.
+// Legacy circular water proxy. It is intentionally disabled: its footprint
+// paints blue over park/tree land. The full-resolution TIFF mask now supplies
+// the actual water footprint, including the Coco Cove shoreline.
 const lake=new THREE.Mesh(new THREE.CircleGeometry(LAKE_RADIUS,160),new THREE.MeshPhysicalMaterial({map:groundTiles.water,color:0x4da7d7,roughness:.18,metalness:.05,transparent:true,opacity:.76,clearcoat:.42,clearcoatRoughness:.14,side:THREE.DoubleSide}));
 lake.rotation.x=-Math.PI/2; lake.position.set(LAKE_X,.118,LAKE_Z); lake.receiveShadow=true;scene.add(lake);
-lake.visible=true;
+lake.visible=false;
 
 // The TIFF is the site authority.  We cannot safely upload its 326 MB source
 // texture to this r128/Safari renderer, so these are deliberately modest,

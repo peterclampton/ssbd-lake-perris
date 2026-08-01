@@ -61,11 +61,18 @@ canvas{display:block;position:fixed;inset:0;z-index:0;touch-action:none}
 window.addEventListener('error',event=>{
   const status=document.querySelector('#status');
   if(status)status.textContent=`Runtime error: ${event.message}`;
+  document.title=`CAD ERROR · ${event.message}`;
 });
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x91c6ee);
 scene.fog=new THREE.FogExp2(0xb9cde0,.00105);
 const camera=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,.2,4000);
+// Never leave the viewer staring at empty sky while the CAD JSON is loading
+// (or if a data error is caught). The successful plan load switches to the
+// authored festival view below.
+camera.position.set(30,430,35);
+camera.rotation.order="YXZ";
+camera.rotation.set(-Math.PI/2+.001,0,0);
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:"high-performance"});
 const coarsePointer=matchMedia("(pointer:coarse)").matches;
 renderer.setSize(innerWidth,innerHeight); renderer.setPixelRatio(Math.min(devicePixelRatio,coarsePointer?1.35:2));

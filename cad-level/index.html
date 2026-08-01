@@ -157,7 +157,14 @@ function tileTexture(name){
   // referenced a non-existent ground/v4 folder, so every material silently
   // failed to load in the live build.  Keep the runtime pointed at assets that
   // are actually published with the level.
-  const tex=textureLoader.load(`assets/ground/${name}.jpg`);
+  // Festival ground uses the three project-owned, distinct texture tiles
+  // below.  Leave the legacy utility materials available for props only.
+  const authored={
+    grass:"assets/ground/grass-festival.png",
+    sand:"assets/ground/sand-beach.png",
+    water:"assets/ground/water-lake.png"
+  };
+  const tex=textureLoader.load(authored[name]||`assets/ground/${name}.jpg`);
   tex.encoding=THREE.sRGBEncoding;tex.wrapS=tex.wrapT=THREE.RepeatWrapping;
   tex.minFilter=THREE.LinearFilter;tex.magFilter=THREE.LinearFilter;
   tex.anisotropy=Math.min(2,renderer.capabilities.getMaxAnisotropy());

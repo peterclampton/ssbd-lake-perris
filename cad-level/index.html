@@ -266,11 +266,17 @@ function siteRibbon(name,points,width,color,y=.025){
   } return sitePatch(name,left.concat(right),color,y);
 }
 sitePatch("AERIAL LAWN",[[-220,-150],[80,-165],[235,-92],[282,20],[252,132],[202,184],[118,224],[4,262],[-124,238],[-214,148],[-250,24]],0x80c95d,.09);
-// The beach begins at the current festival edge: Art Installation → ADA
-// walkway start → Balloon Rides, then runs continuously down to the lake.
-// Do not allow a broad generic sand patch to creep back into the event lawn.
-sitePatch("FESTIVAL BEACH SAND",[[225.5903,43.6842],[242,70],[244,108],[232,145],[214,187],[177,229],[121,264],[48,274],[-25,238],[19,208],[62,188],[104.0493,166.2101],[132,144],[161.0554,107.139]],0xe4ca89,.102);
-sitePatch("COCONUT COVE SAND APRON",[[156,151],[205,148],[231,177],[217,204],[180,216],[153,192]],0xf1d798,.106);
+// TIFF/7-31 authority: the beach does not end as a triangular festival
+// apron.  It curves inland at the ADA-ramp / Festival Merch end, then stays
+// continuous beyond the event boundary to Lake Perris.  This one footprint
+// deliberately replaces the former disconnected Coconut Cove sand island.
+sitePatch("FESTIVAL + PUBLIC BEACH SAND",[
+  [225.5903,43.6842],[217,48],[207,54],[196,61],[185,70],[175,81],
+  [166,93],[161.0554,107.139],[166,120],[178,136],[194,156],[212,180],
+  [227,207],[233,233],[226,257],[208,278],[178,291],[142,292],[105,282],
+  [71,263],[43,240],[20,217],[-5,202],[19,208],[62,188],
+  [104.0493,166.2101],[132,144],[151,122]
+],0xe4ca89,.126);
 siteRibbon("AERIAL PARK ACCESS ROAD",[[-246,-92],[-173,-69],[-103,-46],[-29,-25],[38,0],[97,25],[149,54],[194,87],[236,120]],12,0x707070,.098);
 siteRibbon("AERIAL BEACH ADA APPROACH",[[46,254],[68,236],[97,216],[126,196],[159,179],[192,162]],7.8,0xd6d5cf,.11);
 sitePatch("AERIAL CONCRETE PLAZA",[[61,-22],[126,-14],[141,39],[94,55],[52,24]],0xf0efea,.112);

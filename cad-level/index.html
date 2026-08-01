@@ -136,6 +136,15 @@ const groundTexture=textureLoader.load("assets/lake-perris-ground.jpg",tex=>{
   tex.anisotropy=Math.min(2,renderer.capabilities.getMaxAnisotropy());
   aerial.material.needsUpdate=true;
 });
+// Generated offline from every pixel of GOOGLE_SAT_WM (1).tif at its native
+// 17,152 × 9,984 resolution, then reduced only after classification. RGB is
+// water / vegetated ground / sand-or-pale-dry ground. This keeps exact source
+// information out of the mobile GPU while avoiding zone decisions from the
+// 2048px visual preview.
+const zoneTexture=textureLoader.load("assets/lake-perris-zones-fullres.png",tex=>{
+  tex.generateMipmaps=false;tex.minFilter=THREE.LinearFilter;tex.magFilter=THREE.LinearFilter;
+  aerial.material.needsUpdate=true;
+});
 function tileTexture(name){
   // v4 assets are distinct, cropped source tiles.  Keep this path versioned:
   // the original eight files were identical images with different names.
@@ -150,9 +159,9 @@ const groundTiles={grass:tileTexture("grass"),sand:tileTexture("sand"),road:tile
 // classification map, not a faint colour wash: each class must visibly read
 // as a different game surface from a normal player-height camera.
 const groundMaterial=new THREE.ShaderMaterial({
-  uniforms:{source:{value:groundTexture},grass:{value:groundTiles.grass},sand:{value:groundTiles.sand},road:{value:groundTiles.road},parking:{value:groundTiles.parking},dirt:{value:groundTiles.dirt},concrete:{value:groundTiles.concrete},rocky:{value:groundTiles.rocky},water:{value:groundTiles.water}},
+  uniforms:{source:{value:groundTexture},zones:{value:zoneTexture},grass:{value:groundTiles.grass},sand:{value:groundTiles.sand},road:{value:groundTiles.road},parking:{value:groundTiles.parking},dirt:{value:groundTiles.dirt},concrete:{value:groundTiles.concrete},rocky:{value:groundTiles.rocky},water:{value:groundTiles.water}},
   vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
-  fragmentShader:'uniform sampler2D source,grass,sand,road,parking,dirt,concrete,rocky,water;varying vec2 vUv;vec3 tile(sampler2D t,float n){return texture2D(t,vUv*n).rgb;}void main(){vec3 s=texture2D(source,vUv).rgb;float mx=max(max(s.r,s.g),s.b),mn=min(min(s.r,s.g),s.b),sat=mx-mn;float waterMask=smoothstep(.018,.105,s.b-s.g)*smoothstep(.008,.13,s.b-s.r)*(1.-smoothstep(.55,.82,mx));float sandMask=(1.-waterMask)*smoothstep(.018,.11,s.r-s.b)*smoothstep(.28,.72,mx);float grassMask=(1.-waterMask)*(1.-sandMask)*smoothstep(.012,.075,s.g-s.r)*smoothstep(.012,.09,s.g-s.b);float paved=(1.-waterMask)*(1.-sandMask)*(1.-grassMask)*(1.-smoothstep(.08,.20,sat));float darkPave=paved*(1.-smoothstep(.33,.52,mx));float lightPave=paved-darkPave;float rockyMask=(1.-waterMask)*(1.-sandMask)*(1.-grassMask)*(1.-paved)*smoothstep(.42,.72,mx);vec3 outc=tile(dirt,78.);outc=mix(outc,tile(rocky,68.),rockyMask);outc=mix(outc,tile(grass,104.),grassMask);outc=mix(outc,tile(sand,86.),sandMask);outc=mix(outc,tile(road,94.),darkPave);outc=mix(outc,tile(parking,82.),lightPave);outc=mix(outc,tile(water,64.),waterMask);gl_FragColor=vec4(outc,1.);}'
+  fragmentShader:'uniform sampler2D source,zones,grass,sand,road,parking,dirt,concrete,rocky,water;varying vec2 vUv;vec3 tile(sampler2D t,float n){return texture2D(t,vUv*n).rgb;}void main(){vec3 s=texture2D(source,vUv).rgb,z=texture2D(zones,vUv).rgb;float mx=max(max(s.r,s.g),s.b),mn=min(min(s.r,s.g),s.b),sat=mx-mn;float waterMask=z.r;float grassMask=z.g*(1.-waterMask);float sandMask=z.b*(1.-waterMask)*(1.-grassMask);float paved=(1.-waterMask)*(1.-sandMask)*(1.-grassMask)*(1.-smoothstep(.08,.20,sat));float darkPave=paved*(1.-smoothstep(.33,.52,mx));float lightPave=paved-darkPave;float rockyMask=(1.-waterMask)*(1.-sandMask)*(1.-grassMask)*(1.-paved)*smoothstep(.42,.72,mx);vec3 outc=tile(dirt,78.);outc=mix(outc,tile(rocky,68.),rockyMask);outc=mix(outc,tile(grass,104.),grassMask);outc=mix(outc,tile(sand,86.),sandMask);outc=mix(outc,tile(road,94.),darkPave);outc=mix(outc,tile(parking,82.),lightPave);outc=mix(outc,tile(water,64.),waterMask);gl_FragColor=vec4(outc,1.);}'
 });
 const aerial=new THREE.Mesh(aerialGeo,groundMaterial);
 aerial.name='VECTORWORKS GEOREGISTERED SATELLITE AERIAL';aerial.receiveShadow=true;scene.add(aerial);

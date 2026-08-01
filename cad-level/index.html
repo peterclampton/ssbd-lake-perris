@@ -6,7 +6,9 @@
 <title>SSBD Lake Perris — CAD Master Level</title>
 <style>
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#9ecfff;font:13px/1.4 "Segoe UI",system-ui,sans-serif;color:#152238}
-canvas{display:block;touch-action:none}
+/* Keep the WebGL compositing layer below the controls in Safari.  Without an
+   explicit stack, Safari can present a blank sky canvas above the fixed HUD. */
+canvas{display:block;position:fixed;inset:0;z-index:0;touch-action:none}
 #hud{position:fixed;inset:0;pointer-events:none;z-index:10}
 #title{position:absolute;left:22px;top:20px;text-transform:uppercase;letter-spacing:2px;text-shadow:0 1px #fff}
 #title b{font-size:17px;letter-spacing:3px}

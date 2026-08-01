@@ -159,7 +159,7 @@ const groundTiles={grass:tileTexture("grass"),sand:tileTexture("sand"),road:tile
 const groundMaterial=new THREE.ShaderMaterial({
   uniforms:{source:{value:groundTexture},zones:{value:zoneTexture},grass:{value:groundTiles.grass},sand:{value:groundTiles.sand},road:{value:groundTiles.road},parking:{value:groundTiles.parking},dirt:{value:groundTiles.dirt},concrete:{value:groundTiles.concrete},rocky:{value:groundTiles.rocky},water:{value:groundTiles.water}},
   vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
-  fragmentShader:'uniform sampler2D source,zones,grass,sand,road,parking,dirt,concrete,rocky,water;varying vec2 vUv;vec3 tile(sampler2D t,float n){return texture2D(t,vUv*n).rgb;}void main(){vec3 s=texture2D(source,vUv).rgb;float mx=max(max(s.r,s.g),s.b),mn=min(min(s.r,s.g),s.b),sat=mx-mn;float dry=smoothstep(.05,.26,s.r-s.g);float rockyMask=dry*smoothstep(.38,.72,mx);float paved=(1.-dry)*(1.-smoothstep(.08,.22,sat))*smoothstep(.20,.56,mx);float darkPave=paved*(1.-smoothstep(.31,.52,mx));float lightPave=paved-darkPave;vec3 outc=tile(grass,104.);outc=mix(outc,tile(dirt,78.),dry*.26);outc=mix(outc,tile(rocky,68.),rockyMask*.42);outc=mix(outc,tile(road,94.),darkPave*.68);outc=mix(outc,tile(parking,82.),lightPave*.44);gl_FragColor=vec4(outc,1.);}'
+  fragmentShader:'uniform sampler2D source,zones,grass,sand,road,parking,dirt,concrete,rocky,water;varying vec2 vUv;vec3 tile(sampler2D t,float n){return texture2D(t,vUv*n).rgb;}void main(){vec3 outc=tile(grass,104.);gl_FragColor=vec4(outc,1.);}'
 });
 const aerial=new THREE.Mesh(aerialGeo,groundMaterial);
 aerial.name='VECTORWORKS GEOREGISTERED SATELLITE AERIAL';aerial.receiveShadow=true;scene.add(aerial);
@@ -254,6 +254,10 @@ siteRibbon("AERIAL PARK ACCESS ROAD",[[-246,-92],[-173,-69],[-103,-46],[-29,-25]
 siteRibbon("AERIAL BEACH ADA APPROACH",[[46,254],[68,236],[97,216],[126,196],[159,179],[192,162]],7.8,0xd6d5cf,.11);
 sitePatch("AERIAL CONCRETE PLAZA",[[61,-22],[126,-14],[141,39],[94,55],[52,24]],0xf0efea,.112);
 sitePatch("AERIAL EAST LOT",[[86,50],[183,72],[212,119],[147,133],[92,104]],0x858585,.104);
+// Festival readability comes first.  Until every site material boundary has
+// been manually verified against the plan, keep only the lawn and real beach
+// sand visible; do not turn uncertain aerial pixels into fake roads/parking.
+for(const surface of siteSurface.children)surface.visible=surface.name.includes('LAWN')||surface.name.includes('SAND');
 // Restore visible park vegetation only in aerial-confirmed edge bands.  The
 // core remains open grass; scattered decoration there would contradict the
 // source image and the festival plan.

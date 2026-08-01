@@ -127,7 +127,8 @@ aerialGeo.setIndex([0,1,2,0,2,3]);aerialGeo.computeVertexNormals();
 // A 2k derivative of the supplied TIFF is small enough for Safari/mobile GPU
 // budgets (unlike the 326 MB source), while retaining its exact registered
 // grass → sand → water edge, roads, concrete and tree shadows.
-const groundTexture=new THREE.TextureLoader().load("assets/lake-perris-ground.jpg",tex=>{
+const textureLoader=new THREE.TextureLoader();
+const groundTexture=textureLoader.load("assets/lake-perris-ground.jpg",tex=>{
   tex.encoding=THREE.sRGBEncoding;
   tex.generateMipmaps=false;
   tex.minFilter=THREE.LinearFilter;
@@ -135,7 +136,23 @@ const groundTexture=new THREE.TextureLoader().load("assets/lake-perris-ground.jp
   tex.anisotropy=Math.min(2,renderer.capabilities.getMaxAnisotropy());
   aerial.material.needsUpdate=true;
 });
-const aerial=new THREE.Mesh(aerialGeo,new THREE.MeshBasicMaterial({map:groundTexture}));
+function tileTexture(name){
+  const tex=textureLoader.load(`assets/ground/${name}.jpg`);
+  tex.encoding=THREE.sRGBEncoding;tex.wrapS=tex.wrapT=THREE.RepeatWrapping;
+  tex.minFilter=THREE.LinearFilter;tex.magFilter=THREE.LinearFilter;
+  tex.anisotropy=Math.min(2,renderer.capabilities.getMaxAnisotropy());
+  return tex;
+}
+const groundTiles={grass:tileTexture("grass"),sand:tileTexture("sand"),road:tileTexture("road"),parking:tileTexture("parking"),dirt:tileTexture("dirt"),concrete:tileTexture("concrete"),rocky:tileTexture("rocky"),water:tileTexture("water")};
+// The TIFF controls every zone boundary at pixel level. The shader keeps a
+// little of that source colour for continuity, then lays our own repeatable
+// game materials over grass, sand, pavement, dirt/rock and lake water.
+const groundMaterial=new THREE.ShaderMaterial({
+  uniforms:{source:{value:groundTexture},grass:{value:groundTiles.grass},sand:{value:groundTiles.sand},road:{value:groundTiles.road},parking:{value:groundTiles.parking},dirt:{value:groundTiles.dirt},concrete:{value:groundTiles.concrete},rocky:{value:groundTiles.rocky},water:{value:groundTiles.water}},
+  vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
+  fragmentShader:'uniform sampler2D source,grass,sand,road,parking,dirt,concrete,rocky,water;varying vec2 vUv;vec3 tile(sampler2D t,float n){return texture2D(t,vUv*n).rgb;}void main(){vec3 s=texture2D(source,vUv).rgb;float mx=max(max(s.r,s.g),s.b),mn=min(min(s.r,s.g),s.b),sat=mx-mn;float waterMask=smoothstep(.025,.15,s.b-s.g)*smoothstep(.02,.20,s.b-s.r)*(1.-smoothstep(.58,.88,mx));float sandMask=(1.-waterMask)*smoothstep(.035,.18,s.r-s.b)*smoothstep(.34,.8,mx);float grassMask=(1.-waterMask)*(1.-sandMask)*smoothstep(.018,.12,s.g-s.r)*smoothstep(.018,.14,s.g-s.b);float paved=(1.-waterMask)*(1.-sandMask)*(1.-grassMask)*(1.-smoothstep(.10,.28,sat));float darkPave=paved*(1.-smoothstep(.36,.6,mx));float lightPave=paved-darkPave;float rockyMask=(1.-waterMask)*(1.-sandMask)*(1.-grassMask)*(1.-paved)*smoothstep(.48,.82,mx);vec3 outc=mix(s,tile(dirt,92.),.48);outc=mix(outc,tile(rocky,84.),rockyMask*.7);outc=mix(outc,tile(grass,126.),grassMask*.72);outc=mix(outc,tile(sand,102.),sandMask*.76);outc=mix(outc,tile(road,110.),darkPave*.7);outc=mix(outc,tile(parking,96.),lightPave*.5);outc=mix(outc,tile(water,76.),waterMask*.76);gl_FragColor=vec4(outc,1.);}'
+});
+const aerial=new THREE.Mesh(aerialGeo,groundMaterial);
 aerial.name='VECTORWORKS GEOREGISTERED SATELLITE AERIAL';aerial.receiveShadow=true;scene.add(aerial);
 // Kept out of the WebGL scene while the browser-level renderer uses its
 // compact fallback. The full TIFF remains the alignment authority and is
@@ -1003,6 +1020,17 @@ function pontoonDockAsset(x,z,rot){
     addBox(g,.12,.12,4.4,0,1.02,dz,deckMat);
   }
 }
+function nakeyIslandAsset(){
+  // TIFF registration places the small southern lake island at this world
+  // coordinate (not an invented island near the festival core). It is a
+  // playable destination: pale shore, rocky interior, and an unobtrusive name
+  // marker, while the TIFF-derived water shader supplies the surrounding lake.
+  const g=new THREE.Group();g.name="NAKEY ISLAND · TIFF REGISTERED";g.position.set(496,.09,-1124);detail.add(g);
+  const sand=new THREE.Mesh(new THREE.CircleGeometry(88,48),new THREE.MeshStandardMaterial({map:groundTiles.sand,roughness:.94}));sand.rotation.x=-Math.PI/2;sand.scale.y=.62;g.add(sand);
+  const rock=new THREE.Mesh(new THREE.CylinderGeometry(52,66,3.4,16,3),new THREE.MeshStandardMaterial({map:groundTiles.rocky,roughness:1}));rock.position.y=1.05;rock.scale.z=.68;rock.castShadow=rock.receiveShadow=true;g.add(rock);
+  for(let i=0;i<16;i++){const a=i*2.39996,r=18+(i%5)*7;const stone=new THREE.Mesh(new THREE.DodecahedronGeometry(2.2+(i%4)*.65,0),new THREE.MeshStandardMaterial({map:groundTiles.rocky,roughness:1}));stone.position.set(Math.cos(a)*r,2.4+(i%3)*.4,Math.sin(a)*r*.62);stone.rotation.set(a*.3,a,a*.17);stone.castShadow=true;g.add(stone);}
+  makeLabel("NAKEY ISLAND",496,-1124);
+}
 function eightInchStepAsset(fp){
   const g=new THREE.Group();g.position.set(fp.point[0],0,fp.point[1]);g.rotation.y=fp.rotation;g.name="LIMITLESS 8 INCH STEP · CAD";detail.add(g);
   // Printed plan callout is 8", so height is authoritative too.
@@ -1203,9 +1231,10 @@ function buildDetailedAssets(data){
   const loungeLabel=anchor("LIMITLESS / LOUNGE / 40x20");
   const deck=namedFootprint("LIMITLESS / VIEWING / DECK 32'x20","Stages")
     ||(deckLabel?{x:deckLabel.point[0],z:deckLabel.point[1],rot:deckLabel.rotation,w:32*.3048,d:20*.3048}:null);
-  const lounge=namedFootprint("LIMITLESS / LOUNGE / 40x20","None",20)
+  const lounge=namedFootprint("LIMITLESS / LOUNGE / 40x20","Tents",20)
+    ||namedFootprint("LIMITLESS / LOUNGE / 40x20","None",20)
     ||(loungeLabel?{x:loungeLabel.point[0],z:loungeLabel.point[1],rot:loungeLabel.rotation,w:40*.3048,d:20*.3048}:null);
-  if(deck&&lounge)limitlessAssets(data,deck,lounge);
+  if(deck&&lounge){limitlessAssets(data,deck,lounge);useTent(lounge);}
   // The PDF calls this pocket GREEN ROOM RVS. Five closed None-layer vehicle
   // outlines sit immediately beside that annotation. Their exact oriented
   // rectangles—not the text point—control every RV's placement and dimensions.
@@ -1302,6 +1331,7 @@ function buildDetailedAssets(data){
   }
   const pontoon=anchor("PONTOON");
   if(pontoon)pontoonDockAsset(pontoon.point[0],pontoon.point[1],pontoon.rotation);
+  nakeyIslandAsset();
   const bar1Block=data.inserts.find(i=>i.name==="Block_19"&&i.layer==="Tents"&&i.bounds)?.bounds;
   if(bar1Block){barAsset(bar1Block.point[0],bar1Block.point[1],bar1Block.rotation,bar1Block.width,bar1Block.depth);makeLabel("BAR 1",bar1Block.point[0],bar1Block.point[1]);}
   // The Innerbass/Bar 2 pair is two adjacent 20'×10' CAD blocks.  Block_29 is

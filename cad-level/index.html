@@ -153,9 +153,11 @@ const zoneTexture=textureLoader.load("assets/lake-perris-zones-fullres.png",tex=
   aerial.material.needsUpdate=true;
 });
 function tileTexture(name){
-  // v4 assets are distinct, cropped source tiles.  Keep this path versioned:
-  // the original eight files were identical images with different names.
-  const tex=textureLoader.load(`assets/ground/v4/${name}.png`);
+  // These are the checked-in, distinct project material tiles.  A prior pass
+  // referenced a non-existent ground/v4 folder, so every material silently
+  // failed to load in the live build.  Keep the runtime pointed at assets that
+  // are actually published with the level.
+  const tex=textureLoader.load(`assets/ground/${name}.jpg`);
   tex.encoding=THREE.sRGBEncoding;tex.wrapS=tex.wrapT=THREE.RepeatWrapping;
   tex.minFilter=THREE.LinearFilter;tex.magFilter=THREE.LinearFilter;
   tex.anisotropy=Math.min(2,renderer.capabilities.getMaxAnisotropy());
